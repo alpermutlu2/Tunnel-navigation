@@ -279,9 +279,10 @@ def simulate_imu(src: ImuTruthSource, cfg: SensorConfig = NOMINAL,
 #
 #   h~ = h + b_h0 + b_h,GM(t) + n_h + d_cabin(t) + d_tunnel(s)
 #
-#   d_tunnel = -(k_p / rho_g) * (s - s_entry) inside the tunnel, 0 outside: a pressure gradient
-#   along travel (ventilation) read as altitude. It is zero at the entry portal and returns to
-#   zero after the exit, so the reading steps by k_p * L / rho_g at the exit portal.
+#   d_tunnel = -(k_p / rho_g) * (s - s_entry) inside the tunnel: a pressure gradient along travel
+#   (ventilation) read as altitude, zero at the entry portal. After the exit it decays over
+#   distance, d(s_exit) * exp(-(s - s_exit) / L_p) (review 2, 4.2); L_p = 0 gives the step
+#   variant (stress case). L_p is a sensitivity parameter, not a validated physical value.
 # ---------------------------------------------------------------------------------------------
 @dataclass(frozen=True)
 class BaroTruthSource:
@@ -305,10 +306,16 @@ class BaroErrors:
     constants: dict = field(default_factory=dict)
 
 
-def tunnel_pressure_altitude(s, s_entry, s_exit, grad_pa_per_km, rho_g_pa_per_m):
+def tunnel_pressure_altitude(s, s_entry, s_exit, grad_pa_per_km, rho_g_pa_per_m, exit_decay_m=0.0):
     """d_tunnel(s) [m]: pressure rising along travel reads as falling altitude."""
+    s = np.asarray(s, dtype=float)
+    k = -(grad_pa_per_km / 1000.0) / rho_g_pa_per_m
     inside = (s >= s_entry) & (s <= s_exit)
-    return np.where(inside, -(grad_pa_per_km / 1000.0) * (s - s_entry) / rho_g_pa_per_m, 0.0)
+    d = np.where(inside, k * (s - s_entry), 0.0)
+    if exit_decay_m > 0.0:
+        after = s > s_exit
+        d = np.where(after, k * (s_exit - s_entry) * np.exp(-(s - s_exit) / exit_decay_m), d)
+    return d
 
 
 def simulate_baro(src: BaroTruthSource, cfg: SensorConfig = NOMINAL,
@@ -336,6 +343,7 @@ def simulate_baro(src: BaroTruthSource, cfg: SensorConfig = NOMINAL,
     if on("b_tunnel"):
         comps["b_tunnel"] = tunnel_pressure_altitude(s, src.s_entry, src.s_exit,
                                                      float(p.tunnel_grad_pa_per_km.v),
-                                                     float(p.rho_g_pa_per_m.v))
+                                                     float(p.rho_g_pa_per_m.v),
+                                                     float(p.tunnel_exit_decay_m.v))
     h = h_true + sum(comps.values(), np.zeros(n))
     return BaroMeas(t=t, h=h), BaroErrors(t=t, h_true=h_true, components=comps, constants=consts)

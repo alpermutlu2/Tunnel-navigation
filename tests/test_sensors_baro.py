@@ -81,18 +81,34 @@ def grade_floor_report(seed: int = 77) -> dict:
 
 
 def tunnel_gradient_report() -> dict:
+    """Tunnel pressure gradient on S3 (3.5 km): level at the exit, largest sample-to-sample jump,
+    and the remaining fraction one L_p after the exit (expected e^-1 unless L_p = 0)."""
     sc = build_scenarios()["S3"]
     tr = generate_truth(sc)
     src = BaroTruthSource.from_truth(tr, sc)
     out = {}
-    for case in ("baro_tunnel_10pa", "baro_tunnel_30pa"):
-        b = configure(case).baro
-        _, e = simulate_baro(src, configure(case), Switches.only("b_tunnel"))
+    cases = [("baro_tunnel_10pa",), ("baro_tunnel_30pa",), ("baro_tunnel_30pa", "baro_exit_lp_50"),
+             ("baro_tunnel_30pa", "baro_exit_lp_500"), ("baro_tunnel_30pa", "baro_exit_step")]
+    for names in cases:
+        cfg = configure(*names)
+        b = cfg.baro
+        m, e = simulate_baro(src, cfg, Switches.only("b_tunnel"))
+        d = e.components["b_tunnel"]
+        s = np.interp(m.t, src.t, src.s)
         L = src.s_exit - src.s_entry
-        expect = float(b.tunnel_grad_pa_per_km.v) * L / 1000.0 / float(b.rho_g_pa_per_m.v)
-        out[case] = {"tunnel_length_m": L, "exit_step_expected_m": round(expect, 4),
-                     "exit_step_achieved_m": round(float(-e.components["b_tunnel"].min()), 4),
-                     "fake_grade_pct": round(100 * expect / L, 4)}
+        Lp = float(b.tunnel_exit_decay_m.v)
+        level = float(b.tunnel_grad_pa_per_km.v) * L / 1000.0 / float(b.rho_g_pa_per_m.v)
+        i_exit = int(np.searchsorted(s, src.s_exit))
+        row = {"tunnel_length_m": L, "exit_decay_m": Lp,
+               "exit_level_expected_m": round(level, 4),
+               "exit_level_achieved_m": round(float(-d[i_exit - 1]), 4),
+               "max_sample_jump_m": round(float(np.abs(np.diff(d)).max()), 4),
+               "ds_per_sample_max_m": round(float(np.diff(s).max()), 4),
+               "fake_grade_pct": round(100 * level / L, 4)}
+        if Lp > 0:
+            j = int(np.searchsorted(s, src.s_exit + Lp))
+            row["fraction_left_after_1Lp"] = round(float(d[j] / d[i_exit - 1]), 3)
+        out["+".join(names)] = row
     return out
 
 
@@ -114,13 +130,26 @@ def test_white_only_closed_form_is_exact_enough():
         assert abs(r["approx_vs_exact"]) < 0.02
 
 
-def test_tunnel_gradient_step_and_zero_outside():
+def test_tunnel_gradient_exit_transition():
     rep = tunnel_gradient_report()
-    for r in rep.values():
-        assert r["exit_step_achieved_m"] == pytest.approx(r["exit_step_expected_m"], rel=1e-3)
+    for name, r in rep.items():
+        assert r["exit_level_achieved_m"] == pytest.approx(r["exit_level_expected_m"], rel=2e-3), name
+        if r["exit_decay_m"] > 0:
+            assert r["fraction_left_after_1Lp"] == pytest.approx(np.exp(-1), abs=0.01), name
+            # no step at the portal: largest change per sample is the decay slope times the
+            # distance travelled in one sample, level * (v_max * dt) / L_p
+            assert r["max_sample_jump_m"] <= 1.05 * r["exit_level_expected_m"] * r["ds_per_sample_max_m"] \
+                / r["exit_decay_m"], name
+        else:
+            assert r["max_sample_jump_m"] == pytest.approx(r["exit_level_expected_m"], rel=2e-3)
+
+
+def test_tunnel_gradient_formula():
     s = np.array([0.0, 100.0, 600.0, 1100.0, 1200.0])
     d = tunnel_pressure_altitude(s, 100.0, 1100.0, 11.8, 11.8)       # 11.8 Pa/km -> 1 m per km
     np.testing.assert_allclose(d, [0.0, 0.0, -0.5, -1.0, 0.0])
+    d = tunnel_pressure_altitude(s, 100.0, 1100.0, 11.8, 11.8, exit_decay_m=100.0)
+    np.testing.assert_allclose(d, [0.0, 0.0, -0.5, -1.0, -np.exp(-1)])
 
 
 def test_noise_levels_and_offset():

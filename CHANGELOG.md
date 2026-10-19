@@ -46,6 +46,11 @@ Barometer (K7):
 - New metrics `sensors.baro`: grade floor per case and window (exact, Monte Carlo, closed
   form; MC within 4 % of exact, tolerance 6 %), tunnel gradient exit step (matches k_p L/ρg).
 - Tests +11.
+- Exit transition (review 2, 4.2): the tunnel-gradient term decays after the exit over
+  L_p = 200 m (50/500 m swept) instead of stepping; the step is the stress override
+  `baro_exit_step`. Metric `sensors.baro.tunnel_gradient` gains the exit level, largest
+  per-sample jump (30 Pa/km: 8.90 m step -> 0.035 m at L_p = 200 m) and decay check.
+  Nominal unaffected (gradient off). Tests +1.
 
 Versioning: `__version__` is `0.3.0.dev0` (was still `0.2.0`, so `tools/snapshot.py` would
 have overwritten `reports/0.2.0/`; found by external review 2). `snapshot.py` now refuses to

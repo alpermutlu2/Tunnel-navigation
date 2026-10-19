@@ -193,6 +193,7 @@ class BaroProfile:
     cabin_sigma_m: Param           # d_cabin, GM; 0 = off (A6 baseline)
     cabin_tau_s: Param
     tunnel_grad_pa_per_km: Param   # d_tunnel: pressure gradient along travel inside the tunnel
+    tunnel_exit_decay_m: Param     # d_tunnel after the exit: d(s_exit) exp(-(s - s_exit)/L_p); 0 = step
     rho_g_pa_per_m: Param          # pressure-altitude conversion
 
 
@@ -205,6 +206,7 @@ BARO = BaroProfile(
     cabin_sigma_m=ASSUMED(0.0, "A6 baseline: off"),
     cabin_tau_s=ASSUMED(5.0, "A6 sensitivity"),
     tunnel_grad_pa_per_km=ASSUMED(0.0, "K7: nominal off, swept; magnitude not sourced yet"),
+    tunnel_exit_decay_m=ASSUMED(200.0, "review 2, 4.2: sensitivity parameter, not validated"),
     rho_g_pa_per_m=ASSUMED(11.8, "standard air rho = 1.2 kg/m^3"),
 )
 
@@ -261,6 +263,9 @@ OVERRIDES: dict[str, dict[str, object]] = {
     "baro_cabin":        {"baro.cabin_sigma_m": ASSUMED(0.3, "A6 sensitivity")},
     "baro_tunnel_10pa":  {"baro.tunnel_grad_pa_per_km": ASSUMED(10.0, "K7 sweep, illustrative")},
     "baro_tunnel_30pa":  {"baro.tunnel_grad_pa_per_km": ASSUMED(30.0, "K7 sweep, illustrative")},
+    "baro_exit_lp_50":   {"baro.tunnel_exit_decay_m": ASSUMED(50.0, "review 2 sweep")},
+    "baro_exit_lp_500":  {"baro.tunnel_exit_decay_m": ASSUMED(500.0, "review 2 sweep")},
+    "baro_exit_step":    {"baro.tunnel_exit_decay_m": ASSUMED(0.0, "stress: step at the exit portal")},
 }
 
 
