@@ -3,6 +3,10 @@
 Usage: python tools/snapshot.py          -> reports/<version>/metrics.json (+ test summary)
        python tools/snapshot.py --diff A B  -> print changed metrics between two versions
 
+A released version's report is never overwritten unless --force is given; development
+versions (containing "dev") are overwritten freely. Release = drop ".devN" from
+tunnelsim.__version__, then snapshot.
+
 Only numbers that the version actually produces go in here. As the project grows
 (sensors, estimators, Monte Carlo) each stage adds its own section.
 """
@@ -72,8 +76,11 @@ def run_tests():
     return r.stdout.strip().splitlines()[-1], r.returncode
 
 
-def snapshot():
+def snapshot(force: bool = False):
     ver = tunnelsim.__version__
+    target = ROOT / "reports" / ver / "metrics.json"
+    if target.exists() and "dev" not in ver and not force:
+        sys.exit(f"refusing to overwrite released report {target} (use --force)")
     summary, code = run_tests()
     data = {"version": ver, "tests": summary, "tests_ok": code == 0, "truth": truth_metrics(),
             "sensors": sensor_metrics()}
@@ -102,5 +109,6 @@ def diff(a, b):
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--diff", nargs=2, metavar=("OLD", "NEW"))
+    p.add_argument("--force", action="store_true", help="overwrite a released report")
     args = p.parse_args()
-    diff(*args.diff) if args.diff else snapshot()
+    diff(*args.diff) if args.diff else snapshot(args.force)

@@ -47,6 +47,10 @@ Barometer (K7):
   form; MC within 4 % of exact, tolerance 6 %), tunnel gradient exit step (matches k_p L/ρg).
 - Tests +11.
 
+Versioning: `__version__` is `0.3.0.dev0` (was still `0.2.0`, so `tools/snapshot.py` would
+have overwritten `reports/0.2.0/`; found by external review 2). `snapshot.py` now refuses to
+overwrite a released report without `--force`. Review recorded in `docs/reviews/`.
+
 Truth (separate commit): first-order lag on body sideslip, `τ_β β̇ + β = −k_β·a_lat`,
 τ_β = 0.2 s [ASSUMED] (`Vehicle.sideslip_tau_s`; 0 reproduces v0.2).
 - Why: found by the IMU resampling test. With the algebraic model β̇ stepped at clothoid

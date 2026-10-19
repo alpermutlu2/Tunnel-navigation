@@ -123,7 +123,7 @@ Version scope (decided 2026-10-19):
 
 Principles kept across versions: sensor truth, error components and estimator inputs are strictly separate; every physical effect has a sourced or explicitly assumed parameter; nominal and stress scenarios are not mixed; weak-observability scenarios (S1, S5) are reported in every version. Evaluation criterion: not that an algorithm does better, but that we can explain mathematically and experimentally which information it uses to do better.
 
-0. **Observability analysis first** (before writing the ESKF): linearised error model during the GNSS segment and the outage; which combinations of v_x, b_ax, pitch error, mount pitch and grade error are observable, and with which manoeuvres. NHC constrains v_y, v_z and helps attitude; it gives no v_x information.
+0. **Observability analysis first** (review 2: no 15-state ESKF before it; cases: constant speed, gentle braking, changing grade, each with GNSS and after loss; plus the all-error-terms Monte Carlo distribution of along-track error over a 3 min outage) (before writing the ESKF): linearised error model during the GNSS segment and the outage; which combinations of v_x, b_ax, pitch error, mount pitch and grade error are observable, and with which manoeuvres. NHC constrains v_y, v_z and helps attitude; it gives no v_x information.
 1. **Reference algorithms:** (a) hold last GNSS speed, (b) raw accel integration, (c) oracle with true speed (upper bound, isolates map/geometry error).
 2. **ESKF + NHC:** calibrate biases and mount while GNSS is good; in tunnel, vehicle-constrained INS.
 3. **+ ZUPT:** detect stops in traffic, reset speed error.
