@@ -93,7 +93,9 @@ def strapdown(t, f, w, init: InsInit, cal: ImuCalibration = ImuCalibration(),
     gyro integration (ideal-attitude experiments) and w is ignored.
     """
     t, f, w = _batch(t, 1), _batch(f, 2), _batch(w, 2)
-    B, N = t.shape
+    B, N = max(t.shape[0], f.shape[0]), t.shape[1]
+    t = np.broadcast_to(t, (B, N))                 # a shared time axis is allowed
+    w = np.broadcast_to(w, (B, N, 3))
     f = _apply_cal(f, cal.accel_bias, cal.accel_matrix)
     w = _apply_cal(w, cal.gyro_bias, cal.gyro_matrix)
     p = np.broadcast_to(_batch(init.p_n, 1), (B, 3)).copy()

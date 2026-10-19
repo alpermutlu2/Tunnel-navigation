@@ -86,6 +86,13 @@ def ins_metrics():
             "variable_dt": N.variable_dt_report()}
 
 
+def budget_metrics():
+    """v0.4 step 3: fixed 180 s INS-only budget (200 seeds, development) + analytic check."""
+    import test_budget as Bt
+    from tunnelsim.budget import budget_report
+    return {"analytic_check_s1": Bt.analytic_check_report(), **budget_report(200)}
+
+
 def run_tests():
     r = subprocess.run([sys.executable, "-m", "pytest", "-q", "--runslow", str(ROOT / "tests")],
                        capture_output=True, text=True, cwd=ROOT)
@@ -99,7 +106,7 @@ def snapshot(force: bool = False):
         sys.exit(f"refusing to overwrite released report {target} (use --force)")
     summary, code = run_tests()
     data = {"version": ver, "tests": summary, "tests_ok": code == 0, "truth": truth_metrics(),
-            "sensors": sensor_metrics(), "ins": ins_metrics()}
+            "sensors": sensor_metrics(), "ins": ins_metrics(), "budget": budget_metrics()}
     d = ROOT / "reports" / ver
     d.mkdir(parents=True, exist_ok=True)
     (d / "metrics.json").write_text(json.dumps(data, indent=2) + "\n")
