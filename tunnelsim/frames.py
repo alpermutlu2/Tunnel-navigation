@@ -88,3 +88,25 @@ def mount_rotation(roll_deg: float, pitch_deg: float, yaw_deg: float) -> np.ndar
     r, p, y = np.deg2rad([roll_deg, pitch_deg, yaw_deg])
     C_off = rot_z(y) @ rot_y(-p) @ rot_x(r)
     return C_off @ C_BP_NOMINAL
+
+
+def so3_log(C):
+    """Rotation vector phi with so3_exp(phi) = C (angle in [0, pi))."""
+    C = np.asarray(C, dtype=float)
+    c = np.clip(0.5 * (np.trace(C) - 1.0), -1.0, 1.0)
+    ang = np.arccos(c)
+    w = np.array([C[2, 1] - C[1, 2], C[0, 2] - C[2, 0], C[1, 0] - C[0, 1]])
+    if ang < 1e-8:
+        return 0.5 * w
+    return ang / (2.0 * np.sin(ang)) * w
+
+
+def attitude_error_n(C_hat_np, C_np):
+    """Attitude error, estimate - truth, as a nav-frame rotation vector (docs/contracts.md 5):
+
+        C_hat_np = Exp([dtheta_n]x) C_np,   dtheta_n = Log(C_hat_np C_np^T)
+
+    A positive component is a positive (right-hand) rotation of the estimate about that nav
+    axis relative to the truth. Note FLU pitch: a positive rotation about +y is nose DOWN.
+    """
+    return so3_log(np.asarray(C_hat_np) @ np.asarray(C_np).T)

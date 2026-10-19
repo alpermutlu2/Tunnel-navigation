@@ -13,6 +13,10 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   coordinate and measurement contracts `docs/contracts.md`. DESIGN 4 corrected: forward axis
   is phone −z (constant BI-sized accel bias ~26 m, was ~10 m), pitch axis phone −x (~0.84 km,
   was ~1.4 km). No code change yet.
+- Contracts revised after review 4: attitude error `Ĉ = Exp([δθ]×)C` (estimate − truth),
+  FLU pitch-direction trap documented, C_nb chain, independent mount/lever-arm oracle flags,
+  calibration epoch, timing concepts, signed/abs metrics, 8-state contract.
+  `frames.so3_log`, `frames.attitude_error_n` + `tests/test_frames.py` (16 sign tests).
 
 ## v0.3.0 (2026-10-19): sensor simulation
 
