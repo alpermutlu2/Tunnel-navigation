@@ -43,8 +43,25 @@ def truth_metrics():
     return out
 
 
+def sensor_metrics():
+    """Sensor-level verification (v0.3): every metric carries target, achieved, tolerance."""
+    import test_sensors_imu as I
+    from tunnelsim.profiles import NOMINAL, param_table
+    return {
+        "imu": {
+            "params_nominal": {**param_table(NOMINAL.imu, "imu."), **param_table(NOMINAL.vib, "vib."),
+                               **param_table(NOMINAL.timing, "timing.")},
+            "bi_analytic_fit": I.bi_fit_report(),
+            "allan_24h": I.allan_static_report(),
+            "interpolation": I.interpolation_report(),
+            "timestamps": I.timestamp_report(),
+            "vibration": I.vibration_report(),
+        }
+    }
+
+
 def run_tests():
-    r = subprocess.run([sys.executable, "-m", "pytest", "-q", str(ROOT / "tests")],
+    r = subprocess.run([sys.executable, "-m", "pytest", "-q", "--runslow", str(ROOT / "tests")],
                        capture_output=True, text=True, cwd=ROOT)
     return r.stdout.strip().splitlines()[-1], r.returncode
 
@@ -52,7 +69,8 @@ def run_tests():
 def snapshot():
     ver = tunnelsim.__version__
     summary, code = run_tests()
-    data = {"version": ver, "tests": summary, "tests_ok": code == 0, "truth": truth_metrics()}
+    data = {"version": ver, "tests": summary, "tests_ok": code == 0, "truth": truth_metrics(),
+            "sensors": sensor_metrics()}
     d = ROOT / "reports" / ver
     d.mkdir(parents=True, exist_ok=True)
     (d / "metrics.json").write_text(json.dumps(data, indent=2) + "\n")

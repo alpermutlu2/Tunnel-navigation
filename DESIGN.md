@@ -62,7 +62,7 @@ Vibration is a real specific force / rate, so it passes through the sensor scale
 
 | Term | Model | Values |
 |---|---|---|
-| Bias instability (K1, R2, R3) | Baseline: sum of 3 first-order GM, τ = 5, 50, 500 s [ASSUMED, derived from the target range], weights by NNLS so that white + GM matches `AVAR_target(T) = N²/T + (2ln2/π)B²` over 10–1000 s [ASSUMED range]. Reference: single GM, τ = 300 s, σ = 1.075·B | N, B [MEAS]. Averaging time of B not given in the paper (unknown). Verification: analytic ±10 % over 10–1000 s; one 24 h run ±10 % for T ≤ 300 s, 3σ scatter beyond |
+| Bias instability (K1, R2, R3) | Baseline: sum of 3 first-order GM, τ = 5, 50, 500 s [ASSUMED, derived from the target range], weights by NNLS so that white + GM matches `AVAR_target(T) = N²/T + (2ln2/π)B²` over 10–1000 s [ASSUMED range]. Reference: single GM, τ = 300 s, σ = 1.075·B | N, B [MEAS]. Averaging time of B not given in the paper (unknown). Verification: analytic ±10 % over 10–1000 s; one 24 h run (fixed seed) within max(10 %, 3σ(T)) of the model, σ(T) = measured run-to-run scatter (`tools/allan_scatter.py`) |
 | Turn-on bias (K2) | Constant per run. Stream: `TYPE_GYROSCOPE_UNCALIBRATED`; Android's bias estimate not used | Accel 10 mg [SPEC, LA_TyOff]. Gyro nominal 0.05 °/s [ASSUMED], sweep 0.2, 1 °/s; ±1 dps [SPEC] is an upper bound only |
 | Temperature (K3 → R4) | **Not modelled.** IMU assumed calibrated incl. temperature; residual bias estimated by the filter before the tunnel; in-tunnel temperature change neglected (not observable there) | Known limitation, size with earlier assumptions: ~9.6e-4 m/s² accel, ~8.5e-5 rad/s gyro bias change over 3 min, same order as BI. SPEC coefficients 0.1 mg/°C, 0.005 dps/°C kept for reference |
 | Scale / misalignment (K4) | Sensor misalignment (MEMS → phone) is a separate matrix from the mount rotation (vehicle → phone) | Gyro scale 0.3 % [ASSUMED], ±1 % [SPEC] bound; accel scale 3e-3 [ASSUMED]. Curve-matching heading budget ε_ψ ≈ s_g·Δψ |
@@ -208,6 +208,8 @@ Measured effects (truth, no sensor errors):
 On a steady R = 400 m curve at 80 km/h, sideslip leaks lateral acceleration into the forward axis: ~1.1 mg. That is larger than the accel bias instability (~70 µg), so a filter that ignores sideslip mis-reads curves as along-track acceleration.
 
 Still not modelled: flat earth, earth rotation (also neglected in the filter), body roll, road-roughness heave (sensor vibration instead), tyre longitudinal slip. Sensor side (section 3): IMU temperature drift (R4), vibration rectification error.
+
+Open (2026-10-19, found by the IMU resampling test): the linear sideslip model has no tyre lag, so β̇ steps at clothoid ends and the angular acceleration is an impulse (height grows with sample rate, area r·Δω ≈ 4 mm/s at the phone). Resampling at jittered instants leaves ~1 mm/s velocity-level error per joint in S2. Options: first-order lag on β (tyre relaxation), smoothed clothoid joints, or accept and document.
 
 Verification (`tests/test_truth.py`, 36 tests):
 - Internal consistency: strapdown of the ideal phone IMU reproduces the phone trajectory within 0.13 cm on S1 to S5 and 1.9 cm on the mixed manoeuvre. Mutation checks show the test is sensitive: dropping the lever-arm acceleration gives 1.6 m error, dropping β̇ gives 8.4 m.
