@@ -209,10 +209,14 @@ On a steady R = 400 m curve at 80 km/h, sideslip leaks lateral acceleration into
 
 Still not modelled: flat earth, earth rotation (also neglected in the filter), body roll, road-roughness heave (sensor vibration instead), tyre longitudinal slip. Sensor side (section 3): IMU temperature drift (R4), vibration rectification error.
 
-Open (2026-10-19, found by the IMU resampling test): the linear sideslip model has no tyre lag, so β̇ steps at clothoid ends and the angular acceleration is an impulse (height grows with sample rate, area r·Δω ≈ 4 mm/s at the phone). Resampling at jittered instants leaves ~1 mm/s velocity-level error per joint in S2. Options: first-order lag on β (tyre relaxation), smoothed clothoid joints, or accept and document.
+Revision 2026-10-19 (v0.3, found by the IMU resampling test): the algebraic sideslip `β = −k_β·a_lat` made β̇ step at clothoid ends (κ̇ steps), so the truth angular acceleration was an impulse whose height grew with the sample rate (0.18 / 0.38 / 0.77 m/s² at 100 / 200 / 400 Hz) while its area stayed r·Δω ≈ 4 mm/s. A real car does not do this (yaw/sideslip dynamics, tyre relaxation). Fix: first-order lag `τ_β β̇ + β = −k_β·a_lat`, τ_β = 0.2 s [ASSUMED], exact first-order-hold discretisation with β̇ taken from the ODE (not differenced), so attitude and rate stay consistent; τ_β = 0 reproduces v0.2. Effects:
+- Resampling error at velocity level, S2: ~1 mm/s per joint → 3e-5 m/s over the run.
+- Strapdown consistency: S2 1.3 mm → 0.03 mm, MIX 1.9 cm → 0.17 mm (the v0.2 residuals came from the same impulse).
+- Sideslip and NHC metrics barely move (MIX max β 0.751° → 0.748°, lateral NHC violation 0.106 → 0.108 m/s).
+- Mutation check re-measured: dropping β̇ still gives 8.3 m on MIX (was 8.4 m).
 
 Verification (`tests/test_truth.py`, 36 tests):
-- Internal consistency: strapdown of the ideal phone IMU reproduces the phone trajectory within 0.13 cm on S1 to S5 and 1.9 cm on the mixed manoeuvre. Mutation checks show the test is sensitive: dropping the lever-arm acceleration gives 1.6 m error, dropping β̇ gives 8.4 m.
+- Internal consistency: strapdown of the ideal phone IMU reproduces the phone trajectory within 0.13 cm on S1 to S5 and 1.9 cm on the mixed manoeuvre (v0.2; with the sideslip lag of v0.3: ≤ 0.13 cm on S1 to S5, 0.017 cm on MIX). Mutation checks show the test is sensitive: dropping the lever-arm acceleration gives 1.6 m error, dropping β̇ gives 8.4 m.
 - Independent references: centreline vs closed-form circle and Fresnel clothoid (< 1 mm), altitude vs adaptive quadrature (< 1 mm), centreline vs adaptive RK (rtol 1e-10). **Centreline discretisation error reported separately: 0.05 mm (S2), 0.006 mm (S3), 0.07 mm (MIX)**, so it cannot be confused with navigation error.
 - Boundaries and events: start state, end of road, monotonic s, each ramp starts within one sample of its trigger point, no acceleration steps.
 - Lesson recorded: with a piecewise-linear grade, even ideal strapdown drifted 7 m on S3, from pitch-rate steps at grade breakpoints leaking gravity. Same mechanism as section 4, at a smaller scale.
@@ -261,4 +265,5 @@ Barometer as along-track measurement: `z = h_map(s) + b_h + n`, `∂h/∂s = sin
 - 2026-10-17: Sensor profile parameters beyond Allan terms are marked [ASSUMED] in `tunnelsim/profiles.py`.
 - 2026-10-19: External review applied. Truth adds sideslip, lever arm, event-timing fix; 36 tests incl. independent geometry references and mutation checks. Grade profile no longer assumed in the map (A3). Estimator/truth separation policy (7.2). Observability analysis, reference algorithms incl. oracle, NEES/NIS added to the plan.
 - 2026-10-19: v0.3 sensor decisions K1 to K9 accepted (`docs/decisions/2026-10-19-v0.3-sensors.md`). Three tags [MEAS]/[SPEC]/[ASSUMED]; no real data collected, unsourced parameters swept; nominal vs named sensitivity overrides; per-term RNG streams; version scope v0.3 to v0.8 (section 5). From now on every decision and review is committed; the repository is the only sync channel between sessions.
+- 2026-10-19: Truth: first-order lag on sideslip, τ_β = 0.2 s [ASSUMED] (option (a) over smoothing clothoid joints or accepting the artifact): the algebraic model put a rate-dependent impulse into the truth angular acceleration (7.1).
 - 2026-10-19: IMU structure review (R1 to R4): vibration before sensor errors; Allan target = paper's parametric AVAR over 10–1000 s with τ = 5, 50, 500 s; verification analytic + one 24 h run; IMU temperature drift not modelled (calibration assumed, not observable in tunnel).

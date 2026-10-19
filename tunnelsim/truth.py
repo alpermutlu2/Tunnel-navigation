@@ -13,7 +13,8 @@ gamma' = dgamma/ds:
 Attitude chain, nav <- road <- (sideslip yaw) <- (suspension pitch) = body:
 
     C_nb = Rz(psi) Ry(-gamma) . Rz(-beta) . Ry(-theta_d)
-    beta    = -k_beta * a_lat,   a_lat = v^2 kappa      (beta: angle from body x to velocity)
+    tau_b beta_dot + beta = -k_beta a_lat,   a_lat = v^2 kappa   (beta: body x to velocity;
+                                                 first-order lag, exact FOH discretisation)
     theta_d =  K * a
 
 Body angular rate (A = Rz(-beta), B = Ry(-theta_d)):
@@ -134,6 +135,22 @@ def simulate_speed(sc: Scenario, dt: float, t_max: float = 3600.0):
 
 # --------------------------------------------------------------------------- truth
 
+def _first_order_lag(u, dt, tau):
+    """Exact solution of tau x' + x = u for u linear between samples (first-order hold).
+
+    x(h) = u1 - s tau + (x0 - u0 + s tau) e^(-h/tau),  s = (u1 - u0)/h.
+    Returns x and x' = (u - x)/tau at the samples; x' is the exact derivative of the
+    continuous solution, so attitude and angular rate stay consistent. Starts in steady state.
+    """
+    e = np.exp(-dt / tau)
+    x = np.empty_like(u)
+    x[0] = u[0]
+    for k in range(len(u) - 1):
+        s_tau = (u[k + 1] - u[k]) / dt * tau
+        x[k + 1] = u[k + 1] - s_tau + (x[k] - u[k] + s_tau) * e
+    return x, (u - x) / tau
+
+
 def _cross(a, b):
     return np.cross(a, b)
 
@@ -162,8 +179,12 @@ def generate_truth(sc: Scenario, rate_hz: float = 100.0) -> Truth:
     # attitude
     a_lat = v**2 * kap
     a_lat_dot = 2 * v * a * kap + v**3 * kap_s
-    beta = -veh.sideslip_gain_rad_per_mps2 * a_lat
-    beta_dot = -veh.sideslip_gain_rad_per_mps2 * a_lat_dot
+    beta_ss = -veh.sideslip_gain_rad_per_mps2 * a_lat
+    if veh.sideslip_tau_s > 0.0:
+        beta, beta_dot = _first_order_lag(beta_ss, dt, veh.sideslip_tau_s)
+    else:
+        beta = beta_ss
+        beta_dot = -veh.sideslip_gain_rad_per_mps2 * a_lat_dot
     theta_d = veh.pitch_gain_rad_per_mps2 * a
     theta_d_dot = veh.pitch_gain_rad_per_mps2 * jerk
 

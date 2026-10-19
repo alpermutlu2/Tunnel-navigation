@@ -155,8 +155,11 @@ class Vehicle:
 
     Effects that make the truth violate the filter's ideal assumptions on purpose:
       * suspension pitch      theta_d = K * a                    (squat / dive)
-      * body sideslip         beta = -k_beta * a_lat             (velocity vs body x at rear axle,
-                                                                  linear bicycle model, rear tyre slip)
+      * body sideslip         tau_b beta_dot + beta = -k_beta * a_lat
+                                                                 (velocity vs body x at rear axle,
+                                                                  linear bicycle model, rear tyre slip;
+                                                                  first-order lag so beta_dot stays
+                                                                  continuous at clothoid ends)
       * phone lever arm       r_b from the reference point       (rotation-induced velocity and
                                                                   acceleration at the phone)
     Not modelled (stated in DESIGN.md): body roll, road roughness heave (handled as sensor
@@ -164,6 +167,8 @@ class Vehicle:
     """
     pitch_gain_rad_per_mps2: float = np.deg2rad(1.5) / 9.80665    # [ASSUMED] ~1.5 deg per g
     sideslip_gain_rad_per_mps2: float = np.deg2rad(0.4)           # [ASSUMED] ~0.5 deg at 0.12 g
+    sideslip_tau_s: float = 0.2                                   # [ASSUMED] yaw/sideslip + tyre lag;
+                                                                  # 0 = algebraic (v0.2 behaviour)
     lever_arm_b: tuple[float, float, float] = (1.6, 0.15, 0.7)    # [ASSUMED] dashboard mount, m
     mount_rpy_deg: tuple[float, float, float] = (1.0, 12.0, 3.0)  # [ASSUMED] phone mount offset
 

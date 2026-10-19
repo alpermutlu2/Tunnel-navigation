@@ -26,7 +26,7 @@ IMU (this commit; barometer and GNSS follow):
   Each term has its own RNG stream keyed by a fixed id; switching a term off or dropping
   samples does not change other terms (tested).
 - `tools/allan_scatter.py`: run-to-run OADEV scatter, the source of the 24 h tolerances.
-- Tests 36 -> 65 (+1 slow, run by `--runslow` and by `tools/snapshot.py`).
+- Tests 36 -> 65 (1 of them slow, run by `--runslow` and by `tools/snapshot.py`).
 
 New metrics (`sensors.imu` in metrics.json, each with target, achieved, tolerance):
 - Analytic fit, worst axis 1.7 % (tolerance 10 %). gm1 reference reported against the same
@@ -37,12 +37,20 @@ New metrics (`sensors.imu` in metrics.json, each with target, achieved, toleranc
   < 5e-6 m/s; a 1 % timestamp scale error gives 23.7 m/s, as predicted (ε·∫f dt).
 - Vibration rms within 2 % of the profile.
 
-Open (truth, needs a decision): in S2 the linear sideslip model gives a step in β̇ at each
-clothoid end, so the truth angular acceleration (np.gradient) is an impulse whose height
-grows with the sample rate (0.18 / 0.38 / 0.77 m/s² at 100 / 200 / 400 Hz) while its area
-stays r·Δω ≈ 4 mm/s. Resampling the truth at jittered instants then leaves ~1 mm/s
-velocity-level error per joint (S1, S3 to S5: < 2e-5 m/s). Marked as a strict xfail in
-`test_interpolation_error_negligible[S2]`. Truth metrics unchanged.
+Truth (separate commit): first-order lag on body sideslip, `τ_β β̇ + β = −k_β·a_lat`,
+τ_β = 0.2 s [ASSUMED] (`Vehicle.sideslip_tau_s`; 0 reproduces v0.2).
+- Why: found by the IMU resampling test. With the algebraic model β̇ stepped at clothoid
+  ends, so the truth angular acceleration (np.gradient) was an impulse whose height grew with
+  the sample rate (0.18 / 0.38 / 0.77 m/s² at 100 / 200 / 400 Hz), area r·Δω ≈ 4 mm/s.
+  Resampling at jittered instants left ~1 mm/s velocity-level error per joint in S2. Not
+  physical: a real car's sideslip settles with a lag.
+- Metrics that moved (vs 0.2.0), all from this change:
+  - `truth.S2.strapdown_max_err_m` 1.312e-3 -> 3.12e-5 and `truth.MIX.strapdown_max_err_m`
+    1.851e-2 -> 1.72e-4: the v0.2 strapdown residuals came from the same impulse.
+  - `truth.MIX.sideslip_max_deg` 0.751 -> 0.748, `truth.MIX.nhc_lat_vel_max_mps`
+    0.1063 -> 0.1078, `truth.S2.nhc_lat_vel_max_mps` 0.1062 -> 0.1061: β now lags a_lat.
+- S2 velocity-level resampling error 9.8e-4 -> 3.0e-5 m/s; the S2 xfail is removed.
+- Mutation check re-measured: dropping β̇ still gives 8.3 m on MIX (v0.2: 8.4 m).
 
 ## v0.2.0 (2026-10-19): truth generator after external review
 

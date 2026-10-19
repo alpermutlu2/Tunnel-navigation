@@ -106,10 +106,9 @@ def interpolation_report() -> dict:
     are NOT compared: speed events trigger on the sample grid, so they differ by up to one
     sample in event time (S4: 114.000 s vs 114.005 s), which is not an interpolation error.
 
-    The pass/fail metric is velocity-level (integral of f over the run), because the truth has
-    angular-rate steps at clothoid ends (S2: beta_dot steps, so w_dot from np.gradient is an
-    impulse whose height grows with the rate while its area r*dw stays ~4 mm/s). The pointwise
-    maximum is reported for information.
+    The pass/fail metric is velocity-level (integral of f over the run); the pointwise maximum is
+    reported for information. Before the sideslip lag (v0.3), beta_dot stepped at clothoid ends
+    and S2 failed this test with ~1 mm/s per joint.
     """
     out = {}
     for key in ("S1", "S2", "S3", "S4", "S5"):
@@ -316,11 +315,7 @@ def test_timestamps_monotonic_and_gaps():
 INTERP_LIMIT_MPS = 0.1 * float(NOTE10_LSM6DSR.accel_vrw.a.min())     # 10 % of VRW over 1 s
 
 
-@pytest.mark.parametrize("key", [
-    "S1", pytest.param("S2", marks=pytest.mark.xfail(strict=True, reason=(
-        "truth: beta_dot steps at clothoid ends -> angular-acceleration impulse; ~1 mm/s "
-        "velocity-level resampling error per joint. Open truth decision, see CHANGELOG"))),
-    "S3", "S4", "S5"])
+@pytest.mark.parametrize("key", ["S1", "S2", "S3", "S4", "S5"])
 def test_interpolation_error_negligible(key):
     """Velocity-level interpolation error over the whole run < 10 % of VRW over 1 s."""
     r = interpolation_report_cached()[key]
