@@ -54,16 +54,17 @@ Secondary "low-end" profile: **InvenSense TDK MPU9250**, same paper, same method
 
 Rate: 100 Hz. Model per phone axis:
 ```
-f̃ = (I + S_a + M_a) f_p + b_a,on + b_a,BI(t) + b_a,T(t) + n_a + vib_a
-ω̃ = (I + S_g + M_g) ω_p + b_g,on + b_g,BI(t) + b_g,T(t) + n_g + vib_g
+f̃ = (I + S_a + M_a)(f_p + vib_a) + b_a,on + b_a,BI(t) + n_a
+ω̃ = (I + S_g + M_g)(ω_p + vib_g) + b_g,on + b_g,BI(t) + n_g
 n ~ N(0, N²/Δt)
 ```
+Vibration is a real specific force / rate, so it passes through the sensor scale and misalignment errors (R1).
 
 | Term | Model | Values |
 |---|---|---|
-| Bias instability (K1) | Baseline: sum of 3 first-order GM, τ = 30, 300, 3000 s [ASSUMED], weights fitted to OADEV. Reference: single GM, τ = 300 s, σ = 1.075·B | Suvorkin floor σ_A ≈ 0.664·B (from σ_A² = 2B²ln2/π); GM Allan peak 0.617·σ at T = 1.89τ. Averaging time of B not given in the paper (unknown) |
+| Bias instability (K1, R2, R3) | Baseline: sum of 3 first-order GM, τ = 5, 50, 500 s [ASSUMED, derived from the target range], weights by NNLS so that white + GM matches `AVAR_target(T) = N²/T + (2ln2/π)B²` over 10–1000 s [ASSUMED range]. Reference: single GM, τ = 300 s, σ = 1.075·B | N, B [MEAS]. Averaging time of B not given in the paper (unknown). Verification: analytic ±10 % over 10–1000 s; one 24 h run ±10 % for T ≤ 300 s, 3σ scatter beyond |
 | Turn-on bias (K2) | Constant per run. Stream: `TYPE_GYROSCOPE_UNCALIBRATED`; Android's bias estimate not used | Accel 10 mg [SPEC, LA_TyOff]. Gyro nominal 0.05 °/s [ASSUMED], sweep 0.2, 1 °/s; ±1 dps [SPEC] is an upper bound only |
-| Temperature (K3) | T(t) = T₀ + ΔT∞(1 − e^(−t/τ_th)), b_T = k_T(T − T₀) | ΔT∞ = 15 °C, τ_th = 15 min [ASSUMED]; entry at min 5 and min 20. k_T nominal 0.5 × SPEC [ASSUMED], sweep 0 and 1 × SPEC; SPEC = 0.1 mg/°C, 0.005 dps/°C (upper bound, stream may be compensated) |
+| Temperature (K3 → R4) | **Not modelled.** IMU assumed calibrated incl. temperature; residual bias estimated by the filter before the tunnel; in-tunnel temperature change neglected (not observable there) | Known limitation, size with earlier assumptions: ~9.6e-4 m/s² accel, ~8.5e-5 rad/s gyro bias change over 3 min, same order as BI. SPEC coefficients 0.1 mg/°C, 0.005 dps/°C kept for reference |
 | Scale / misalignment (K4) | Sensor misalignment (MEMS → phone) is a separate matrix from the mount rotation (vehicle → phone) | Gyro scale 0.3 % [ASSUMED], ±1 % [SPEC] bound; accel scale 3e-3 [ASSUMED]. Curve-matching heading budget ε_ψ ≈ s_g·Δψ |
 | Vibration (K5) | Generated at 100 Hz. Road: broadband ≈ 2–30 Hz, scaled with speed. Engine: narrow band ≈ 25 Hz at idle. No wheel tone (5.2) | [ASSUMED], two levels "calm" / "noisy". 1 kHz + LPF + decimation is an optional sensitivity test. **Out of scope:** vibration rectification error (VRE) |
 | Timestamps (K6) | Timestamps carry the true measurement time. Scenarios: (1) sample-rate offset ±1–2 %, timestamps correct → no effect expected; (2) timestamp scale error → accumulating error; (3) estimator uses nominal dt → v0.4 | White jitter 0.5 ms, occasional gaps [ASSUMED]. IMU–GNSS time offset nominal 0, sweep 0–200 ms. "1 % rate error → 45 m (25 m/s, 180 s)" holds only for (2) and (3) |
@@ -206,7 +207,7 @@ Measured effects (truth, no sensor errors):
 
 On a steady R = 400 m curve at 80 km/h, sideslip leaks lateral acceleration into the forward axis: ~1.1 mg. That is larger than the accel bias instability (~70 µg), so a filter that ignores sideslip mis-reads curves as along-track acceleration.
 
-Still not modelled: flat earth, earth rotation (also neglected in the filter), body roll, road-roughness heave (sensor vibration instead), tyre longitudinal slip.
+Still not modelled: flat earth, earth rotation (also neglected in the filter), body roll, road-roughness heave (sensor vibration instead), tyre longitudinal slip. Sensor side (section 3): IMU temperature drift (R4), vibration rectification error.
 
 Verification (`tests/test_truth.py`, 36 tests):
 - Internal consistency: strapdown of the ideal phone IMU reproduces the phone trajectory within 0.13 cm on S1 to S5 and 1.9 cm on the mixed manoeuvre. Mutation checks show the test is sensitive: dropping the lever-arm acceleration gives 1.6 m error, dropping β̇ gives 8.4 m.
@@ -258,3 +259,4 @@ Barometer as along-track measurement: `z = h_map(s) + b_h + n`, `∂h/∂s = sin
 - 2026-10-17: Sensor profile parameters beyond Allan terms are marked [ASSUMED] in `tunnelsim/profiles.py`.
 - 2026-10-19: External review applied. Truth adds sideslip, lever arm, event-timing fix; 36 tests incl. independent geometry references and mutation checks. Grade profile no longer assumed in the map (A3). Estimator/truth separation policy (7.2). Observability analysis, reference algorithms incl. oracle, NEES/NIS added to the plan.
 - 2026-10-19: v0.3 sensor decisions K1 to K9 accepted (`docs/decisions/2026-10-19-v0.3-sensors.md`). Three tags [MEAS]/[SPEC]/[ASSUMED]; no real data collected, unsourced parameters swept; nominal vs named sensitivity overrides; per-term RNG streams; version scope v0.3 to v0.8 (section 5). From now on every decision and review is committed; the repository is the only sync channel between sessions.
+- 2026-10-19: IMU structure review (R1 to R4): vibration before sensor errors; Allan target = paper's parametric AVAR over 10–1000 s with τ = 5, 50, 500 s; verification analytic + one 24 h run; IMU temperature drift not modelled (calibration assumed, not observable in tunnel).
