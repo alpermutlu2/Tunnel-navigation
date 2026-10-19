@@ -1,0 +1,58 @@
+{
+  "version": "0.2.0",
+  "tests": "36 passed in 8.93s",
+  "tests_ok": true,
+  "truth": {
+    "S1": {
+      "duration_s": 238.46,
+      "time_in_tunnel_s": 135.0,
+      "strapdown_max_err_m": 5.06e-11,
+      "nhc_lat_vel_max_mps": 0.0,
+      "nhc_up_vel_max_mps": 0.0,
+      "sideslip_max_deg": 0.0
+    },
+    "S2": {
+      "duration_s": 215.96,
+      "time_in_tunnel_s": 112.5,
+      "strapdown_max_err_m": 0.001312,
+      "nhc_lat_vel_max_mps": 0.1062,
+      "nhc_up_vel_max_mps": 0.0,
+      "sideslip_max_deg": 0.494,
+      "centreline_discretisation_m": 5.148e-05
+    },
+    "S3": {
+      "duration_s": 298.24,
+      "time_in_tunnel_s": 180.0,
+      "strapdown_max_err_m": 4.775e-06,
+      "nhc_lat_vel_max_mps": 0.0,
+      "nhc_up_vel_max_mps": 0.0146,
+      "sideslip_max_deg": 0.0,
+      "centreline_discretisation_m": 5.948e-06
+    },
+    "S4": {
+      "duration_s": 475.32,
+      "time_in_tunnel_s": 337.38,
+      "strapdown_max_err_m": 0.001327,
+      "nhc_lat_vel_max_mps": 0.0,
+      "nhc_up_vel_max_mps": 0.1068,
+      "sideslip_max_deg": 0.0
+    },
+    "S5": {
+      "duration_s": 241.87,
+      "time_in_tunnel_s": 143.52,
+      "strapdown_max_err_m": 0.000495,
+      "nhc_lat_vel_max_mps": 0.0,
+      "nhc_up_vel_max_mps": 0.1651,
+      "sideslip_max_deg": 0.0
+    },
+    "MIX": {
+      "duration_s": 66.24,
+      "time_in_tunnel_s": 51.63,
+      "strapdown_max_err_m": 0.01851,
+      "nhc_lat_vel_max_mps": 0.1063,
+      "nhc_up_vel_max_mps": 0.1255,
+      "sideslip_max_deg": 0.751,
+      "centreline_discretisation_m": 7.185e-05
+    }
+  }
+}
