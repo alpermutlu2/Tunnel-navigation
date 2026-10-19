@@ -227,85 +227,113 @@ def _straight_road(total: float, s_entry: float, tunnel_len: float, grade_pct: f
     )
 
 
+APPROACH_S = 200.0      # [ASSUMED] GNSS time before every portal (v0.4 plan 4: 180 s window + margin)
+AFTER_PORTAL_S = 220.0  # [ASSUMED] road after the portal covers >= 220 s at entry speed (180 s budget)
+LEAD_OUT_MIN = 800.0    # minimum road after the tunnel exit (recovery)
+
+
+def _approach(v0: float) -> float:
+    return APPROACH_S * v0
+
+
+def _lead_out(v0: float, tunnel_len: float) -> float:
+    return max(LEAD_OUT_MIN, AFTER_PORTAL_S * v0 - tunnel_len)
+
+
 def build_scenarios() -> dict[str, Scenario]:
-    """Scenario catalogue (DESIGN.md section 6). Lead-in before the tunnel gives the
-    filter time to calibrate on GNSS; lead-out lets us watch the recovery."""
+    """Scenario catalogue (DESIGN.md section 6).
+
+    Approach: 200 s of driving at entry speed before the portal (GNSS calibration windows up to
+    180 s). Lead-out: at least 800 m after the exit and enough road for 220 s after the portal
+    (fixed 180 s INS budget). All positions inside a scenario are given relative to its portal
+    s_e, so the tunnel geometry and speed events are the same as in v0.3; only the approach and
+    lead-out lengths changed (v0.4).
+    """
     out: dict[str, Scenario] = {}
 
     # S1: straight, no grade, no curves, constant speed. Hardest case: no map features.
-    L_t = 3000.0
+    v0, L_t = kmh(80), 3000.0
+    s_e = _approach(v0)
     out["S1"] = Scenario(
         key="S1",
         title="Straight, flat, constant speed",
         description="3 km straight tunnel, 0 % grade, 80 km/h constant. No map features.",
-        road=_straight_road(1500 + L_t + 800, 1500.0, L_t, 0.0,
-                            exits=[Exit(1500 + 2200, "Exit A")]),
-        speed=SpeedProfile(v0=kmh(80)),
+        road=_straight_road(s_e + L_t + _lead_out(v0, L_t), s_e, L_t, 0.0,
+                            exits=[Exit(s_e + 2200, "Exit A")]),
+        speed=SpeedProfile(v0=v0),
     )
 
     # S2: curved tunnel (S-bend with clothoid transitions).
-    R = 400.0
+    R, v0, L_t = 400.0, kmh(80), 2500.0
+    s_e = _approach(v0)
     hs = [
-        HSeg(1500),                       # approach (tunnel entry at 1500)
+        HSeg(s_e),                        # approach
         HSeg(500),                        # straight inside
         HSeg(80, 0.0, 1 / R), HSeg(350, 1 / R), HSeg(80, 1 / R, 0.0),
         HSeg(400),
         HSeg(80, 0.0, -1 / R), HSeg(350, -1 / R), HSeg(80, -1 / R, 0.0),
-        HSeg(580),                        # straight to tunnel exit at 1500+2500=4000
-        HSeg(800),                        # lead-out
+        HSeg(580),                        # straight to the tunnel exit at s_e + 2500
+        HSeg(_lead_out(v0, L_t)),         # lead-out
     ]
     out["S2"] = Scenario(
         key="S2",
         title="Curved tunnel",
         description="2.5 km tunnel with an S-bend (R = 400 m), 80 km/h constant.",
-        road=Road(hsegs=hs, grade_points=[(0.0, 0.0)], tunnel=Tunnel(1500.0, 4000.0),
-                  exits=[Exit(3300.0, "Exit A")]),
-        speed=SpeedProfile(v0=kmh(80)),
+        road=Road(hsegs=hs, grade_points=[(0.0, 0.0)], tunnel=Tunnel(s_e, s_e + L_t),
+                  exits=[Exit(s_e + 1800.0, "Exit A")]),
+        speed=SpeedProfile(v0=v0),
     )
 
     # S3: V-profile (undersea type): -5 % down, flat bottom, +5 % up.
+    v0, L_t = kmh(70), 3500.0
+    s_e = _approach(v0)
+    g = [(-100.0, 0.0), (100.0, -5.0), (1100.0, -5.0), (1300.0, 0.0),
+         (2100.0, 0.0), (2300.0, 5.0), (3300.0, 5.0), (3500.0, 0.0)]
     out["S3"] = Scenario(
         key="S3",
         title="V-profile tunnel",
         description="3.5 km undersea-type tunnel: -5 % descent, flat bottom, +5 % climb.",
         road=Road(
-            hsegs=[HSeg(1500 + 3500 + 800)],
-            grade_points=[(1400.0, 0.0), (1600.0, -5.0), (2600.0, -5.0), (2800.0, 0.0),
-                          (3600.0, 0.0), (3800.0, 5.0), (4800.0, 5.0), (5000.0, 0.0)],
-            tunnel=Tunnel(1500.0, 5000.0),
-            exits=[Exit(4200.0, "Exit A")],
+            hsegs=[HSeg(s_e + L_t + _lead_out(v0, L_t))],
+            grade_points=[(s_e + x, gr) for x, gr in g],
+            tunnel=Tunnel(s_e, s_e + L_t),
+            exits=[Exit(s_e + 2700.0, "Exit A")],
         ),
-        speed=SpeedProfile(v0=kmh(70)),
+        speed=SpeedProfile(v0=v0),
     )
 
     # S4: stop-and-go inside a flat straight tunnel.
+    v0, L_t = kmh(60), 3000.0
+    s_e = _approach(v0)
     out["S4"] = Scenario(
         key="S4",
         title="Stop-and-go traffic",
         description="3 km flat straight tunnel, two full stops and a slow crawl inside.",
-        road=_straight_road(1500 + 3000 + 800, 1500.0, 3000.0, 0.0,
-                            exits=[Exit(1500 + 2400, "Exit A")]),
-        speed=SpeedProfile(v0=kmh(60), events=[
-            SpeedEvent(1900.0, 0.0, 8.0, dwell=20.0),
-            SpeedEvent(1900.0, kmh(30), 10.0, dwell=30.0),
-            SpeedEvent(2600.0, 0.0, 6.0, dwell=45.0),
-            SpeedEvent(2600.0, kmh(15), 6.0, dwell=40.0),
-            SpeedEvent(2800.0, kmh(60), 15.0),
+        road=_straight_road(s_e + L_t + _lead_out(v0, L_t), s_e, L_t, 0.0,
+                            exits=[Exit(s_e + 2400, "Exit A")]),
+        speed=SpeedProfile(v0=v0, events=[
+            SpeedEvent(s_e + 400.0, 0.0, 8.0, dwell=20.0),
+            SpeedEvent(s_e + 400.0, kmh(30), 10.0, dwell=30.0),
+            SpeedEvent(s_e + 1100.0, 0.0, 6.0, dwell=45.0),
+            SpeedEvent(s_e + 1100.0, kmh(15), 6.0, dwell=40.0),
+            SpeedEvent(s_e + 1300.0, kmh(60), 15.0),
         ]),
     )
 
     # S5: slow speed drift and braking inside a flat straight tunnel.
+    v0, L_t = kmh(90), 3000.0
+    s_e = _approach(v0)
     out["S5"] = Scenario(
         key="S5",
         title="Slow drift and braking",
         description="3 km flat straight tunnel: speed drifts 90 -> 82 km/h over 60 s, "
                     "then a brake to 50 km/h and a slow recovery.",
-        road=_straight_road(1500 + 3000 + 800, 1500.0, 3000.0, 0.0,
-                            exits=[Exit(1500 + 2500, "Exit A")]),
-        speed=SpeedProfile(v0=kmh(90), events=[
-            SpeedEvent(1700.0, kmh(82), 60.0),
-            SpeedEvent(3300.0, kmh(50), 5.0, dwell=10.0),
-            SpeedEvent(3300.0, kmh(75), 40.0),
+        road=_straight_road(s_e + L_t + _lead_out(v0, L_t), s_e, L_t, 0.0,
+                            exits=[Exit(s_e + 2500, "Exit A")]),
+        speed=SpeedProfile(v0=v0, events=[
+            SpeedEvent(s_e + 200.0, kmh(82), 60.0),
+            SpeedEvent(s_e + 1800.0, kmh(50), 5.0, dwell=10.0),
+            SpeedEvent(s_e + 1800.0, kmh(75), 40.0),
         ]),
     )
     return out

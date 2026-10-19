@@ -70,11 +70,13 @@ def error_free_report() -> dict:
     return out
 
 
-def analytic_motion(rate_hz, two_axis, T=60.0):
-    """Closed-form trajectory: exact position, attitude, specific force and body rate.
-    Attitude C = Rz(psi) (one axis) or Rz(psi) Ry(theta) (two axes, coning present)."""
+def analytic_motion(rate_hz, two_axis, T=60.0, t=None):
+    """Closed-form trajectory: exact position, attitude, specific force and body rate, at any
+    times t (default: uniform grid at rate_hz). Attitude C = Rz(psi) (one axis) or
+    Rz(psi) Ry(theta) (two axes, coning present)."""
     from tunnelsim.frames import GRAVITY_N, rot_y, rot_z
-    t = np.arange(int(round(T * rate_hz)) + 1) / rate_hz
+    if t is None:
+        t = np.arange(int(round(T * rate_hz)) + 1) / rate_hz
     psi = 0.3 * np.sin(0.2 * t) + 0.05 * t
     psid = 0.06 * np.cos(0.2 * t) + 0.05
     th = 0.05 * np.sin(0.3 * t) if two_axis else 0 * t
@@ -114,17 +116,42 @@ def convergence_report(rates=(25.0, 50.0, 100.0, 200.0, 400.0)) -> dict:
 
 
 def variable_dt_report() -> dict:
-    """Only sampling jitter and dropped samples on: irregular dt from the timestamps."""
+    """Irregular dt from timestamps.
+
+    analytic_2axis: closed-form motion sampled at jittered instants (0.5 ms, clipped 3 sigma)
+    with dropped samples (3 per event, 1 per 120 s, as the nominal profile); f and w are exact
+    at every instant, so this isolates the mechanisation. Compared with the uniform grid.
+    S1/S4/MIX: the IMU generator's jitter and gaps on the truth (informative): off-grid
+    instants need the truth interpolated, which leaves a small resampling floor that grows
+    with run length (S4, 585 s run: ~1 cm), not a mechanisation error.
+    """
     out = {}
+    rng = np.random.default_rng(7)
+    T, r = 600.0, 100.0
+    tg = np.arange(int(T * r) + 1) / r
+    tj = tg + np.clip(rng.normal(0, 0.5e-3, tg.size), -1.5e-3, 1.5e-3)
+    tj[0] = 0.0
+    keep = np.ones(tg.size, bool)
+    for st in rng.integers(1, tg.size - 3, int(T / 120)):
+        keep[st:st + 3] = False
+    errs = {}
+    for name, tt in (("uniform", tg), ("jitter_gaps", tj[keep])):
+        t, p, v, C, f, w = analytic_motion(r, True, t=tt)
+        res = strapdown(t, f, w, InsInit(p[0], v[0], C[0]))
+        errs[name] = float(np.linalg.norm(res.p_n[0] - p, axis=1).max())
+    out["analytic_2axis_600s"] = {"uniform_max_pos_err_m": float(f"{errs['uniform']:.3e}"),
+                                  "jitter_gaps_max_pos_err_m": float(f"{errs['jitter_gaps']:.3e}"),
+                                  "dropped_samples": int((~keep).sum())}
     for key in ("S1", "S4", "MIX"):
         tr = generate_truth(ALL[key])
-        m, e = simulate_imu(ImuTruthSource.from_truth(tr), NOMINAL, Switches.only("ts_jitter", "ts_gaps"), seed=1)
-        res = strapdown_meas(m, oracle_init(tr, e.t_true[0]))
-        dp, _ = run_errors(tr, res, e.t_true)
-        out[key] = {"max_pos_err_m": float(f"{dp:.3e}"),
-                    "dropped_samples": int(e.n_grid - len(m.t)),
-                    "dt_min_ms": round(float(np.diff(m.t).min() * 1e3), 2),
-                    "dt_max_ms": round(float(np.diff(m.t).max() * 1e3), 2)}
+        src = ImuTruthSource.from_truth(tr)
+        row = {}
+        for label, sw in (("error_free", Switches.only()), ("jitter_gaps", Switches.only("ts_jitter", "ts_gaps"))):
+            m, e = simulate_imu(src, NOMINAL, sw, seed=1)
+            dp, _ = run_errors(tr, strapdown_meas(m, oracle_init(tr, e.t_true[0])), e.t_true)
+            row[f"{label}_max_pos_err_m"] = float(f"{dp:.3e}")
+        row["run_s"] = round(float(tr.t[-1]), 1)
+        out[key] = row
     return out
 
 
@@ -166,9 +193,14 @@ def test_second_order_convergence():
 
 
 def test_variable_dt_from_timestamps():
-    for key, r in variable_dt_report().items():
-        assert r["dropped_samples"] > 0
-        assert r["max_pos_err_m"] < 2e-3, (key, r)
+    """Mechanisation with irregular dt (exact signals): no worse than the uniform grid beyond
+    a small margin; scenario resampling floor stays below 2 cm."""
+    rep = variable_dt_report()
+    a = rep["analytic_2axis_600s"]
+    assert a["dropped_samples"] > 0
+    assert a["jitter_gaps_max_pos_err_m"] < 1.5 * a["uniform_max_pos_err_m"] + 1e-4, a
+    for key in ("S1", "S4", "MIX"):
+        assert rep[key]["jitter_gaps_max_pos_err_m"] < 0.02, (key, rep[key])
 
 
 def test_calibration_interface_removes_constant_errors():

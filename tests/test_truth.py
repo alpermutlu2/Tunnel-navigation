@@ -90,7 +90,7 @@ def test_flat_constant_speed_specific_force():
 
 def test_grade_gravity_projection():
     tr = generate_truth(SCENARIOS["S3"])
-    k = np.argmin(np.abs(tr.s - 2100.0))   # mid-descent, constant -5 % grade, constant speed
+    k = np.argmin(np.abs(tr.s - (SCENARIOS["S3"].road.tunnel.s_entry + 600.0)))   # mid-descent, constant -5 %, constant speed
     g = np.arctan(-0.05)
     assert tr.f_b[k, 0] == pytest.approx(9.80665 * np.sin(g), abs=1e-6)
 
@@ -98,7 +98,7 @@ def test_grade_gravity_projection():
 def test_steady_curve_with_sideslip():
     sc = SCENARIOS["S2"]
     tr = generate_truth(sc)
-    k = np.argmin(np.abs(tr.s - (1500 + 500 + 80 + 175)))   # middle of the left arc, R = 400
+    k = np.argmin(np.abs(tr.s - (sc.road.tunnel.s_entry + 500 + 80 + 175)))   # middle of the left arc, R = 400
     v, R = tr.v[k], 400.0
     a_lat = v**2 / R
     beta = -sc.vehicle.sideslip_gain_rad_per_mps2 * a_lat
@@ -115,7 +115,7 @@ def test_nhc_violated_at_phone_in_curve():
     tr = generate_truth(SCENARIOS["S2"])
     C_bn = np.transpose(tr.C_nb, (0, 2, 1))
     v_b_phone = np.einsum("nij,nj->ni", C_bn, tr.vel_phone_n)
-    k = np.argmin(np.abs(tr.s - (1500 + 500 + 80 + 175)))
+    k = np.argmin(np.abs(tr.s - (SCENARIOS["S2"].road.tunnel.s_entry + 500 + 80 + 175)))
     expected = tr.v[k] * np.sin(tr.beta[k]) + tr.w_b[k, 2] * tr.lever_arm_b[0]
     assert v_b_phone[k, 1] == pytest.approx(expected, rel=1e-3)
     assert abs(v_b_phone[k, 1]) > 0.05
@@ -191,7 +191,8 @@ def test_clothoid_fresnel():
 
 def test_altitude_against_quad():
     road = SCENARIOS["S3"].road
-    for s_end in [1500.0, 2700.0, 3700.0, 5000.0]:
+    s_e = road.tunnel.s_entry
+    for s_end in [s_e, s_e + 1200.0, s_e + 2200.0, s_e + 3500.0]:
         ref, _ = quad(lambda x: np.sin(road.grade(x)[0]), 0, s_end, limit=400, epsabs=1e-10)
         assert road.position(s_end)[2] == pytest.approx(ref, abs=1e-3)
 

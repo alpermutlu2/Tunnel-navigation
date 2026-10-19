@@ -32,6 +32,18 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   grid time; the oracle initial state is now taken at the true time of the first sample
   (was 6 mm offset on S1 = v·jitter).
 - Tests 101 -> 114.
+- Scenarios (truth change, done now so the truth changes once): approach = 200 s of driving at
+  entry speed before every portal (GNSS calibration windows up to 180 s); lead-out ≥ 800 m and
+  ≥ 220 s after the portal at entry speed (fixed 180 s INS budget; S1 and S2 had only 171 s and
+  148 s). Tunnel geometry and speed events unchanged relative to the portal. Truth metrics that
+  moved vs 0.3.0, all from the longer runs: durations (S1 238 → 420 s, S2 216 → 420, S3 298 →
+  421, S4 475 → 585, S5 242 → 463), strapdown residuals accumulate over the longer run (S2
+  3.1e-5 → 5.3e-5 m, S3 4.8e-6 → 1.6e-5, S5 4.95e-4 → 8.8e-4, S1 5e-11 → 7e-9), centreline
+  discretisation S2 5.1e-5 → 1.0e-4 m (longer road), time in tunnel −0.01 s (sample alignment).
+- Irregular-dt test moved to closed-form motion (exact signals at jittered instants): 600 s,
+  two-axis, +3 % vs the uniform grid (8.6 → 8.9 cm, coning). On scenarios the generator's
+  jitter needs the truth interpolated off-grid; that resampling floor grows with run length
+  (S4, 585 s: 1.2 cm) and is reported, not charged to the mechanisation.
 
 ## v0.3.0 (2026-10-19): sensor simulation
 
