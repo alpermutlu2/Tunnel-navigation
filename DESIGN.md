@@ -26,9 +26,20 @@ Source of truth for the final write-up and README.
 
 ## 3. Sensor models
 
+Full decision record with reasoning: `docs/decisions/2026-10-19-v0.3-sensors.md` (K1 to K9).
+
+**Parameter tags.** Every number carries one of three tags:
+- **[MEAS]** measured in a real experiment (e.g. Suvorkin Table 4),
+- **[SPEC]** datasheet / manufacturer specification (e.g. LSM6DSR datasheet typ),
+- **[ASSUMED]** chosen for the simulation, not validated.
+
+**Policy (2026-10-19).** No real data is collected at this stage. Every [ASSUMED] parameter is swept rather than pinned to one value. `profiles.py` holds one nominal configuration; sensitivity scenarios are named overrides, and no sensitivity value is ever a default.
+
+**Separation.** `tunnelsim/sensors.py` returns only measured fields (7.2); error components live in a separate object never passed to the estimator. Each error term can be switched off alone and has its own RNG stream (`SeedSequence.spawn`), so switching one term off does not change the samples of any other.
+
 ### 3.1 IMU: reference phone
 
-Primary profile: **Samsung Galaxy Note10, STMicroelectronics LSM6DSR**, values from week-long static overlapped Allan deviation (Suvorkin et al., Sensors 2024, Table 4). ST does not publish these terms in the datasheet.
+Primary profile: **Samsung Galaxy Note10, STMicroelectronics LSM6DSR**, values from week-long static overlapped Allan deviation (Suvorkin et al., Sensors 2024, Table 4) [MEAS]. ST does not publish these terms in the datasheet.
 
 | Term | x | y | z | Approx. |
 |---|---|---|---|---|
@@ -37,25 +48,41 @@ Primary profile: **Samsung Galaxy Note10, STMicroelectronics LSM6DSR**, values f
 | Gyro ARW [rad/√s] | 7.00e-4 | 6.01e-4 | 6.70e-4 | ~2.2 °/√h |
 | Gyro bias instability [rad/s] | 8.84e-5 | 1.54e-4 | 2.26e-4 | ~18 to 47 °/h |
 
-Secondary "low-end" profile: **InvenSense TDK MPU9250**, same paper, same method (Table 5). Gives a consistent sensitivity comparison.
+The datasheet noise densities [SPEC] are lower: accel 60 µg/√Hz (measured VRW is 1.7x), gyro 5 mdps/√Hz (measured ARW is 8x). No cause is claimed (Android mode, bandwidth, filtering, Allan extraction method); the phone-measured value is used.
 
-Terms added on top of Allan values (not captured by a static, temperature-stable lab test):
-- Turn-on bias (random per run)
-- Slow temperature-driven bias drift (phone heats up in the car)
-- Scale factor and small non-orthogonality
-- Vehicle vibration (road/engine), band-limited
-- Timestamp jitter / sample-rate switching from the Android pipeline (Bochkati & Pany, ISS 2021)
+Secondary "low-end" profile: **InvenSense TDK MPU9250**, same paper, same method (Table 5) [MEAS]. Gives a consistent sensitivity comparison.
 
-Rate: 100 Hz.
+Rate: 100 Hz. Model per phone axis:
+```
+f̃ = (I + S_a + M_a) f_p + b_a,on + b_a,BI(t) + b_a,T(t) + n_a + vib_a
+ω̃ = (I + S_g + M_g) ω_p + b_g,on + b_g,BI(t) + b_g,T(t) + n_g + vib_g
+n ~ N(0, N²/Δt)
+```
 
-### 3.2 Barometer
-- ~25 Hz, relative accuracy ~0.5 m equivalent, white noise + slow drift (weather, negligible over minutes).
-- Optional cabin disturbance (A6 sensitivity).
+| Term | Model | Values |
+|---|---|---|
+| Bias instability (K1) | Baseline: sum of 3 first-order GM, τ = 30, 300, 3000 s [ASSUMED], weights fitted to OADEV. Reference: single GM, τ = 300 s, σ = 1.075·B | Suvorkin floor σ_A ≈ 0.664·B (from σ_A² = 2B²ln2/π); GM Allan peak 0.617·σ at T = 1.89τ. Averaging time of B not given in the paper (unknown) |
+| Turn-on bias (K2) | Constant per run. Stream: `TYPE_GYROSCOPE_UNCALIBRATED`; Android's bias estimate not used | Accel 10 mg [SPEC, LA_TyOff]. Gyro nominal 0.05 °/s [ASSUMED], sweep 0.2, 1 °/s; ±1 dps [SPEC] is an upper bound only |
+| Temperature (K3) | T(t) = T₀ + ΔT∞(1 − e^(−t/τ_th)), b_T = k_T(T − T₀) | ΔT∞ = 15 °C, τ_th = 15 min [ASSUMED]; entry at min 5 and min 20. k_T nominal 0.5 × SPEC [ASSUMED], sweep 0 and 1 × SPEC; SPEC = 0.1 mg/°C, 0.005 dps/°C (upper bound, stream may be compensated) |
+| Scale / misalignment (K4) | Sensor misalignment (MEMS → phone) is a separate matrix from the mount rotation (vehicle → phone) | Gyro scale 0.3 % [ASSUMED], ±1 % [SPEC] bound; accel scale 3e-3 [ASSUMED]. Curve-matching heading budget ε_ψ ≈ s_g·Δψ |
+| Vibration (K5) | Generated at 100 Hz. Road: broadband ≈ 2–30 Hz, scaled with speed. Engine: narrow band ≈ 25 Hz at idle. No wheel tone (5.2) | [ASSUMED], two levels "calm" / "noisy". 1 kHz + LPF + decimation is an optional sensitivity test. **Out of scope:** vibration rectification error (VRE) |
+| Timestamps (K6) | Timestamps carry the true measurement time. Scenarios: (1) sample-rate offset ±1–2 %, timestamps correct → no effect expected; (2) timestamp scale error → accumulating error; (3) estimator uses nominal dt → v0.4 | White jitter 0.5 ms, occasional gaps [ASSUMED]. IMU–GNSS time offset nominal 0, sweep 0–200 ms. "1 % rate error → 45 m (25 m/s, 180 s)" holds only for (2) and (3) |
 
-### 3.3 GNSS
+### 3.2 Barometer (K7)
+- Model: `h̃ = h + b_h0 + b_h,GM(t) + n_h + d_cabin(t) + d_tunnel(s)`, ~25 Hz.
+- b_h0: constant within a drive [ASSUMED]. Magnitude bounded by the manufacturer's "relative accuracy" [SPEC] once its definition is checked; not called a measured bias.
+- n_h: white 0.1 m at 25 Hz [ASSUMED]. b_h,GM: correlation levels swept (no single value).
+- d_cabin: cabin disturbance, sensitivity scenario (A6).
+- d_tunnel = k_p·s: ventilation pressure gradient [ASSUMED], swept in Pa/km (1 Pa ≈ 8.5 cm, ρg ≈ 11.8 Pa/m). On a constant-grade tunnel it is indistinguishable from a grade offset.
+- Grade floor (least-squares slope over window T): white `σ_ḣ = σ√(12/(fT³))`; correlated (T ≪ τ) `σ_ḣ ≈ √(6q/(5T))`, q = 2σ²/τ. At 10 s and 25 m/s: 0.9 mm/s² equivalent for white noise, up to 7.1 mm/s² with GM(0.3 m, 60 s) (table in the decision record). v0.3 verifies these with a window sweep 5–60 s and reports where T ≪ τ breaks down.
+- Grade from baro depends on speed (sin γ ≈ ḣ/v): error ≈ γ·δv/v. Negligible on a flat tunnel; on a 5 % grade, 1 % speed error gives 0.05 % grade error ≈ 4.9 mm/s², above the white-noise floor.
+
+### 3.3 GNSS (K8, K9)
 - 1 Hz position + Doppler velocity with reported accuracy.
-- Entry: gradual degradation over a few seconds before full loss (SNR drop, growing accuracy).
-- Exit: first fixes biased by multipath (10 to 50 m), Doppler recovers faster than position.
+- Velocity: `ṽ = v + b_v,GM + n_v`, nominal 3D with independent components [ASSUMED]. Two experiment families: total RMS fixed with varying white/correlated split, and total RMS increasing. Reason: with white σ_v = 0.1 m/s, a 60 s window gives an accel-bias calibration floor σ_v√(12/(fT³)) = 7.5e-4 m/s², the same level as bias instability.
+- Entry: gradual degradation before the portal. Nominal: measurements stop at signal loss. Scenario "coasting": fake fixes propagated from the last *receiver* state (not truth), with growing reported accuracy.
+- Exit: delayed re-acquisition; Doppler recovers before position. Nominal multipath: random direction, time-correlated, 30 m with 8 s decay [ASSUMED]. "Lagging receiver" is a separate scenario; the two mechanisms are not mixed.
+- Reported accuracy is generated independently of the true error: calibrated (ratio 1), optimistic (0.7), pessimistic (1.5).
 
 ## 4. Back-of-envelope error budget (3 min outage, Note10 profile)
 
@@ -70,6 +97,19 @@ Rate: 100 Hz.
 Along the forward axis, accel bias and mount pitch appear together as `b + g·sin(θ_mount)`. They cannot be separated, but with a rigid mount (A1) the lumped term stays constant in the tunnel, so we estimate the lumped term only.
 
 ## 5. Estimator roadmap (layered, each layer's contribution shown separately)
+
+Version scope (decided 2026-10-19):
+
+| Version | Content |
+|---|---|
+| v0.3 | Sensor generators + sensor-level verification only (Allan/PSD, baro grade floor, timestamps, GNSS timing, reported accuracy). Scenario variants are defined and tested here; sweeps run in v0.4 |
+| v0.4 | Strapdown mechanisation; along-track error at the exit with each error term switched on alone, ideal attitude, perfect entry calibration (measured version of the section 4 budget, recomputed); reference algorithms (item 1); observability analysis (item 0) |
+| v0.5 | ESKF + NHC + ZUPT (items 2, 3), NEES/NIS |
+| v0.6 | IMM (5.1), map/baro grade layer (item 4) |
+| v0.7 | Monte Carlo, exit callout, exit recovery (items 5, 6) |
+| v0.8 | Browser UI (Pyodide) |
+
+Principles kept across versions: sensor truth, error components and estimator inputs are strictly separate; every physical effect has a sourced or explicitly assumed parameter; nominal and stress scenarios are not mixed; weak-observability scenarios (S1, S5) are reported in every version. Evaluation criterion: not that an algorithm does better, but that we can explain mathematically and experimentally which information it uses to do better.
 
 0. **Observability analysis first** (before writing the ESKF): linearised error model during the GNSS segment and the outage; which combinations of v_x, b_ax, pitch error, mount pitch and grade error are observable, and with which manoeuvres. NHC constrains v_y, v_z and helps attitude; it gives no v_x information.
 1. **Reference algorithms:** (a) hold last GNSS speed, (b) raw accel integration, (c) oracle with true speed (upper bound, isolates map/geometry error).
@@ -94,6 +134,7 @@ Review notes (2026-10-19):
 - S5 drift (90 → 82 km/h in 60 s): mean −0.037 m/s², peak −0.069 m/s². If CV holds entry speed for 60 s: 67 m along-track error, then +2.2 m/s × t afterwards.
 - That drift is **detectable in principle**: residual bias after GNSS calibration is ~7e-4 m/s² (BI level), ~2 % of the drift. The real floor is **grade knowledge**: a 0.1 % grade error is 9.8e-3 m/s², 0.3 % is 2.9e-2 m/s², the same size as the drift.
 - Grade source therefore matters more than bias: barometer vertical rate, if baro noise were white at 25 Hz / 0.1 m, gives grade to ~0.01 % over a 10 s window (~1 mm/s² equivalent). Real baro noise is correlated and the cabin can disturb it; to be measured in the sensor step, not assumed.
+  - Update 2026-10-19 (K7): the ~0.01 % figure holds **only for white noise**. With a correlated component the floor rises to 2.5–7.1 mm/s² (GM 0.1–0.3 m, τ 60–300 s [ASSUMED]); the worst case is ~20 % of the S5 mean drift. No real recording at this stage, so the correlation level is swept, not chosen (3.2).
 - IMM metrics: besides position error, report mode-switch latency and time spent in the wrong mode.
 
 Decisions (2026-10-17):
@@ -195,7 +236,7 @@ Every result is reported together with the mismatch settings that produced it.
 
 Barometer as along-track measurement: `z = h_map(s) + b_h + n`, `∂h/∂s = sin γ(s)`. On a constant grade b_h and s error are indistinguishable; only grade *changes* (S3) separate them. b_h can be calibrated at the portal from GNSS horizontal position + map altitude (σ_s · sin γ at entry).
 
-## 9. Real-device follow-up (optional)
+## 9. Real-device follow-up (later, optional; not part of v0.3 to v0.8, decision 2026-10-19)
 - Record own trace (e.g. Sensor Logger) in an Istanbul tunnel; portal positions and GNSS re-acquisition as checkpoints.
 - Static recording for own Allan deviation to validate section 3.1.
 
@@ -216,3 +257,4 @@ Barometer as along-track measurement: `z = h_map(s) + b_h + n`, `∂h/∂s = sin
 - 2026-10-17: Truth generator implemented and verified by strapdown test. Scenarios S1 to S5 defined (S3 tunnel 3.5 km, symmetric V).
 - 2026-10-17: Sensor profile parameters beyond Allan terms are marked [ASSUMED] in `tunnelsim/profiles.py`.
 - 2026-10-19: External review applied. Truth adds sideslip, lever arm, event-timing fix; 36 tests incl. independent geometry references and mutation checks. Grade profile no longer assumed in the map (A3). Estimator/truth separation policy (7.2). Observability analysis, reference algorithms incl. oracle, NEES/NIS added to the plan.
+- 2026-10-19: v0.3 sensor decisions K1 to K9 accepted (`docs/decisions/2026-10-19-v0.3-sensors.md`). Three tags [MEAS]/[SPEC]/[ASSUMED]; no real data collected, unsourced parameters swept; nominal vs named sensitivity overrides; per-term RNG streams; version scope v0.3 to v0.8 (section 5). From now on every decision and review is committed; the repository is the only sync channel between sessions.
