@@ -101,9 +101,11 @@ Vibration is a real specific force / rate, so it passes through the sensor scale
 
 ## 4. Back-of-envelope error budget (3 min outage, Note10 profile)
 
-- VRW → position: ~1 m. Negligible.
-- Accel bias drifting at BI level, perfectly calibrated at entry: ~10 m.
-- Gyro pitch integrated freely at BI level → gravity leakage, error ∝ g·b·t³/6: **~1.4 km**.
+Corrected 2026-10-19 (axis mapping, `docs/decisions/2026-10-19-v0.4-plan.md`): the forward axis is phone −z and the pitch axis phone −x (portrait mount); the first version used phone x/y values. Numbers below are **"position error if a constant bias of BI size were present"** on the nominal axes, a scale estimate, not the RMS/P95 of the GM-realised error; true-mount and realised values come from the v0.4 experiments.
+
+- VRW → position: N·√(t³/3) ≈ 1.2 m (z axis). Negligible.
+- Constant BI-sized forward accel bias (z, 1.62e-3 m/s²), b·t²/2: **~26 m** (was ~10 m, x axis).
+- Constant BI-sized pitch-gyro bias (x, 8.84e-5 rad/s) integrated freely → gravity leakage, g·b·t³/6: **~0.84 km** (was ~1.4 km, y axis).
 - 1 mg residual accel error: ~160 m. 1° grade/pitch error (~17 mg): ~2.7 km.
 
 **Conclusion:** sensor noise is not the limit. The limits are (a) calibration quality before the outage and (b) pitch/grade knowledge. Pitch must be held by NHC + barometer + map grade; gyro is used freely mainly for yaw.
@@ -287,6 +289,7 @@ Barometer as along-track measurement: `z = h_map(s) + b_h + n`, `∂h/∂s = sin
 - 2026-10-17: Sensor profile parameters beyond Allan terms are marked [ASSUMED] in `tunnelsim/profiles.py`.
 - 2026-10-19: External review applied. Truth adds sideslip, lever arm, event-timing fix; 36 tests incl. independent geometry references and mutation checks. Grade profile no longer assumed in the map (A3). Estimator/truth separation policy (7.2). Observability analysis, reference algorithms incl. oracle, NEES/NIS added to the plan.
 - 2026-10-19: v0.3 sensor decisions K1 to K9 accepted (`docs/decisions/2026-10-19-v0.3-sensors.md`). Three tags [MEAS]/[SPEC]/[ASSUMED]; no real data collected, unsourced parameters swept; nominal vs named sensitivity overrides; per-term RNG streams; version scope v0.3 to v0.8 (section 5). From now on every decision and review is committed; the repository is the only sync channel between sessions.
+- 2026-10-19: v0.4 plan accepted with review 3 (`docs/decisions/2026-10-19-v0.4-plan.md`): axis-mapping correction of section 4, independent oracle flags, LS-ideal vs LS-practical calibration, approach road lengthened to 200 s of GNSS, structural + practical observability, 200/1000 seeds, fixed-180 s and real-exit reports, coordinate contracts (`docs/contracts.md`).
 - 2026-10-19: Bias calibration design note (5.0): slow bias estimation, robustness over optimality, Q/R restrict only the bias states' rate of change (wrong bias costs δb·t²/2), R inflated for GNSS velocity correlation, separate coasting detector.
 - 2026-10-19: GNSS generator (K8, K9) implemented; unspecified details chosen [ASSUMED] and listed in 3.3 (velocity split, degradation ramp, coasting 5 s, reacquisition 1/2 s, lagging-receiver mechanism, exit Doppler factor).
 - 2026-10-19: External review 2 applied: barometer exit transition L_p (nominal 200 m, step kept as stress), nominal baro GM(0.1 m, 60 s) confirmed, temperature residual as a truth-only stress scenario in v0.4 (nominal unchanged, no filter state), dev version + report overwrite guard.
