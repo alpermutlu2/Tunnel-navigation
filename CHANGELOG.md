@@ -7,7 +7,12 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
-## Unreleased (v0.3.0 in progress): sensor simulation
+## v0.3.0 (2026-10-19): sensor simulation
+
+Metric diff vs 0.2.0 (`tools/snapshot.py --diff 0.2.0 0.3.0`): the only existing metrics that
+moved are the five truth metrics listed under "Truth" below, all from the sideslip lag;
+`sensors.*` is new. Tests 36 -> 85 (one slow), all pass. Design note for v0.5 bias calibration:
+DESIGN 5.0.
 
 Decisions: `docs/decisions/2026-10-19-v0.3-sensors.md` (K1 to K9, R1 to R4).
 

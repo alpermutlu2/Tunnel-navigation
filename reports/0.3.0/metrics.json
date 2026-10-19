@@ -1,0 +1,1387 @@
+{
+  "version": "0.3.0",
+  "tests": "85 passed in 28.55s",
+  "tests_ok": true,
+  "truth": {
+    "S1": {
+      "duration_s": 238.46,
+      "time_in_tunnel_s": 135.0,
+      "strapdown_max_err_m": 5.06e-11,
+      "nhc_lat_vel_max_mps": 0.0,
+      "nhc_up_vel_max_mps": 0.0,
+      "sideslip_max_deg": 0.0
+    },
+    "S2": {
+      "duration_s": 215.96,
+      "time_in_tunnel_s": 112.5,
+      "strapdown_max_err_m": 3.12e-05,
+      "nhc_lat_vel_max_mps": 0.1061,
+      "nhc_up_vel_max_mps": 0.0,
+      "sideslip_max_deg": 0.494,
+      "centreline_discretisation_m": 5.148e-05
+    },
+    "S3": {
+      "duration_s": 298.24,
+      "time_in_tunnel_s": 180.0,
+      "strapdown_max_err_m": 4.775e-06,
+      "nhc_lat_vel_max_mps": 0.0,
+      "nhc_up_vel_max_mps": 0.0146,
+      "sideslip_max_deg": 0.0,
+      "centreline_discretisation_m": 5.948e-06
+    },
+    "S4": {
+      "duration_s": 475.32,
+      "time_in_tunnel_s": 337.38,
+      "strapdown_max_err_m": 0.001327,
+      "nhc_lat_vel_max_mps": 0.0,
+      "nhc_up_vel_max_mps": 0.1068,
+      "sideslip_max_deg": 0.0
+    },
+    "S5": {
+      "duration_s": 241.87,
+      "time_in_tunnel_s": 143.52,
+      "strapdown_max_err_m": 0.000495,
+      "nhc_lat_vel_max_mps": 0.0,
+      "nhc_up_vel_max_mps": 0.1651,
+      "sideslip_max_deg": 0.0
+    },
+    "MIX": {
+      "duration_s": 66.24,
+      "time_in_tunnel_s": 51.63,
+      "strapdown_max_err_m": 0.0001718,
+      "nhc_lat_vel_max_mps": 0.1078,
+      "nhc_up_vel_max_mps": 0.1255,
+      "sideslip_max_deg": 0.748,
+      "centreline_discretisation_m": 7.185e-05
+    }
+  },
+  "sensors": {
+    "gnss": {
+      "params_nominal": {
+        "gnss.rate_hz": {
+          "value": 1.0,
+          "tag": "ASSUMED",
+          "src": "K9; phone location rate"
+        },
+        "gnss.pos_sigma_h_m": {
+          "value": 3.0,
+          "tag": "ASSUMED",
+          "src": "open-sky phone, per axis"
+        },
+        "gnss.pos_sigma_v_m": {
+          "value": 6.0,
+          "tag": "ASSUMED",
+          "src": ""
+        },
+        "gnss.pos_tau_s": {
+          "value": 30.0,
+          "tag": "ASSUMED",
+          "src": "position error is time-correlated"
+        },
+        "gnss.vel_white_h_mps": {
+          "value": 0.07,
+          "tag": "ASSUMED",
+          "src": "K8 nominal split: total 0.10 m/s, half the variance correlated"
+        },
+        "gnss.vel_gm_h_mps": {
+          "value": 0.07,
+          "tag": "ASSUMED",
+          "src": "K8 nominal split"
+        },
+        "gnss.vel_gm_tau_s": {
+          "value": 10.0,
+          "tag": "ASSUMED",
+          "src": "K8"
+        },
+        "gnss.vel_vert_factor": {
+          "value": 1.5,
+          "tag": "ASSUMED",
+          "src": "K8: 3D, components independent"
+        },
+        "gnss.degrade_s": {
+          "value": 4.0,
+          "tag": "ASSUMED",
+          "src": "K9 entry degradation"
+        },
+        "gnss.degrade_factor": {
+          "value": 5.0,
+          "tag": "ASSUMED",
+          "src": "K9"
+        },
+        "gnss.coast_s": {
+          "value": 0.0,
+          "tag": "ASSUMED",
+          "src": "K9 nominal: measurements stop at loss"
+        },
+        "gnss.coast_acc_growth_mps": {
+          "value": 3.0,
+          "tag": "ASSUMED",
+          "src": "K9 coasting scenario"
+        },
+        "gnss.vel_reacq_s": {
+          "value": 1.0,
+          "tag": "ASSUMED",
+          "src": "K9: Doppler before position"
+        },
+        "gnss.pos_reacq_s": {
+          "value": 2.0,
+          "tag": "ASSUMED",
+          "src": "K9"
+        },
+        "gnss.exit_multipath_m": {
+          "value": 30.0,
+          "tag": "ASSUMED",
+          "src": "K9, DESIGN 3.3 range 10..50 m"
+        },
+        "gnss.exit_decay_s": {
+          "value": 8.0,
+          "tag": "ASSUMED",
+          "src": "K9"
+        },
+        "gnss.exit_vel_factor": {
+          "value": 3.0,
+          "tag": "ASSUMED",
+          "src": "K9: Doppler noisier for the first seconds"
+        },
+        "gnss.lag_s": {
+          "value": 1.5,
+          "tag": "ASSUMED",
+          "src": "K9 lagging-receiver scenario"
+        },
+        "gnss.reported_ratio": {
+          "value": 1.0,
+          "tag": "ASSUMED",
+          "src": "K9 calibrated"
+        }
+      },
+      "open_sky": {
+        "nominal": {
+          "pos_std_h_m": {
+            "target": 3.0,
+            "achieved": 2.957,
+            "tolerance": 0.05
+          },
+          "pos_std_v_m": {
+            "target": 6.0,
+            "achieved": 5.873,
+            "tolerance": 0.05
+          },
+          "vel_std_h_mps": {
+            "target": 0.099,
+            "achieved": 0.0987,
+            "tolerance": 0.05
+          },
+          "nis_pos_mean": {
+            "target": 1.0,
+            "achieved": 0.972,
+            "tolerance": 0.05
+          },
+          "nis_vel_mean": {
+            "target": 1.0,
+            "achieved": 0.995,
+            "tolerance": 0.05
+          }
+        },
+        "gnss_optimistic": {
+          "pos_std_h_m": {
+            "target": 3.0,
+            "achieved": 2.957,
+            "tolerance": 0.05
+          },
+          "pos_std_v_m": {
+            "target": 6.0,
+            "achieved": 5.873,
+            "tolerance": 0.05
+          },
+          "vel_std_h_mps": {
+            "target": 0.099,
+            "achieved": 0.0987,
+            "tolerance": 0.05
+          },
+          "nis_pos_mean": {
+            "target": 2.041,
+            "achieved": 1.983,
+            "tolerance": 0.05
+          },
+          "nis_vel_mean": {
+            "target": 2.041,
+            "achieved": 2.03,
+            "tolerance": 0.05
+          }
+        },
+        "gnss_pessimistic": {
+          "pos_std_h_m": {
+            "target": 3.0,
+            "achieved": 2.957,
+            "tolerance": 0.05
+          },
+          "pos_std_v_m": {
+            "target": 6.0,
+            "achieved": 5.873,
+            "tolerance": 0.05
+          },
+          "vel_std_h_mps": {
+            "target": 0.099,
+            "achieved": 0.0987,
+            "tolerance": 0.05
+          },
+          "nis_pos_mean": {
+            "target": 0.444,
+            "achieved": 0.432,
+            "tolerance": 0.05
+          },
+          "nis_vel_mean": {
+            "target": 0.444,
+            "achieved": 0.442,
+            "tolerance": 0.05
+          }
+        }
+      },
+      "calibration_floor": {
+        "nominal": {
+          "sigma_bias_mps2": {
+            "T30s": 0.003815,
+            "T60s": 0.001778,
+            "T120s": 0.0007332
+          },
+          "vel_rms_h_mps": 0.099
+        },
+        "gnss_vel_white_only": {
+          "sigma_bias_mps2": {
+            "T30s": 0.002008,
+            "T60s": 0.0007272,
+            "T120s": 0.0002603
+          },
+          "vel_rms_h_mps": 0.1
+        },
+        "gnss_vel_corr_heavy": {
+          "sigma_bias_mps2": {
+            "T30s": 0.004851,
+            "T60s": 0.002323,
+            "T120s": 0.0009671
+          },
+          "vel_rms_h_mps": 0.0996
+        },
+        "gnss_vel_rms_x2": {
+          "sigma_bias_mps2": {
+            "T30s": 0.00763,
+            "T60s": 0.003557,
+            "T120s": 0.001466
+          },
+          "vel_rms_h_mps": 0.198
+        }
+      },
+      "outage": {
+        "nominal": {
+          "fixes_inside_tunnel": 0,
+          "coasting_fixes": 0,
+          "vel_reacq_after_exit_s": 1.5,
+          "pos_reacq_after_exit_s": 2.5
+        },
+        "gnss_coasting": {
+          "fixes_inside_tunnel": 5,
+          "coasting_fixes": 5,
+          "vel_reacq_after_exit_s": 1.5,
+          "pos_reacq_after_exit_s": 2.5
+        }
+      },
+      "exit": {
+        "nominal": {
+          "first_fix_bias_m": {
+            "target": 30.0,
+            "achieved": 30.0
+          },
+          "after_one_decay_ratio": {
+            "target": 0.368,
+            "achieved": 0.368
+          },
+          "mean_direction_norm": 0.324,
+          "mean_along_track_m": -4.036
+        },
+        "gnss_lagging": {
+          "first_fix_bias_m": {
+            "target": 33.333,
+            "achieved": 33.333
+          },
+          "after_one_decay_ratio": {
+            "target": 0.368,
+            "achieved": 0.368
+          },
+          "mean_direction_norm": 1.0,
+          "mean_along_track_m": -33.333
+        }
+      },
+      "time_offset": {
+        "gnss_offset_100ms": {
+          "offset_s": 0.1,
+          "max_pos_err_m": 2.3,
+          "expected_max_v_times_d_m": 2.3,
+          "max_vel_err_mps": 0.0314,
+          "expected_max_a_times_d_mps": 0.0314
+        },
+        "gnss_offset_200ms": {
+          "offset_s": 0.2,
+          "max_pos_err_m": 4.6,
+          "expected_max_v_times_d_m": 4.5999,
+          "max_vel_err_mps": 0.0628,
+          "expected_max_a_times_d_mps": 0.0628
+        }
+      }
+    },
+    "baro": {
+      "params_nominal": {
+        "baro.rate_hz": {
+          "value": 25.0,
+          "tag": "ASSUMED",
+          "src": "K7; LPS22HB offers 25 Hz ODR"
+        },
+        "baro.white_sigma_m": {
+          "value": 0.1,
+          "tag": "ASSUMED",
+          "src": "K7; cf. 0.0075 hPa rms = 0.064 m, LPS22HB datasheet Table 3 (representative phone part; Note10 part not confirmed)"
+        },
+        "baro.gm_sigma_m": {
+          "value": 0.1,
+          "tag": "ASSUMED",
+          "src": "K7 nominal = mildest correlated row; white-only is an override"
+        },
+        "baro.gm_tau_s": {
+          "value": 60.0,
+          "tag": "ASSUMED",
+          "src": "K7 nominal"
+        },
+        "baro.offset_sigma_m": {
+          "value": 0.85,
+          "tag": "ASSUMED",
+          "src": "K7; +-0.1 hPa relative accuracy, LPS22HB datasheet Table 3 (representative phone part; Note10 part not confirmed)"
+        },
+        "baro.cabin_sigma_m": {
+          "value": 0.0,
+          "tag": "ASSUMED",
+          "src": "A6 baseline: off"
+        },
+        "baro.cabin_tau_s": {
+          "value": 5.0,
+          "tag": "ASSUMED",
+          "src": "A6 sensitivity"
+        },
+        "baro.tunnel_grad_pa_per_km": {
+          "value": 0.0,
+          "tag": "ASSUMED",
+          "src": "K7: nominal off, swept; magnitude not sourced yet"
+        },
+        "baro.tunnel_exit_decay_m": {
+          "value": 200.0,
+          "tag": "ASSUMED",
+          "src": "review 2, 4.2: sensitivity parameter, not validated"
+        },
+        "baro.rho_g_pa_per_m": {
+          "value": 11.8,
+          "tag": "ASSUMED",
+          "src": "standard air rho = 1.2 kg/m^3"
+        }
+      },
+      "grade_floor": {
+        "nominal": {
+          "T5s": {
+            "sigma_hdot_exact_mps": 0.01076,
+            "sigma_hdot_mc_mps": 0.0107,
+            "mc_vs_exact": -0.0057,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.0116,
+            "grade_pct_at_25mps": 0.043,
+            "accel_equiv_mmps2": 4.219
+          },
+          "T10s": {
+            "sigma_hdot_exact_mps": 0.006491,
+            "sigma_hdot_mc_mps": 0.006572,
+            "mc_vs_exact": 0.0125,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.0311,
+            "grade_pct_at_25mps": 0.026,
+            "accel_equiv_mmps2": 2.546
+          },
+          "T20s": {
+            "sigma_hdot_exact_mps": 0.004248,
+            "sigma_hdot_mc_mps": 0.004183,
+            "mc_vs_exact": -0.0153,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.0684,
+            "grade_pct_at_25mps": 0.017,
+            "accel_equiv_mmps2": 1.666
+          },
+          "T30s": {
+            "sigma_hdot_exact_mps": 0.003325,
+            "sigma_hdot_mc_mps": 0.003286,
+            "mc_vs_exact": -0.0119,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.1053,
+            "grade_pct_at_25mps": 0.0133,
+            "accel_equiv_mmps2": 1.304
+          },
+          "T60s": {
+            "sigma_hdot_exact_mps": 0.002123,
+            "sigma_hdot_mc_mps": 0.002055,
+            "mc_vs_exact": -0.0319,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.2184,
+            "grade_pct_at_25mps": 0.0085,
+            "accel_equiv_mmps2": 0.833
+          }
+        },
+        "baro_white_only": {
+          "T5s": {
+            "sigma_hdot_exact_mps": 0.006197,
+            "sigma_hdot_mc_mps": 0.006307,
+            "mc_vs_exact": 0.0178,
+            "tolerance": 0.06,
+            "approx_vs_exact": -0.0,
+            "grade_pct_at_25mps": 0.0248,
+            "accel_equiv_mmps2": 2.431
+          },
+          "T10s": {
+            "sigma_hdot_exact_mps": 0.002191,
+            "sigma_hdot_mc_mps": 0.002205,
+            "mc_vs_exact": 0.0065,
+            "tolerance": 0.06,
+            "approx_vs_exact": -0.0,
+            "grade_pct_at_25mps": 0.0088,
+            "accel_equiv_mmps2": 0.859
+          },
+          "T20s": {
+            "sigma_hdot_exact_mps": 0.0007746,
+            "sigma_hdot_mc_mps": 0.0007636,
+            "mc_vs_exact": -0.0142,
+            "tolerance": 0.06,
+            "approx_vs_exact": -0.0,
+            "grade_pct_at_25mps": 0.0031,
+            "accel_equiv_mmps2": 0.304
+          },
+          "T30s": {
+            "sigma_hdot_exact_mps": 0.0004216,
+            "sigma_hdot_mc_mps": 0.0004182,
+            "mc_vs_exact": -0.0081,
+            "tolerance": 0.06,
+            "approx_vs_exact": -0.0,
+            "grade_pct_at_25mps": 0.0017,
+            "accel_equiv_mmps2": 0.165
+          },
+          "T60s": {
+            "sigma_hdot_exact_mps": 0.0001491,
+            "sigma_hdot_mc_mps": 0.0001522,
+            "mc_vs_exact": 0.0212,
+            "tolerance": 0.06,
+            "approx_vs_exact": -0.0,
+            "grade_pct_at_25mps": 0.0006,
+            "accel_equiv_mmps2": 0.058
+          }
+        },
+        "baro_gm_0p3_300": {
+          "T5s": {
+            "sigma_hdot_exact_mps": 0.01347,
+            "sigma_hdot_mc_mps": 0.01335,
+            "mc_vs_exact": -0.0086,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.0027,
+            "grade_pct_at_25mps": 0.0539,
+            "accel_equiv_mmps2": 5.284
+          },
+          "T10s": {
+            "sigma_hdot_exact_mps": 0.008707,
+            "sigma_hdot_mc_mps": 0.008797,
+            "mc_vs_exact": 0.0104,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.0065,
+            "grade_pct_at_25mps": 0.0348,
+            "accel_equiv_mmps2": 3.415
+          },
+          "T20s": {
+            "sigma_hdot_exact_mps": 0.005968,
+            "sigma_hdot_mc_mps": 0.005826,
+            "mc_vs_exact": -0.0239,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.0137,
+            "grade_pct_at_25mps": 0.0239,
+            "accel_equiv_mmps2": 2.341
+          },
+          "T30s": {
+            "sigma_hdot_exact_mps": 0.004817,
+            "sigma_hdot_mc_mps": 0.004736,
+            "mc_vs_exact": -0.0167,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.0208,
+            "grade_pct_at_25mps": 0.0193,
+            "accel_equiv_mmps2": 1.89
+          },
+          "T60s": {
+            "sigma_hdot_exact_mps": 0.003327,
+            "sigma_hdot_mc_mps": 0.003202,
+            "mc_vs_exact": -0.0378,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.042,
+            "grade_pct_at_25mps": 0.0133,
+            "accel_equiv_mmps2": 1.305
+          }
+        },
+        "baro_gm_0p3_60": {
+          "T5s": {
+            "sigma_hdot_exact_mps": 0.02709,
+            "sigma_hdot_mc_mps": 0.02689,
+            "mc_vs_exact": -0.0076,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.0165,
+            "grade_pct_at_25mps": 0.1084,
+            "accel_equiv_mmps2": 10.628
+          },
+          "T10s": {
+            "sigma_hdot_exact_mps": 0.01846,
+            "sigma_hdot_mc_mps": 0.01868,
+            "mc_vs_exact": 0.0121,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.0345,
+            "grade_pct_at_25mps": 0.0738,
+            "accel_equiv_mmps2": 7.242
+          },
+          "T20s": {
+            "sigma_hdot_exact_mps": 0.01255,
+            "sigma_hdot_mc_mps": 0.0124,
+            "mc_vs_exact": -0.0123,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.0704,
+            "grade_pct_at_25mps": 0.0502,
+            "accel_equiv_mmps2": 4.925
+          },
+          "T30s": {
+            "sigma_hdot_exact_mps": 0.009905,
+            "sigma_hdot_mc_mps": 0.00977,
+            "mc_vs_exact": -0.0136,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.1068,
+            "grade_pct_at_25mps": 0.0396,
+            "accel_equiv_mmps2": 3.885
+          },
+          "T60s": {
+            "sigma_hdot_exact_mps": 0.006354,
+            "sigma_hdot_mc_mps": 0.00614,
+            "mc_vs_exact": -0.0337,
+            "tolerance": 0.06,
+            "approx_vs_exact": 0.2193,
+            "grade_pct_at_25mps": 0.0254,
+            "accel_equiv_mmps2": 2.493
+          }
+        }
+      },
+      "tunnel_gradient": {
+        "baro_tunnel_10pa": {
+          "tunnel_length_m": 3500.0,
+          "exit_decay_m": 200.0,
+          "exit_level_expected_m": 2.9661,
+          "exit_level_achieved_m": 2.9657,
+          "max_sample_jump_m": 0.0115,
+          "ds_per_sample_max_m": 0.7778,
+          "fake_grade_pct": 0.0847,
+          "fraction_left_after_1Lp": 0.368
+        },
+        "baro_tunnel_30pa": {
+          "tunnel_length_m": 3500.0,
+          "exit_decay_m": 200.0,
+          "exit_level_expected_m": 8.8983,
+          "exit_level_achieved_m": 8.8972,
+          "max_sample_jump_m": 0.0345,
+          "ds_per_sample_max_m": 0.7778,
+          "fake_grade_pct": 0.2542,
+          "fraction_left_after_1Lp": 0.368
+        },
+        "baro_tunnel_30pa+baro_exit_lp_50": {
+          "tunnel_length_m": 3500.0,
+          "exit_decay_m": 50.0,
+          "exit_level_expected_m": 8.8983,
+          "exit_level_achieved_m": 8.8972,
+          "max_sample_jump_m": 0.1364,
+          "ds_per_sample_max_m": 0.7778,
+          "fake_grade_pct": 0.2542,
+          "fraction_left_after_1Lp": 0.367
+        },
+        "baro_tunnel_30pa+baro_exit_lp_500": {
+          "tunnel_length_m": 3500.0,
+          "exit_decay_m": 500.0,
+          "exit_level_expected_m": 8.8983,
+          "exit_level_achieved_m": 8.8972,
+          "max_sample_jump_m": 0.0138,
+          "ds_per_sample_max_m": 0.7778,
+          "fake_grade_pct": 0.2542,
+          "fraction_left_after_1Lp": 0.368
+        },
+        "baro_tunnel_30pa+baro_exit_step": {
+          "tunnel_length_m": 3500.0,
+          "exit_decay_m": 0.0,
+          "exit_level_expected_m": 8.8983,
+          "exit_level_achieved_m": 8.8972,
+          "max_sample_jump_m": 8.8972,
+          "ds_per_sample_max_m": 0.7778,
+          "fake_grade_pct": 0.2542
+        }
+      }
+    },
+    "imu": {
+      "params_nominal": {
+        "imu.rate_hz": {
+          "value": 100.0,
+          "tag": "MEAS",
+          "src": "Suvorkin et al. 2024, Table 1 (from output timestamps)"
+        },
+        "imu.accel_vrw": {
+          "value": [
+            0.000999,
+            0.00092,
+            0.000858
+          ],
+          "tag": "MEAS",
+          "src": "Suvorkin et al. 2024, Table 4 (Note10, LSM6DSR)"
+        },
+        "imu.accel_bias_instab": {
+          "value": [
+            0.000663,
+            0.000679,
+            0.00162
+          ],
+          "tag": "MEAS",
+          "src": "Suvorkin et al. 2024, Table 4 (Note10, LSM6DSR)"
+        },
+        "imu.gyro_arw": {
+          "value": [
+            0.0007,
+            0.000601,
+            0.00067
+          ],
+          "tag": "MEAS",
+          "src": "Suvorkin et al. 2024, Table 4 (Note10, LSM6DSR)"
+        },
+        "imu.gyro_bias_instab": {
+          "value": [
+            8.84e-05,
+            0.000154,
+            0.000226
+          ],
+          "tag": "MEAS",
+          "src": "Suvorkin et al. 2024, Table 4 (Note10, LSM6DSR)"
+        },
+        "imu.bi_taus_s": {
+          "value": [
+            5.0,
+            50.0,
+            500.0
+          ],
+          "tag": "ASSUMED",
+          "src": "R3: derived from the target range (tau ~ T/2)"
+        },
+        "imu.bi_fit_range_s": {
+          "value": [
+            10.0,
+            1000.0
+          ],
+          "tag": "ASSUMED",
+          "src": "R3: outage horizon with margin"
+        },
+        "imu.bi_gm1_tau_s": {
+          "value": 300.0,
+          "tag": "ASSUMED",
+          "src": "K1 reference model"
+        },
+        "imu.accel_turn_on_sigma": {
+          "value": 0.0980665,
+          "tag": "SPEC",
+          "src": "LSM6DSR datasheet LA_TyOff +-10 mg, used as 1 sigma"
+        },
+        "imu.gyro_turn_on_sigma": {
+          "value": 0.0008726646259971648,
+          "tag": "ASSUMED",
+          "src": "K2 nominal, uncalibrated stream residual; SPEC raw G_TyOff +-1 dps is an upper bound"
+        },
+        "imu.accel_scale_sigma": {
+          "value": 0.003,
+          "tag": "ASSUMED",
+          "src": "K4"
+        },
+        "imu.gyro_scale_sigma": {
+          "value": 0.003,
+          "tag": "ASSUMED",
+          "src": "K4 nominal 0.3 %; SPEC G_So% +-1 % is the bound"
+        },
+        "imu.misalign_sigma": {
+          "value": 0.0017453292519943296,
+          "tag": "ASSUMED",
+          "src": "K4"
+        },
+        "vib.level": {
+          "value": 1.0,
+          "tag": "ASSUMED",
+          "src": "K5 'calm'"
+        },
+        "vib.road_band_hz": {
+          "value": [
+            2.0,
+            30.0
+          ],
+          "tag": "ASSUMED",
+          "src": "K5"
+        },
+        "vib.road_v_ref_mps": {
+          "value": 25.0,
+          "tag": "ASSUMED",
+          "src": "K5, rms linear in speed"
+        },
+        "vib.road_accel_rms_b": {
+          "value": [
+            0.05,
+            0.05,
+            0.15
+          ],
+          "tag": "ASSUMED",
+          "src": "K5"
+        },
+        "vib.road_rate_rms_b": {
+          "value": [
+            0.005,
+            0.005,
+            0.002
+          ],
+          "tag": "ASSUMED",
+          "src": "K5"
+        },
+        "vib.engine_freq_hz": {
+          "value": 25.0,
+          "tag": "ASSUMED",
+          "src": "K5: 4-cyl idle ~750 rpm, 2 firings/rev"
+        },
+        "vib.engine_bw_hz": {
+          "value": 2.0,
+          "tag": "ASSUMED",
+          "src": "K5"
+        },
+        "vib.engine_accel_rms_b": {
+          "value": [
+            0.02,
+            0.02,
+            0.05
+          ],
+          "tag": "ASSUMED",
+          "src": "K5"
+        },
+        "vib.engine_rate_rms_b": {
+          "value": [
+            0.001,
+            0.001,
+            0.0005
+          ],
+          "tag": "ASSUMED",
+          "src": "K5"
+        },
+        "vib.filter_order": {
+          "value": 4,
+          "tag": "ASSUMED",
+          "src": "band shape"
+        },
+        "timing.rate_offset": {
+          "value": 0.0,
+          "tag": "ASSUMED",
+          "src": "K6 case 1: nominal 0, sweep +-1..2 %"
+        },
+        "timing.jitter_sigma_s": {
+          "value": 0.0005,
+          "tag": "ASSUMED",
+          "src": "K6; Android pipeline irregularity, Bochkati & Pany 2021"
+        },
+        "timing.gap_rate_hz": {
+          "value": 0.008333333333333333,
+          "tag": "ASSUMED",
+          "src": "K6 occasional gaps"
+        },
+        "timing.gap_len_samples": {
+          "value": 3,
+          "tag": "ASSUMED",
+          "src": "K6"
+        },
+        "timing.ts_scale_error": {
+          "value": 0.0,
+          "tag": "ASSUMED",
+          "src": "K6 case 2: nominal 0, sweep 1e-2"
+        },
+        "timing.imu_gnss_offset_s": {
+          "value": 0.0,
+          "tag": "ASSUMED",
+          "src": "K6: nominal 0, sweep 0..0.2 s"
+        }
+      },
+      "bi_analytic_fit": {
+        "accel_x": {
+          "gm3_sigmas": [
+            0.00063189,
+            0.00054075,
+            0.00064086
+          ],
+          "gm3_taus_s": [
+            5.0,
+            50.0,
+            500.0
+          ],
+          "gm3_max_adev_err": 0.017,
+          "gm1_max_adev_err": 0.4673,
+          "tolerance": 0.1,
+          "bias_change_rms_180s_gm3": 0.001271,
+          "bias_change_rms_180s_gm1": 0.0006777,
+          "flicker_ref_0p94B": 0.0006226
+        },
+        "accel_y": {
+          "gm3_sigmas": [
+            0.00064697,
+            0.00055393,
+            0.00065626
+          ],
+          "gm3_taus_s": [
+            5.0,
+            50.0,
+            500.0
+          ],
+          "gm3_max_adev_err": 0.0171,
+          "gm1_max_adev_err": 0.49,
+          "tolerance": 0.1,
+          "bias_change_rms_180s_gm3": 0.001302,
+          "bias_change_rms_180s_gm1": 0.000694,
+          "flicker_ref_0p94B": 0.0006376
+        },
+        "accel_z": {
+          "gm3_sigmas": [
+            0.001542,
+            0.0013228,
+            0.0015651
+          ],
+          "gm3_taus_s": [
+            5.0,
+            50.0,
+            500.0
+          ],
+          "gm3_max_adev_err": 0.0174,
+          "gm1_max_adev_err": 0.6635,
+          "tolerance": 0.1,
+          "bias_change_rms_180s_gm3": 0.003105,
+          "bias_change_rms_180s_gm1": 0.001656,
+          "flicker_ref_0p94B": 0.001521
+        },
+        "gyro_x": {
+          "gm3_sigmas": [
+            8.5284e-05,
+            7.1438e-05,
+            8.5734e-05
+          ],
+          "gm3_taus_s": [
+            5.0,
+            50.0,
+            500.0
+          ],
+          "gm3_max_adev_err": 0.0135,
+          "gm1_max_adev_err": 0.1194,
+          "tolerance": 0.1,
+          "bias_change_rms_180s_gm3": 0.0001701,
+          "bias_change_rms_180s_gm1": 9.036e-05,
+          "flicker_ref_0p94B": 8.301e-05
+        },
+        "gyro_y": {
+          "gm3_sigmas": [
+            0.0001476,
+            0.00012503,
+            0.00014912
+          ],
+          "gm3_taus_s": [
+            5.0,
+            50.0,
+            500.0
+          ],
+          "gm3_max_adev_err": 0.0157,
+          "gm1_max_adev_err": 0.2538,
+          "tolerance": 0.1,
+          "bias_change_rms_180s_gm3": 0.0002957,
+          "bias_change_rms_180s_gm1": 0.0001574,
+          "flicker_ref_0p94B": 0.0001446
+        },
+        "gyro_z": {
+          "gm3_sigmas": [
+            0.00021613,
+            0.0001838,
+            0.00021869
+          ],
+          "gm3_taus_s": [
+            5.0,
+            50.0,
+            500.0
+          ],
+          "gm3_max_adev_err": 0.0162,
+          "gm1_max_adev_err": 0.3152,
+          "tolerance": 0.1,
+          "bias_change_rms_180s_gm3": 0.0004337,
+          "bias_change_rms_180s_gm1": 0.000231,
+          "flicker_ref_0p94B": 0.0002122
+        }
+      },
+      "allan_24h": {
+        "hours": 24.0,
+        "seed": 2026,
+        "axes": {
+          "accel_x": {
+            "adev": {
+              "T1s": {
+                "target": 0.0010918,
+                "model": 0.0010239,
+                "achieved": 0.001025,
+                "err_vs_model": 0.0011,
+                "err_vs_target": -0.0611,
+                "tolerance": null
+              },
+              "T10s": {
+                "target": 0.000542,
+                "model": 0.00053933,
+                "achieved": 0.0005403,
+                "err_vs_model": 0.0018,
+                "err_vs_target": -0.0031,
+                "tolerance": 0.1
+              },
+              "T30s": {
+                "target": 0.00047669,
+                "model": 0.00047466,
+                "achieved": 0.00046423,
+                "err_vs_model": -0.022,
+                "err_vs_target": -0.0261,
+                "tolerance": 0.1
+              },
+              "T100s": {
+                "target": 0.00045161,
+                "model": 0.00045333,
+                "achieved": 0.00044026,
+                "err_vs_model": -0.0288,
+                "err_vs_target": -0.0251,
+                "tolerance": 0.1
+              },
+              "T300s": {
+                "target": 0.00044418,
+                "model": 0.0004436,
+                "achieved": 0.00043843,
+                "err_vs_model": -0.0117,
+                "err_vs_target": -0.0129,
+                "tolerance": 0.123
+              },
+              "T1000s": {
+                "target": 0.00044155,
+                "model": 0.00043403,
+                "achieved": 0.00042713,
+                "err_vs_model": -0.0159,
+                "err_vs_target": -0.0327,
+                "tolerance": 0.228
+              },
+              "T3000s": {
+                "target": 0.0004408,
+                "model": 0.00033757,
+                "achieved": 0.00038622,
+                "err_vs_model": 0.1441,
+                "err_vs_target": -0.1238,
+                "tolerance": null
+              }
+            },
+            "bias_change_rms_180s": {
+              "model": 0.001271,
+              "achieved": 0.001237
+            }
+          },
+          "accel_y": {
+            "adev": {
+              "T1s": {
+                "target": 0.0010246,
+                "model": 0.00094825,
+                "achieved": 0.00094881,
+                "err_vs_model": 0.0006,
+                "err_vs_target": -0.074,
+                "tolerance": null
+              },
+              "T10s": {
+                "target": 0.00053673,
+                "model": 0.00053383,
+                "achieved": 0.00053469,
+                "err_vs_model": 0.0016,
+                "err_vs_target": -0.0038,
+                "tolerance": 0.1
+              },
+              "T30s": {
+                "target": 0.00048131,
+                "model": 0.00047917,
+                "achieved": 0.00049364,
+                "err_vs_model": 0.0302,
+                "err_vs_target": 0.0256,
+                "tolerance": 0.1
+              },
+              "T100s": {
+                "target": 0.00046033,
+                "model": 0.00046214,
+                "achieved": 0.00048212,
+                "err_vs_model": 0.0432,
+                "err_vs_target": 0.0473,
+                "tolerance": 0.1
+              },
+              "T300s": {
+                "target": 0.00045416,
+                "model": 0.00045358,
+                "achieved": 0.0004453,
+                "err_vs_model": -0.0183,
+                "err_vs_target": -0.0195,
+                "tolerance": 0.123
+              },
+              "T1000s": {
+                "target": 0.00045199,
+                "model": 0.00044426,
+                "achieved": 0.0004457,
+                "err_vs_model": 0.0033,
+                "err_vs_target": -0.0139,
+                "tolerance": 0.228
+              },
+              "T3000s": {
+                "target": 0.00045136,
+                "model": 0.00034559,
+                "achieved": 0.00030837,
+                "err_vs_model": -0.1077,
+                "err_vs_target": -0.3168,
+                "tolerance": null
+              }
+            },
+            "bias_change_rms_180s": {
+              "model": 0.001302,
+              "achieved": 0.001315
+            }
+          },
+          "accel_z": {
+            "adev": {
+              "T1s": {
+                "target": 0.0013763,
+                "model": 0.0010179,
+                "achieved": 0.0010179,
+                "err_vs_model": 0.0,
+                "err_vs_target": -0.2604,
+                "tolerance": null
+              },
+              "T10s": {
+                "target": 0.0011098,
+                "model": 0.0011012,
+                "achieved": 0.0011035,
+                "err_vs_model": 0.0022,
+                "err_vs_target": -0.0057,
+                "tolerance": 0.1
+              },
+              "T30s": {
+                "target": 0.0010875,
+                "model": 0.0010819,
+                "achieved": 0.0010953,
+                "err_vs_model": 0.0124,
+                "err_vs_target": 0.0072,
+                "tolerance": 0.1
+              },
+              "T100s": {
+                "target": 0.0010796,
+                "model": 0.0010842,
+                "achieved": 0.0010887,
+                "err_vs_model": 0.0041,
+                "err_vs_target": 0.0084,
+                "tolerance": 0.1
+              },
+              "T300s": {
+                "target": 0.0010773,
+                "model": 0.001076,
+                "achieved": 0.0011455,
+                "err_vs_model": 0.0646,
+                "err_vs_target": 0.0633,
+                "tolerance": 0.123
+              },
+              "T1000s": {
+                "target": 0.0010765,
+                "model": 0.0010578,
+                "achieved": 0.0012225,
+                "err_vs_model": 0.1557,
+                "err_vs_target": 0.1356,
+                "tolerance": 0.228
+              },
+              "T3000s": {
+                "target": 0.0010763,
+                "model": 0.00082348,
+                "achieved": 0.00098009,
+                "err_vs_model": 0.1902,
+                "err_vs_target": -0.0893,
+                "tolerance": null
+              }
+            },
+            "bias_change_rms_180s": {
+              "model": 0.003105,
+              "achieved": 0.003163
+            }
+          },
+          "gyro_x": {
+            "adev": {
+              "T1s": {
+                "target": 0.00070246,
+                "model": 0.00070065,
+                "achieved": 0.00069985,
+                "err_vs_model": -0.0011,
+                "err_vs_target": -0.0037,
+                "tolerance": null
+              },
+              "T10s": {
+                "target": 0.00022902,
+                "model": 0.00022903,
+                "achieved": 0.00022976,
+                "err_vs_model": 0.0032,
+                "err_vs_target": 0.0032,
+                "tolerance": 0.1
+              },
+              "T30s": {
+                "target": 0.00014065,
+                "model": 0.0001406,
+                "achieved": 0.00013837,
+                "err_vs_model": -0.0159,
+                "err_vs_target": -0.0162,
+                "tolerance": 0.1
+              },
+              "T100s": {
+                "target": 9.1369e-05,
+                "model": 9.1443e-05,
+                "achieved": 9.2055e-05,
+                "err_vs_model": 0.0067,
+                "err_vs_target": 0.0075,
+                "tolerance": 0.1
+              },
+              "T300s": {
+                "target": 7.1286e-05,
+                "model": 7.1185e-05,
+                "achieved": 7.0659e-05,
+                "err_vs_model": -0.0074,
+                "err_vs_target": -0.0088,
+                "tolerance": 0.123
+              },
+              "T1000s": {
+                "target": 6.2756e-05,
+                "model": 6.1911e-05,
+                "achieved": 5.586e-05,
+                "err_vs_model": -0.0977,
+                "err_vs_target": -0.1099,
+                "tolerance": 0.228
+              },
+              "T3000s": {
+                "target": 6.0097e-05,
+                "model": 4.6829e-05,
+                "achieved": 4.5075e-05,
+                "err_vs_model": -0.0375,
+                "err_vs_target": -0.25,
+                "tolerance": null
+              }
+            },
+            "bias_change_rms_180s": {
+              "model": 0.0001701,
+              "achieved": 0.0001703
+            }
+          },
+          "gyro_y": {
+            "adev": {
+              "T1s": {
+                "target": 0.00060964,
+                "model": 0.00060328,
+                "achieved": 0.00060425,
+                "err_vs_model": 0.0016,
+                "err_vs_target": -0.0088,
+                "tolerance": null
+              },
+              "T10s": {
+                "target": 0.00021584,
+                "model": 0.00021565,
+                "achieved": 0.00021465,
+                "err_vs_model": -0.0047,
+                "err_vs_target": -0.0055,
+                "tolerance": 0.1
+              },
+              "T30s": {
+                "target": 0.00015002,
+                "model": 0.00014976,
+                "achieved": 0.00014817,
+                "err_vs_model": -0.0106,
+                "err_vs_target": -0.0123,
+                "tolerance": 0.1
+              },
+              "T100s": {
+                "target": 0.00011865,
+                "model": 0.0001189,
+                "achieved": 0.00011325,
+                "err_vs_model": -0.0475,
+                "err_vs_target": -0.0455,
+                "tolerance": 0.1
+              },
+              "T300s": {
+                "target": 0.00010802,
+                "model": 0.00010786,
+                "achieved": 0.00010582,
+                "err_vs_model": -0.0189,
+                "err_vs_target": -0.0204,
+                "tolerance": 0.123
+              },
+              "T1000s": {
+                "target": 0.00010405,
+                "model": 0.00010242,
+                "achieved": 0.00010206,
+                "err_vs_model": -0.0035,
+                "err_vs_target": -0.0191,
+                "tolerance": 0.228
+              },
+              "T3000s": {
+                "target": 0.00010289,
+                "model": 7.9157e-05,
+                "achieved": 9.2806e-05,
+                "err_vs_model": 0.1724,
+                "err_vs_target": -0.098,
+                "tolerance": null
+              }
+            },
+            "bias_change_rms_180s": {
+              "model": 0.0002957,
+              "achieved": 0.0002919
+            }
+          },
+          "gyro_z": {
+            "adev": {
+              "T1s": {
+                "target": 0.00068661,
+                "model": 0.00067438,
+                "achieved": 0.00067585,
+                "err_vs_model": 0.0022,
+                "err_vs_target": -0.0157,
+                "tolerance": null
+              },
+              "T10s": {
+                "target": 0.00025967,
+                "model": 0.00025921,
+                "achieved": 0.00026109,
+                "err_vs_model": 0.0072,
+                "err_vs_target": 0.0055,
+                "tolerance": 0.1
+              },
+              "T30s": {
+                "target": 0.00019365,
+                "model": 0.00019316,
+                "achieved": 0.00019491,
+                "err_vs_model": 0.0091,
+                "err_vs_target": 0.0065,
+                "tolerance": 0.1
+              },
+              "T100s": {
+                "target": 0.0001644,
+                "model": 0.00016485,
+                "achieved": 0.0001695,
+                "err_vs_model": 0.0282,
+                "err_vs_target": 0.031,
+                "tolerance": 0.1
+              },
+              "T300s": {
+                "target": 0.00015503,
+                "model": 0.00015481,
+                "achieved": 0.00017317,
+                "err_vs_model": 0.1186,
+                "err_vs_target": 0.117,
+                "tolerance": 0.123
+              },
+              "T1000s": {
+                "target": 0.00015162,
+                "model": 0.00014916,
+                "achieved": 0.00016236,
+                "err_vs_model": 0.0885,
+                "err_vs_target": 0.0709,
+                "tolerance": 0.228
+              },
+              "T3000s": {
+                "target": 0.00015063,
+                "model": 0.00011564,
+                "achieved": 0.000128,
+                "err_vs_model": 0.1069,
+                "err_vs_target": -0.1502,
+                "tolerance": null
+              }
+            },
+            "bias_change_rms_180s": {
+              "model": 0.0004337,
+              "achieved": 0.0004373
+            }
+          }
+        }
+      },
+      "interpolation": {
+        "S1": {
+          "max_pointwise_f_mps2": 0.0,
+          "max_pointwise_w_rps": 0.0,
+          "max_integral_f_err_mps": 1.46e-09
+        },
+        "S2": {
+          "max_pointwise_f_mps2": 0.00906,
+          "max_pointwise_w_rps": 2.14e-05,
+          "max_integral_f_err_mps": 3.04e-05
+        },
+        "S3": {
+          "max_pointwise_f_mps2": 2.16e-06,
+          "max_pointwise_w_rps": 8.01e-09,
+          "max_integral_f_err_mps": 1.85e-07
+        },
+        "S4": {
+          "max_pointwise_f_mps2": 0.00211,
+          "max_pointwise_w_rps": 8.89e-06,
+          "max_integral_f_err_mps": 7.64e-06
+        },
+        "S5": {
+          "max_pointwise_f_mps2": 0.00389,
+          "max_pointwise_w_rps": 9.04e-06,
+          "max_integral_f_err_mps": 4.1e-06
+        }
+      },
+      "timestamps": {
+        "rate_offset_+2pct": {
+          "dv_err_norm_mps": 2.928e-06,
+          "predicted_mps": 0.0
+        },
+        "rate_offset_-2pct": {
+          "dv_err_norm_mps": 4.116e-06,
+          "predicted_mps": 0.0
+        },
+        "ts_scale_1pct": {
+          "dv_err_norm_mps": 23.72,
+          "predicted_mps": 23.72
+        }
+      },
+      "vibration": {
+        "engine_accel_rms_b": {
+          "target": [
+            0.02,
+            0.02,
+            0.05
+          ],
+          "achieved": [
+            0.0201,
+            0.0204,
+            0.0503
+          ]
+        },
+        "road_accel_rms_b_at_cruise": {
+          "v_mps": 22.22,
+          "target": [
+            0.0444,
+            0.0444,
+            0.1333
+          ],
+          "achieved": [
+            0.0447,
+            0.0445,
+            0.1326
+          ]
+        },
+        "tolerance": 0.05
+      }
+    }
+  }
+}
