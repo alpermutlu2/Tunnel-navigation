@@ -140,9 +140,20 @@ Readings:
   row is the relevant reference; on graded roads (S3) the lumped term changes with the grade.
 - **Knowing the entry bias and holding it does not beat no calibration** for this BI model
   (33 vs 28 m): the fast components (τ = 5, 50 s) revert to their mean, so a held b(t_entry) adds
-  error. The best use of the entry value is the GM prediction Σ b_j(0) e^(−t/τ_j): analytic
-  15.8 m at 180 s (accel), 507 m (gyro). Design note for v0.5: bias states as GM, not constants,
-  or estimate only the slow part.
+  error. Using the entry value through the GM model helps (analytic, 180 s, accel / gyro):
+  only the total b(0) known, conditional mean `b̂(t) = b(0)·Σσᵢ²e^(−t/τᵢ)/Σσᵢ²`: **21.6 m / 703 m**;
+  each component bᵢ(0) known separately (oracle lower bound, not achievable from one bias
+  value): 15.8 m / 507 m. (Corrected after review 5: 15.8 m had been presented as the
+  achievable value.) Single-GM model: 11.6 m either way.
+- **Forward-axis BI sensitivity**: the forward axis is phone z, whose B (1.62e-3) is 2.4× x/y
+  and was measured with z vertical; Suvorkin report a bending of the Allan curve on whichever
+  axis was vertical (cause not given; they state it does not change the coefficients). If the
+  high value belongs to the vertical orientation rather than the z axis, the forward BI in the
+  car is nearer x/y: held-bias error 13.0 m instead of 30.9 m. Unsettled; kept as nominal,
+  sensitivity to be added. The ~30 m headline therefore rests on two pessimistic choices (3-GM
+  shape, z-axis B), each worth ~2.4×.
+- Row names: "accel BI, no calibration" = BI-only with zero correction, not an uncalibrated
+  phone (turn-on, scale, misalignment are off in that row).
 - **Model-shape sensitivity**: the paper gives one B per axis, not the Allan curve shape. With
   the single-GM reference model (τ = 300 s) the held-bias accel error is 12.5 m instead of 30.9 m
   (analytic, 180 s). The realised drift depends on an assumption the data cannot settle; both are
