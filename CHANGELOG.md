@@ -17,6 +17,21 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   FLU pitch-direction trap documented, C_nb chain, independent mount/lever-arm oracle flags,
   calibration epoch, timing concepts, signed/abs metrics, 8-state contract.
   `frames.so3_log`, `frames.attitude_error_n` + `tests/test_frames.py` (16 sign tests).
+- Step 2, strapdown INS (`tunnelsim/ins.py`): rotation-matrix mechanisation of the plan
+  (midpoint rate, trapezoid accel and position), dt from reported timestamps, batch dimension
+  for Monte Carlo, calibration applied inside the INS (`ImuCalibration`), attitude sequence as
+  an optional input (ideal-attitude experiments), `reference_point` (p_R = p_P − C_np C_bpᵀ r_b).
+  Imports only numpy, frames, meas (tested).
+- New metrics `ins`: error-free reproduction of the truth (≤ 1.3 mm on S1–S5 and MIX, attitude
+  ≤ 5e-7 rad; same as the truth strapdown); convergence on closed-form motion exactly second
+  order (2.00 per halving, one- and two-axis rotation; two-axis coning 0.7 mm at 100 Hz over
+  60 s); MIX plateaus at 6e-5 m from 200 Hz, the truth's own discretisation floor
+  (np.gradient for ω̇, sideslip FOH, event timing on the grid), not a mechanisation error;
+  irregular dt (jitter + dropped samples) adds nothing measurable.
+- Harness fix found on the way: with sampling jitter the first IMU sample is not at the truth
+  grid time; the oracle initial state is now taken at the true time of the first sample
+  (was 6 mm offset on S1 = v·jitter).
+- Tests 101 -> 114.
 
 ## v0.3.0 (2026-10-19): sensor simulation
 

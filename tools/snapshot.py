@@ -79,6 +79,13 @@ def sensor_metrics():
     }
 
 
+def ins_metrics():
+    """v0.4: strapdown INS verification (error-free, convergence order, irregular dt)."""
+    import test_ins as N
+    return {"error_free": N.error_free_report(), "convergence": N.convergence_report(),
+            "variable_dt": N.variable_dt_report()}
+
+
 def run_tests():
     r = subprocess.run([sys.executable, "-m", "pytest", "-q", "--runslow", str(ROOT / "tests")],
                        capture_output=True, text=True, cwd=ROOT)
@@ -92,7 +99,7 @@ def snapshot(force: bool = False):
         sys.exit(f"refusing to overwrite released report {target} (use --force)")
     summary, code = run_tests()
     data = {"version": ver, "tests": summary, "tests_ok": code == 0, "truth": truth_metrics(),
-            "sensors": sensor_metrics()}
+            "sensors": sensor_metrics(), "ins": ins_metrics()}
     d = ROOT / "reports" / ver
     d.mkdir(parents=True, exist_ok=True)
     (d / "metrics.json").write_text(json.dumps(data, indent=2) + "\n")
