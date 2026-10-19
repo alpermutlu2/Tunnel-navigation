@@ -108,6 +108,54 @@ Corrected 2026-10-19 (axis mapping, `docs/decisions/2026-10-19-v0.4-plan.md`): t
 - Constant BI-sized pitch-gyro bias (x, 8.84e-5 rad/s) integrated freely → gravity leakage, g·b·t³/6: **~0.84 km** (was ~1.4 km, y axis).
 - 1 mg residual accel error: ~160 m. 1° grade/pitch error (~17 mg): ~2.7 km.
 
+### 4.3 Measured budget (v0.4 step 3, 200 seeds, `reports/0.4.0.dev0/budget_200.json`)
+
+Fixed 180 s INS-only propagation from the portal, oracle initial state, true mount and lever
+arm, calibration at the tunnel-entry epoch; along-track error at R; rmse / p95_abs in metres.
+Single-term rows on S1 match the closed forms within 15 % (slow test).
+
+| Configuration | S1 | S2 (curves) | S3 (V) | S4 | S5 |
+|---|---|---|---|---|---|
+| accel white (ideal attitude) | 1.2 / 2.2 | 1.2 / 2.2 | 1.2 / 2.2 | 1.2 / 2.2 | 1.2 / 2.2 |
+| accel BI, entry bias known and held | 33 / 62 | 28 / 53 | 29 / 57 | 33 / 67 | 32 / 62 |
+| accel BI, no calibration | 28 / 59 | 24 / 47 | 28 / 55 | 30 / 55 | 30 / 56 |
+| accel scale 3e-3, uncalibrated | 140 / 273 | 117 / 229 | 126 / 246 | 137 / 264 | 139 / 270 |
+| accel misalignment 0.1°, uncalibrated | 252 / 505 | 240 / 462 | 254 / 507 | 252 / 506 | 252 / 505 |
+| gyro ARW (free attitude) | 681 / 1260 | 645 / 1160 | 682 / 1260 | 681 / 1260 | 680 / 1260 |
+| gyro BI, entry bias known and held (free) | 983 / 1790 | 1300 / 2640 | 951 / 1770 | 958 / 1760 | 978 / 1940 |
+| gyro misalignment (free) | 0 | 82 / 159 | 0.1 | 0 | 0 |
+| vibration road+engine, ideal / free | 0.19 / 14 | 0.19 / 14 | 0.16 / 13 | 0.14 / 11 | 0.21 / 16 |
+| **all terms, ideal attitude, all constants + entry bias known** | **33 / 62** | **28 / 54** | **29 / 57** | **33 / 67** | **32 / 62** |
+| all terms, ideal attitude, entry bias known (S, M not) | 293 / 576 | 270 / 562 | 289 / 559 | 290 / 558 | 291 / 550 |
+| all terms, free attitude, entry bias known | 1260 / 2400 | 1510 / 2860 | 1240 / 2350 | 1280 / 2430 | 1280 / 2410 |
+
+Readings:
+- **Free pitch is unusable**: ~1.2–1.5 km at 180 s even with the entry bias known; 64 % of the
+  variance is gyro BI, 31 % ARW (S1). Pitch must be constrained (NHC, barometer); this is the
+  measured version of the section 4 conclusion.
+- **With ideal attitude the residual is the accel bias change after the entry**: ~29–33 m
+  rmse, 53–67 m p95_abs. Uncalibrated scale and misalignment dominate the 290 m row (misalignment
+  75 %, scale 23 %), but on a constant grade they act as a constant forward offset (gravity
+  through S, M) that a GNSS calibration estimates as part of the lumped bias, so the "all known"
+  row is the relevant reference; on graded roads (S3) the lumped term changes with the grade.
+- **Knowing the entry bias and holding it does not beat no calibration** for this BI model
+  (33 vs 28 m): the fast components (τ = 5, 50 s) revert to their mean, so a held b(t_entry) adds
+  error. The best use of the entry value is the GM prediction Σ b_j(0) e^(−t/τ_j): analytic
+  15.8 m at 180 s (accel), 507 m (gyro). Design note for v0.5: bias states as GM, not constants,
+  or estimate only the slow part.
+- **Model-shape sensitivity**: the paper gives one B per axis, not the Allan curve shape. With
+  the single-GM reference model (τ = 300 s) the held-bias accel error is 12.5 m instead of 30.9 m
+  (analytic, 180 s). The realised drift depends on an assumption the data cannot settle; both are
+  reported.
+- Gyro misalignment couples yaw rate into pitch in curves (S2: 82 m free); zero on straight roads.
+- Vibration: zero-mean in the accel channel (0.2 m), but through the attitude nonlinearity a
+  nonzero mean in free attitude (1.4–1.9 m over 180 s); not sensitive to 100 vs 200 Hz.
+- Additivity of variances: ratio 1.01–1.03 with ideal attitude, 1.04–1.11 with free attitude
+  (gyro–accel interaction), as expected.
+- Real-exit errors (operational, own name): S4's exit is 337 s after the portal; with ideal
+  attitude and entry bias known its rmse is 1025 m, so long stop-and-go tunnels need the speed
+  cues, not the INS.
+
 **Conclusion:** sensor noise is not the limit. The limits are (a) calibration quality before the outage and (b) pitch/grade knowledge. Pitch must be held by NHC + barometer + map grade; gyro is used freely mainly for yaw.
 
 ### 4.2 Bias / mount-pitch observability
@@ -165,6 +213,7 @@ Review notes (2026-10-19):
 Decisions (2026-10-17):
 - Grade is handled by map/baro matching, so the CV hypothesis matters most on the flat, straight tunnel (S1).
 - Accel bias is estimated while GNSS is good; bias *drift* is ignored by the filter (BI-level drift ≈ 10 m over 3 min). Drift stays in the truth model so its effect is measured, not assumed.
+  - Measured 2026-10-20 (v0.4, 4.3): the drift after the entry costs ~29–33 m rmse at 180 s with the 3-GM model (12.5 m with the single-GM reference), not ≈ 10 m; the 10 m figure used the wrong axis and a constant-bias picture.
 - Slow speed change: multi-time-scale accel filters (fast / medium / slow). Formal equivalent: IMM over Singer acceleration models (first-order Gauss-Markov accel) with different time constants τ. Trade-off: longer τ lowers the detection floor but adds delay.
 
 ### 5.2 Bias-free speed cues (candidates for the flat, straight tunnel)
@@ -289,6 +338,7 @@ Barometer as along-track measurement: `z = h_map(s) + b_h + n`, `∂h/∂s = sin
 - 2026-10-17: Sensor profile parameters beyond Allan terms are marked [ASSUMED] in `tunnelsim/profiles.py`.
 - 2026-10-19: External review applied. Truth adds sideslip, lever arm, event-timing fix; 36 tests incl. independent geometry references and mutation checks. Grade profile no longer assumed in the map (A3). Estimator/truth separation policy (7.2). Observability analysis, reference algorithms incl. oracle, NEES/NIS added to the plan.
 - 2026-10-19: v0.3 sensor decisions K1 to K9 accepted (`docs/decisions/2026-10-19-v0.3-sensors.md`). Three tags [MEAS]/[SPEC]/[ASSUMED]; no real data collected, unsourced parameters swept; nominal vs named sensitivity overrides; per-term RNG streams; version scope v0.3 to v0.8 (section 5). From now on every decision and review is committed; the repository is the only sync channel between sessions.
+- 2026-10-20: v0.4 step 3 measured budget (4.3): free pitch unusable (~1.2–1.5 km at 180 s); ideal-attitude residual ~30 m from the accel bias change; held entry bias no better than none for the 3-GM model, GM prediction halves it; BI model shape changes the result 2.5×.
 - 2026-10-19: v0.4 plan accepted with review 3 (`docs/decisions/2026-10-19-v0.4-plan.md`): axis-mapping correction of section 4, independent oracle flags, LS-ideal vs LS-practical calibration, approach road lengthened to 200 s of GNSS, structural + practical observability, 200/1000 seeds, fixed-180 s and real-exit reports, coordinate contracts (`docs/contracts.md`).
 - 2026-10-19: Bias calibration design note (5.0): slow bias estimation, robustness over optimality, Q/R restrict only the bias states' rate of change (wrong bias costs δb·t²/2), R inflated for GNSS velocity correlation, separate coasting detector.
 - 2026-10-19: GNSS generator (K8, K9) implemented; unspecified details chosen [ASSUMED] and listed in 3.3 (velocity split, degradation ramp, coasting 5 s, reacquisition 1/2 s, lagging-receiver mechanism, exit Doppler factor).

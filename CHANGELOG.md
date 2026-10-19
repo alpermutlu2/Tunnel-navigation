@@ -40,6 +40,13 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   421, S4 475 → 585, S5 242 → 463), strapdown residuals accumulate over the longer run (S2
   3.1e-5 → 5.3e-5 m, S3 4.8e-6 → 1.6e-5, S5 4.95e-4 → 8.8e-4, S1 5e-11 → 7e-9), centreline
   discretisation S2 5.1e-5 → 1.0e-4 m (longer road), time in tunnel −0.01 s (sample alignment).
+- Step 3, error budget (`tunnelsim/budget.py`, analysis harness): fixed 180 s INS-only budget
+  and real-exit error for S1–S5, 22 configurations, 200 seeds (paired), bias / rmse / p95_abs
+  with bootstrap CI, growth curves, variance shares and additivity; per-seed IMU generated once
+  and recomposed (tested identical to the generator). Analytic references incl. three bias
+  instability kernels (raw, held entry bias, GM prediction). Results in DESIGN 4.3 and
+  `reports/0.4.0.dev0/budget_200.json`; `tools/budget.py` for the 1000-seed final run. New
+  metric section `budget` in the snapshot. Tests +6 (one slow).
 - Irregular-dt test moved to closed-form motion (exact signals at jittered instants): 600 s,
   two-axis, +3 % vs the uniform grid (8.6 → 8.9 cm, coning). On scenarios the generator's
   jitter needs the truth interpolated off-grid; that resampling floor grows with run length
