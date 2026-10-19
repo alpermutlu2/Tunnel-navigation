@@ -12,7 +12,6 @@ itself be a `Param`, so a swept value cannot lose its tag.
 Units are SI throughout: m, s, rad. Per-axis tuples are (x, y, z) in the frame named by the
 field (phone frame unless stated).
 
-The GNSS profile is still the v0.2 placeholder; it is rebuilt (tags, K8, K9) in its own commit.
 """
 from __future__ import annotations
 
@@ -212,21 +211,55 @@ BARO = BaroProfile(
 
 
 # ---------------------------------------------------------------------------------------------
-# GNSS: v0.2 placeholder (plain floats, all assumed), rebuilt in its own commit.
+# GNSS (K8, K9). Fixes are ENU position/velocity of the phone antenna (no lat/lon), 1 sigma per
+# axis. Reported accuracy is generated from the model sigma, independent of the realised error.
 # ---------------------------------------------------------------------------------------------
-
-
 @dataclass(frozen=True)
 class GnssProfile:
-    rate_hz: float = 1.0
-    pos_sigma_m: float = 3.0
-    vert_sigma_m: float = 6.0
-    pos_corr_tau_s: float = 30.0
-    vel_sigma_mps: float = 0.10
-    degrade_before_portal_s: float = 4.0
-    exit_multipath_m: float = 30.0
-    exit_multipath_decay_s: float = 8.0
-    exit_reacq_delay_s: float = 2.0
+    rate_hz: Param
+    pos_sigma_h_m: Param           # open-sky position error, GM per horizontal axis
+    pos_sigma_v_m: Param
+    pos_tau_s: Param
+    vel_white_h_mps: Param         # Doppler velocity: white part per horizontal axis
+    vel_gm_h_mps: Param            # correlated part (GM) per horizontal axis
+    vel_gm_tau_s: Param
+    vel_vert_factor: Param         # vertical velocity sigma / horizontal
+    degrade_s: Param               # entry: degradation window before the portal
+    degrade_factor: Param          # sigma multiplier reached at the portal (linear ramp from 1)
+    coast_s: Param                 # coasting scenario: fake fixes after loss (0 = nominal: stop)
+    coast_acc_growth_mps: Param    # reported position accuracy growth while coasting
+    vel_reacq_s: Param             # exit: first velocity after leaving the tunnel
+    pos_reacq_s: Param             # exit: first position
+    exit_mode: str                 # "multipath" (nominal) or "lagging"
+    exit_multipath_m: Param        # random-direction horizontal bias at the first position fix
+    exit_decay_s: Param            # decay of the exit bias (both modes)
+    exit_vel_factor: Param         # velocity sigma multiplier at the first velocity fix, same decay
+    lag_s: Param                   # lagging receiver: along-track lag at the first fix
+    reported_ratio: Param          # reported / model sigma: 1 calibrated, 0.7 optimistic, 1.5 pessimistic
+
+
+GNSS = GnssProfile(
+    rate_hz=ASSUMED(1.0, "K9; phone location rate"),
+    pos_sigma_h_m=ASSUMED(3.0, "open-sky phone, per axis"),
+    pos_sigma_v_m=ASSUMED(6.0, ""),
+    pos_tau_s=ASSUMED(30.0, "position error is time-correlated"),
+    vel_white_h_mps=ASSUMED(0.07, "K8 nominal split: total 0.10 m/s, half the variance correlated"),
+    vel_gm_h_mps=ASSUMED(0.07, "K8 nominal split"),
+    vel_gm_tau_s=ASSUMED(10.0, "K8"),
+    vel_vert_factor=ASSUMED(1.5, "K8: 3D, components independent"),
+    degrade_s=ASSUMED(4.0, "K9 entry degradation"),
+    degrade_factor=ASSUMED(5.0, "K9"),
+    coast_s=ASSUMED(0.0, "K9 nominal: measurements stop at loss"),
+    coast_acc_growth_mps=ASSUMED(3.0, "K9 coasting scenario"),
+    vel_reacq_s=ASSUMED(1.0, "K9: Doppler before position"),
+    pos_reacq_s=ASSUMED(2.0, "K9"),
+    exit_mode="multipath",
+    exit_multipath_m=ASSUMED(30.0, "K9, DESIGN 3.3 range 10..50 m"),
+    exit_decay_s=ASSUMED(8.0, "K9"),
+    exit_vel_factor=ASSUMED(3.0, "K9: Doppler noisier for the first seconds"),
+    lag_s=ASSUMED(1.5, "K9 lagging-receiver scenario"),
+    reported_ratio=ASSUMED(1.0, "K9 calibrated"),
+)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -238,10 +271,10 @@ class SensorConfig:
     vib: VibrationProfile
     timing: TimingProfile
     baro: BaroProfile
-    gnss: GnssProfile = field(default_factory=GnssProfile)
+    gnss: GnssProfile
 
 
-NOMINAL = SensorConfig(imu=NOTE10_LSM6DSR, vib=VIB_CALM, timing=TIMING, baro=BARO)
+NOMINAL = SensorConfig(imu=NOTE10_LSM6DSR, vib=VIB_CALM, timing=TIMING, baro=BARO, gnss=GNSS)
 
 OVERRIDES: dict[str, dict[str, object]] = {
     "imu_lowend":        {"imu": MPU9250_LOWEND},
@@ -266,6 +299,22 @@ OVERRIDES: dict[str, dict[str, object]] = {
     "baro_exit_lp_50":   {"baro.tunnel_exit_decay_m": ASSUMED(50.0, "review 2 sweep")},
     "baro_exit_lp_500":  {"baro.tunnel_exit_decay_m": ASSUMED(500.0, "review 2 sweep")},
     "baro_exit_step":    {"baro.tunnel_exit_decay_m": ASSUMED(0.0, "stress: step at the exit portal")},
+    # GNSS (K8): total velocity rms fixed at ~0.10 m/s with a different split, or increased
+    "gnss_vel_white_only": {"gnss.vel_white_h_mps": ASSUMED(0.10, "K8 family 1"),
+                            "gnss.vel_gm_h_mps": ASSUMED(0.0, "K8 family 1")},
+    "gnss_vel_corr_heavy": {"gnss.vel_white_h_mps": ASSUMED(0.03, "K8 family 1"),
+                            "gnss.vel_gm_h_mps": ASSUMED(0.095, "K8 family 1")},
+    "gnss_vel_rms_x2":     {"gnss.vel_white_h_mps": ASSUMED(0.14, "K8 family 2"),
+                            "gnss.vel_gm_h_mps": ASSUMED(0.14, "K8 family 2")},
+    # GNSS (K9)
+    "gnss_coasting":       {"gnss.coast_s": ASSUMED(5.0, "K9 scenario")},
+    "gnss_lagging":        {"gnss.exit_mode": "lagging"},
+    "gnss_multipath_10":   {"gnss.exit_multipath_m": ASSUMED(10.0, "K9 sweep")},
+    "gnss_multipath_50":   {"gnss.exit_multipath_m": ASSUMED(50.0, "K9 sweep")},
+    "gnss_optimistic":     {"gnss.reported_ratio": ASSUMED(0.7, "K9")},
+    "gnss_pessimistic":    {"gnss.reported_ratio": ASSUMED(1.5, "K9")},
+    "gnss_offset_100ms":   {"timing.imu_gnss_offset_s": ASSUMED(0.1, "K6 sweep")},
+    "gnss_offset_200ms":   {"timing.imu_gnss_offset_s": ASSUMED(0.2, "K6 sweep")},
 }
 
 

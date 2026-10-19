@@ -52,6 +52,19 @@ Barometer (K7):
   per-sample jump (30 Pa/km: 8.90 m step -> 0.035 m at L_p = 200 m) and decay check.
   Nominal unaffected (gradient off). Tests +1.
 
+GNSS (K8, K9):
+- `simulate_gnss`, `GnssMeas` (NaN where unavailable), tagged `GNSS` profile replacing the v0.2
+  placeholder. Open-sky GM position and white + GM velocity; entry degradation; nominal stop or
+  coasting from the receiver's own last fix; velocity before position at the exit; exit bias
+  as random-direction multipath (nominal) or lagging receiver (scenario); reported accuracy
+  from model σ × ratio; IMU–GNSS time offset. Unspecified details chosen [ASSUMED], listed in
+  DESIGN 3.3.
+- New metrics `sensors.gnss`: open-sky error std and normalised squared error per reported
+  ratio (all within 3 %, tolerance 5 %); calibration floor per velocity-noise case
+  (60 s: white-only 7.3e-4, nominal 1.8e-3 m/s²); outage and re-acquisition timing; exit bias
+  magnitude and decay; time-offset errors (v·δ, a·δ).
+- Tests +8.
+
 Versioning: `__version__` is `0.3.0.dev0` (was still `0.2.0`, so `tools/snapshot.py` would
 have overwritten `reports/0.2.0/`; found by external review 2). `snapshot.py` now refuses to
 overwrite a released report without `--force`. Review recorded in `docs/reviews/`.

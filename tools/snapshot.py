@@ -50,9 +50,18 @@ def truth_metrics():
 def sensor_metrics():
     """Sensor-level verification (v0.3): every metric carries target, achieved, tolerance."""
     import test_sensors_baro as Bt
+    import test_sensors_gnss as Gt
     import test_sensors_imu as I
     from tunnelsim.profiles import NOMINAL, param_table
     return {
+        "gnss": {
+            "params_nominal": param_table(NOMINAL.gnss, "gnss."),
+            "open_sky": Gt.open_sky_report(),
+            "calibration_floor": Gt.calibration_floor_report(),
+            "outage": Gt.outage_report(),
+            "exit": Gt.exit_report(),
+            "time_offset": Gt.offset_report(),
+        },
         "baro": {
             "params_nominal": param_table(NOMINAL.baro, "baro."),
             "grade_floor": Bt.grade_floor_report(),

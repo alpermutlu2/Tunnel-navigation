@@ -89,12 +89,15 @@ Vibration is a real specific force / rate, so it passes through the sensor scale
   The T ≪ τ approximation is within 3 % up to T ≈ τ/6, 11 % at T = τ/2, 22 % at T = τ (it overestimates). With correlated noise, longer windows help much less than with white noise (×1/√T instead of ×1/T^1.5).
 - Grade from baro depends on speed (sin γ ≈ ḣ/v): error ≈ γ·δv/v. Negligible on a flat tunnel; on a 5 % grade, 1 % speed error gives 0.05 % grade error ≈ 4.9 mm/s², above the white-noise floor.
 
-### 3.3 GNSS (K8, K9)
-- 1 Hz position + Doppler velocity with reported accuracy.
-- Velocity: `ṽ = v + b_v,GM + n_v`, nominal 3D with independent components [ASSUMED]. Two experiment families: total RMS fixed with varying white/correlated split, and total RMS increasing. Reason: with white σ_v = 0.1 m/s, a 60 s window gives an accel-bias calibration floor σ_v√(12/(fT³)) = 7.5e-4 m/s², the same level as bias instability.
-- Entry: gradual degradation before the portal. Nominal: measurements stop at signal loss. Scenario "coasting": fake fixes propagated from the last *receiver* state (not truth), with growing reported accuracy.
-- Exit: delayed re-acquisition; Doppler recovers before position. Nominal multipath: random direction, time-correlated, 30 m with 8 s decay [ASSUMED]. "Lagging receiver" is a separate scenario; the two mechanisms are not mixed.
-- Reported accuracy is generated independently of the true error: calibrated (ratio 1), optimistic (0.7), pessimistic (1.5).
+### 3.3 GNSS (K8, K9, implemented in `simulate_gnss`)
+- 1 Hz fixes of the phone antenna in local ENU (no lat/lon, flat earth), position and Doppler velocity with reported 1σ per axis. NaN where a quantity is not available.
+- Open sky [ASSUMED]: position GM per axis, 3 m horizontal, 6 m vertical, τ 30 s. Velocity = white + GM per axis; **nominal split 0.07 + 0.07 m/s (τ 10 s), total ≈ 0.10 m/s**; vertical ×1.5; components independent, no position–velocity error correlation (K8 nominal).
+- K8 families as overrides: total fixed ≈ 0.10 m/s (white-only 0.10/0; correlation-heavy 0.03/0.095) and total doubled (0.14/0.14).
+- Why the split matters (exact LS-slope floor `p'Σp`, horizontal axis, 1 Hz): accel-bias calibration floor over a 60 s window is 7.3e-4 m/s² with white-only noise, **1.8e-3 m/s² nominal**, 2.3e-3 correlation-heavy, at the same total rms. With correlated velocity noise the calibration floor is 2.7× bias instability, so the entry calibration, not the IMU, may set the S1 limit. To be measured in v0.4.
+- Entry: sigmas ramp linearly from 1× to 5× over the 4 s before the portal [ASSUMED]. Nominal: fixes stop at the portal. Scenario `gnss_coasting`: 5 s of fake fixes propagated from the receiver's own last fix (position + velocity·Δt), reported accuracy growing 3 m/s [ASSUMED].
+- Exit: velocity from 1 s, position from 2 s after the portal [ASSUMED] (on the 1 Hz grid: 1.5 and 2.5 s on S1). Nominal exit bias: random horizontal direction, 30 m at the first position fix, decaying with 8 s [ASSUMED]; overrides 10 and 50 m. Scenario `gnss_lagging`: bias −v·1.5 s along track, same decay; the two mechanisms are never mixed. Velocity noise ×3 at the first velocity fix, same decay [ASSUMED].
+- Reported accuracy = ratio × model σ (incl. entry degradation), independent of the realised error; the exit bias is not reported (receivers underestimate it). Ratios 1 (nominal), 0.7, 1.5. Verified: mean normalised squared error = 1/ratio² within 3 %.
+- IMU–GNSS time offset (K6): the fix stamped t describes t − δ; nominal 0, overrides 0.1 and 0.2 s. Verified: position error v·δ, velocity error a·δ.
 
 ## 4. Back-of-envelope error budget (3 min outage, Note10 profile)
 
@@ -276,6 +279,7 @@ Barometer as along-track measurement: `z = h_map(s) + b_h + n`, `∂h/∂s = sin
 - 2026-10-17: Sensor profile parameters beyond Allan terms are marked [ASSUMED] in `tunnelsim/profiles.py`.
 - 2026-10-19: External review applied. Truth adds sideslip, lever arm, event-timing fix; 36 tests incl. independent geometry references and mutation checks. Grade profile no longer assumed in the map (A3). Estimator/truth separation policy (7.2). Observability analysis, reference algorithms incl. oracle, NEES/NIS added to the plan.
 - 2026-10-19: v0.3 sensor decisions K1 to K9 accepted (`docs/decisions/2026-10-19-v0.3-sensors.md`). Three tags [MEAS]/[SPEC]/[ASSUMED]; no real data collected, unsourced parameters swept; nominal vs named sensitivity overrides; per-term RNG streams; version scope v0.3 to v0.8 (section 5). From now on every decision and review is committed; the repository is the only sync channel between sessions.
+- 2026-10-19: GNSS generator (K8, K9) implemented; unspecified details chosen [ASSUMED] and listed in 3.3 (velocity split, degradation ramp, coasting 5 s, reacquisition 1/2 s, lagging-receiver mechanism, exit Doppler factor).
 - 2026-10-19: External review 2 applied: barometer exit transition L_p (nominal 200 m, step kept as stress), nominal baro GM(0.1 m, 60 s) confirmed, temperature residual as a truth-only stress scenario in v0.4 (nominal unchanged, no filter state), dev version + report overwrite guard.
 - 2026-10-19: Truth: first-order lag on sideslip, τ_β = 0.2 s [ASSUMED] (option (a) over smoothing clothoid joints or accepting the artifact): the algebraic model put a rate-dependent impulse into the truth angular acceleration (7.1).
 - 2026-10-19: IMU structure review (R1 to R4): vibration before sensor errors; Allan target = paper's parametric AVAR over 10–1000 s with τ = 5, 50, 500 s; verification analytic + one 24 h run; IMU temperature drift not modelled (calibration assumed, not observable in tunnel).

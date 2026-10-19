@@ -25,7 +25,7 @@ from scipy.signal import butter, lfilter, sosfilt
 
 from .allan import FLICKER_K, avar_gm, fit_gm_sigmas
 from .frames import G0, mount_rotation
-from .meas import BaroMeas, ImuMeas
+from .meas import BaroMeas, GnssMeas, ImuMeas
 from .profiles import NOMINAL, ImuProfile, SensorConfig
 
 # Fixed ids, never reused or renumbered. 1-99 IMU, 100-199 barometer, 200-299 GNSS.
@@ -38,6 +38,7 @@ TERM_IDS = {
     "vib_road": 11, "vib_engine": 12,
     "ts_jitter": 13, "ts_gaps": 14,
     "b_white": 101, "b_gm": 102, "b_offset": 103, "b_cabin": 104, "b_tunnel": 105,
+    "gnss_pos": 201, "gnss_vel_white": 202, "gnss_vel_gm": 203, "gnss_exit": 204, "gnss_degrade": 205,
 }
 
 # Allan peak of a first-order GM: max_T ADEV / sigma (0.617 at T = 1.89 tau)
@@ -347,3 +348,163 @@ def simulate_baro(src: BaroTruthSource, cfg: SensorConfig = NOMINAL,
                                                      float(p.tunnel_exit_decay_m.v))
     h = h_true + sum(comps.values(), np.zeros(n))
     return BaroMeas(t=t, h=h), BaroErrors(t=t, h_true=h_true, components=comps, constants=consts)
+
+
+# ---------------------------------------------------------------------------------------------
+# GNSS (K8, K9)
+#
+# Open sky:  pos~ = p + e_p,   e_p GM per axis (sigma_h, sigma_h, sigma_v; tau_p)
+#            vel~ = v + n_v + b_v,GM   (white + GM per axis, vertical x vel_vert_factor)
+# Entry:     sigmas ramp linearly from 1 to degrade_factor over degrade_s before the portal;
+#            at the portal the fixes stop (nominal) or the receiver coasts: fake fixes
+#            propagated from its own last fix (position + velocity * dt), reported accuracy
+#            growing, for coast_s seconds.
+# Exit:      velocity from vel_reacq_s, position from pos_reacq_s after the exit portal.
+#            Exit bias on position, decaying with exit_decay_s from the first position fix:
+#              "multipath": random horizontal direction, magnitude exit_multipath_m
+#              "lagging":   -v_true * lag_s (receiver output behind along track)
+#            Velocity noise is multiplied by exit_vel_factor at the first velocity fix, same decay.
+# Reported:  reported_ratio * model sigma (incl. degradation), independent of the realised
+#            error; the exit bias is not reported (receivers underestimate it).
+# Time:      the fix stamped t describes the antenna at t - imu_gnss_offset_s.
+# ---------------------------------------------------------------------------------------------
+@dataclass(frozen=True)
+class GnssTruthSource:
+    t: np.ndarray        # (M,)
+    pos: np.ndarray      # (M,3) phone antenna, ENU
+    vel: np.ndarray      # (M,3)
+    s: np.ndarray        # (M,) along-track position of the reference point
+    s_entry: float
+    s_exit: float
+
+    @classmethod
+    def from_truth(cls, tr, sc) -> "GnssTruthSource":
+        return cls(t=tr.t, pos=tr.pos_phone_n, vel=tr.vel_phone_n, s=tr.s,
+                   s_entry=float(sc.road.tunnel.s_entry), s_exit=float(sc.road.tunnel.s_exit))
+
+
+@dataclass
+class GnssErrors:
+    t: np.ndarray                 # (N,) stamped fix times
+    t_true: np.ndarray            # (N,) times the fixes describe (t - offset)
+    pos_true: np.ndarray          # (N,3)
+    vel_true: np.ndarray          # (N,3)
+    components: dict = field(default_factory=dict)
+    events: dict = field(default_factory=dict)     # t_entry, t_exit, t_vel0, t_pos0, ...
+    masks: dict = field(default_factory=dict)      # pos_valid, vel_valid, coasting
+
+
+def _crossing_time(t, s, s_target):
+    i = int(np.searchsorted(s, s_target))
+    if i == 0:
+        return float(t[0])
+    if i >= len(s):
+        return np.inf
+    return float(np.interp(s_target, s[i - 1:i + 1], t[i - 1:i + 1]))
+
+
+def simulate_gnss(src: GnssTruthSource, cfg: SensorConfig = NOMINAL,
+                  switches: Switches = Switches(), seed: int = 0) -> tuple[GnssMeas, GnssErrors]:
+    g, on = cfg.gnss, switches
+    off = float(cfg.timing.imu_gnss_offset_s.v)
+    dt = 1.0 / float(g.rate_hz.v)
+    t0, t1 = float(src.t[0]), float(src.t[-1])
+    t = t0 + off + np.arange(int(np.floor((t1 - t0 - off) / dt)) + 1) * dt   # stamped times
+    tm = t - off                                                           # described times
+    n = t.size
+    cs = CubicSpline(src.t, np.column_stack([src.pos, src.vel]), axis=0)
+    x = cs(tm)
+    p_true, v_true = x[:, :3], x[:, 3:]
+
+    t_entry = _crossing_time(src.t, src.s, src.s_entry)
+    t_exit = _crossing_time(src.t, src.s, src.s_exit)
+
+    # sigma multiplier before the portal (only before it; after the exit the exit model applies)
+    before = tm < t_entry
+    fac = np.ones(n)
+    if on("gnss_degrade") and float(g.degrade_s.v) > 0:
+        u = np.clip((tm - (t_entry - float(g.degrade_s.v))) / float(g.degrade_s.v), 0.0, 1.0)
+        fac = np.where(before, 1.0 + (float(g.degrade_factor.v) - 1.0) * u, 1.0)
+
+    comps = {}
+    sig_p = np.array([float(g.pos_sigma_h_m.v)] * 2 + [float(g.pos_sigma_v_m.v)])
+    vf = np.array([1.0, 1.0, float(g.vel_vert_factor.v)])
+    e_p = np.zeros((n, 3))
+    if on("gnss_pos"):
+        r = term_rng(seed, "gnss_pos")
+        e_p = np.column_stack([gm_sum(r, n, dt, (1.0,), (float(g.pos_tau_s.v),)) for _ in range(3)]) * sig_p
+    n_vw = np.zeros((n, 3))
+    if on("gnss_vel_white"):
+        n_vw = term_rng(seed, "gnss_vel_white").standard_normal((n, 3)) * float(g.vel_white_h_mps.v) * vf
+    n_vg = np.zeros((n, 3))
+    if on("gnss_vel_gm"):
+        r = term_rng(seed, "gnss_vel_gm")
+        n_vg = np.column_stack([gm_sum(r, n, dt, (1.0,), (float(g.vel_gm_tau_s.v),)) for _ in range(3)]) \
+            * float(g.vel_gm_h_mps.v) * vf
+
+    # availability
+    t_vel0 = t_exit + float(g.vel_reacq_s.v)
+    t_pos0 = t_exit + float(g.pos_reacq_s.v)
+    vel_ok = before | (tm >= t_vel0)
+    pos_ok = before | (tm >= t_pos0)
+    if np.any(tm >= t_pos0):
+        t_pos0 = float(tm[tm >= t_pos0][0])
+    if np.any(tm >= t_vel0):
+        t_vel0 = float(tm[tm >= t_vel0][0])
+
+    # exit effects
+    exit_bias = np.zeros((n, 3))
+    vel_exit_fac = np.ones(n)
+    tau_x = float(g.exit_decay_s.v)
+    if on("gnss_exit") and np.isfinite(t_exit):
+        after_p = tm >= t_pos0
+        decay = np.exp(-(tm[after_p] - t_pos0) / tau_x)
+        if g.exit_mode == "multipath":
+            ang = term_rng(seed, "gnss_exit").uniform(0.0, 2 * np.pi)
+            u = np.array([np.cos(ang), np.sin(ang), 0.0])
+            exit_bias[after_p] = float(g.exit_multipath_m.v) * decay[:, None] * u
+        elif g.exit_mode == "lagging":
+            exit_bias[after_p] = -v_true[after_p] * float(g.lag_s.v) * decay[:, None]
+        else:
+            raise ValueError(f"unknown exit_mode {g.exit_mode!r}")
+        after_v = tm >= t_vel0
+        vel_exit_fac[after_v] = 1.0 + (float(g.exit_vel_factor.v) - 1.0) * np.exp(-(tm[after_v] - t_vel0) / tau_x)
+
+    pos = p_true + fac[:, None] * e_p + exit_bias
+    vel = v_true + (fac * vel_exit_fac)[:, None] * (n_vw + n_vg)
+    ratio = float(g.reported_ratio.v)
+    sig_v = float(np.hypot(float(g.vel_white_h_mps.v), float(g.vel_gm_h_mps.v)))
+    acc_h = ratio * sig_p[0] * fac
+    acc_v = ratio * sig_p[2] * fac
+    acc_vel = ratio * sig_v * fac * vel_exit_fac
+
+    # coasting: fake fixes from the receiver's own last fix (not from the truth)
+    coasting = np.zeros(n, dtype=bool)
+    coast_s = float(g.coast_s.v)
+    if coast_s > 0 and np.any(before) and np.isfinite(t_entry):
+        k = int(np.nonzero(before)[0][-1])
+        coasting = (~before) & (tm < t_entry + coast_s) & (tm < t_exit)
+        dtc = tm[coasting] - tm[k]
+        pos[coasting] = pos[k] + vel[k] * dtc[:, None]
+        vel[coasting] = vel[k]
+        acc_h[coasting] = acc_h[k] + float(g.coast_acc_growth_mps.v) * dtc
+        acc_v[coasting] = acc_v[k] + float(g.coast_acc_growth_mps.v) * dtc
+        acc_vel[coasting] = acc_vel[k]
+        pos_ok |= coasting
+        vel_ok |= coasting
+
+    keep = pos_ok | vel_ok
+    pos = np.where(pos_ok[:, None], pos, np.nan)
+    vel = np.where(vel_ok[:, None], vel, np.nan)
+    acc_h, acc_v = np.where(pos_ok, acc_h, np.nan), np.where(pos_ok, acc_v, np.nan)
+    acc_vel = np.where(vel_ok, acc_vel, np.nan)
+
+    comps.update(pos_noise=fac[:, None] * e_p, vel_white=n_vw, vel_gm=n_vg, exit_bias=exit_bias,
+                 sigma_factor=fac, vel_exit_factor=vel_exit_fac)
+    meas = GnssMeas(t=t[keep], pos=pos[keep], vel=vel[keep], acc_pos_h=acc_h[keep],
+                    acc_pos_v=acc_v[keep], acc_vel=acc_vel[keep])
+    err = GnssErrors(t=t[keep], t_true=tm[keep], pos_true=p_true[keep], vel_true=v_true[keep],
+                     components={k_: c[keep] for k_, c in comps.items()},
+                     events={"t_entry": t_entry, "t_exit": t_exit, "t_vel0": t_vel0, "t_pos0": t_pos0},
+                     masks={"pos_valid": pos_ok[keep], "vel_valid": vel_ok[keep], "coasting": coasting[keep]})
+    return meas, err

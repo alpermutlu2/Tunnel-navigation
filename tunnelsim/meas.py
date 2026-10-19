@@ -23,3 +23,16 @@ class BaroMeas:
     """Barometric altitude (pressure already converted by the app), arbitrary datum."""
     t: np.ndarray   # (N,) [s]
     h: np.ndarray   # (N,) [m]
+
+
+@dataclass(frozen=True)
+class GnssMeas:
+    """GNSS fixes of the phone antenna in local ENU (flat earth). NaN where a quantity is not
+    available (e.g. velocity re-acquired before position at the tunnel exit). Accuracies are
+    the receiver's reported 1-sigma per axis, not the true error."""
+    t: np.ndarray          # (N,) [s]
+    pos: np.ndarray        # (N,3) [m]
+    vel: np.ndarray        # (N,3) [m/s]
+    acc_pos_h: np.ndarray  # (N,) [m]
+    acc_pos_v: np.ndarray  # (N,) [m]
+    acc_vel: np.ndarray    # (N,) [m/s], horizontal axes
