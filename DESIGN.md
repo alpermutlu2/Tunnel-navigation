@@ -69,13 +69,24 @@ Vibration is a real specific force / rate, so it passes through the sensor scale
 | Vibration (K5) | Generated at 100 Hz. Road: broadband ≈ 2–30 Hz, scaled with speed. Engine: narrow band ≈ 25 Hz at idle. No wheel tone (5.2) | [ASSUMED], two levels "calm" / "noisy". 1 kHz + LPF + decimation is an optional sensitivity test. **Out of scope:** vibration rectification error (VRE) |
 | Timestamps (K6) | Timestamps carry the true measurement time. Scenarios: (1) sample-rate offset ±1–2 %, timestamps correct → no effect expected; (2) timestamp scale error → accumulating error; (3) estimator uses nominal dt → v0.4 | White jitter 0.5 ms, occasional gaps [ASSUMED]. IMU–GNSS time offset nominal 0, sweep 0–200 ms. "1 % rate error → 45 m (25 m/s, 180 s)" holds only for (2) and (3) |
 
-### 3.2 Barometer (K7)
-- Model: `h̃ = h + b_h0 + b_h,GM(t) + n_h + d_cabin(t) + d_tunnel(s)`, ~25 Hz.
-- b_h0: constant within a drive [ASSUMED]. Magnitude bounded by the manufacturer's "relative accuracy" [SPEC] once its definition is checked; not called a measured bias.
-- n_h: white 0.1 m at 25 Hz [ASSUMED]. b_h,GM: correlation levels swept (no single value).
-- d_cabin: cabin disturbance, sensitivity scenario (A6).
-- d_tunnel = k_p·s: ventilation pressure gradient [ASSUMED], swept in Pa/km (1 Pa ≈ 8.5 cm, ρg ≈ 11.8 Pa/m). On a constant-grade tunnel it is indistinguishable from a grade offset.
-- Grade floor (least-squares slope over window T): white `σ_ḣ = σ√(12/(fT³))`; correlated (T ≪ τ) `σ_ḣ ≈ √(6q/(5T))`, q = 2σ²/τ. At 10 s and 25 m/s: 0.9 mm/s² equivalent for white noise, up to 7.1 mm/s² with GM(0.3 m, 60 s) (table in the decision record). v0.3 verifies these with a window sweep 5–60 s and reports where T ≪ τ breaks down.
+### 3.2 Barometer (K7, implemented in `simulate_baro`)
+- Model: `h̃ = h + b_h0 + b_h,GM(t) + n_h + d_cabin(t) + d_tunnel(s)`, 25 Hz, h = true phone altitude.
+- Part: the Note10 barometer could not be confirmed. ST LPS22HB is quoted as a representative phone barometer (relative accuracy ±0.1 hPa at 25 °C over 800–1100 hPa, noise 0.0075 hPa rms with embedded filter); values derived from it stay [ASSUMED].
+- b_h0: constant within a drive, σ = 0.85 m [ASSUMED, ≈ ±0.1 hPa]; not called a measured bias.
+- n_h: white 0.1 m at 25 Hz [ASSUMED] (LPS22HB 0.064 m for comparison).
+- b_h,GM: **nominal GM(0.1 m, 60 s)** [ASSUMED], the mildest correlated row of the K7 table, because white-only is known to be optimistic (5.1 note). White-only, GM(0.3 m, 300 s) and GM(0.3 m, 60 s) are named overrides.
+- d_cabin: GM, off in the baseline (A6); override 0.3 m, τ 5 s [ASSUMED].
+- d_tunnel = −(k_p/ρg)·(s − s_entry) inside the tunnel, 0 outside: ventilation pressure gradient read as altitude [ASSUMED], nominal off, overrides 10 and 30 Pa/km (illustrative, magnitude not sourced). ρg = 11.8 Pa/m. Shape consequence: zero at the entry, a step of k_p·L/ρg at the exit portal (S3, 3.5 km: 3.0 m at 10 Pa/km, 8.9 m at 30 Pa/km). On a constant-grade tunnel it is indistinguishable from a grade offset: 10 Pa/km reads as a 0.085 % grade (≈ 8.3 mm/s²), 30 Pa/km as 0.25 % (≈ 25 mm/s², 2/3 of the S5 mean drift). If real gradients are of this size, they dominate the barometric grade error; a short literature check is worth doing before v0.6.
+- Grade floor (least-squares slope over window T): white `σ_ḣ = σ√(12/(fT³))`; correlated (T ≪ τ) `σ_ḣ ≈ √(6q/(5T))`, q = 2σ²/τ. Verified in v0.3 against the exact value `p'Σp` (LS slope weights p, noise covariance Σ) and Monte Carlo (agree within 4 %). Accel equivalent at 25 m/s, exact:
+
+| Noise | T = 5 s | 10 s | 20 s | 30 s | 60 s |
+|---|---|---|---|---|---|
+| white 0.1 m | 2.4 | 0.86 | 0.30 | 0.17 | 0.06 mm/s² |
+| nominal: + GM(0.1 m, 60 s) | 4.2 | 2.5 | 1.7 | 1.3 | 0.83 |
+| + GM(0.3 m, 300 s) | 5.3 | 3.4 | 2.3 | 1.9 | 1.3 |
+| + GM(0.3 m, 60 s) | 10.6 | 7.2 | 4.9 | 3.9 | 2.5 |
+
+  The T ≪ τ approximation is within 3 % up to T ≈ τ/6, 11 % at T = τ/2, 22 % at T = τ (it overestimates). With correlated noise, longer windows help much less than with white noise (×1/√T instead of ×1/T^1.5).
 - Grade from baro depends on speed (sin γ ≈ ḣ/v): error ≈ γ·δv/v. Negligible on a flat tunnel; on a 5 % grade, 1 % speed error gives 0.05 % grade error ≈ 4.9 mm/s², above the white-noise floor.
 
 ### 3.3 GNSS (K8, K9)

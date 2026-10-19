@@ -25,7 +25,7 @@ from scipy.signal import butter, lfilter, sosfilt
 
 from .allan import FLICKER_K, avar_gm, fit_gm_sigmas
 from .frames import G0, mount_rotation
-from .meas import ImuMeas
+from .meas import BaroMeas, ImuMeas
 from .profiles import NOMINAL, ImuProfile, SensorConfig
 
 # Fixed ids, never reused or renumbered. 1-99 IMU, 100-199 barometer, 200-299 GNSS.
@@ -37,6 +37,7 @@ TERM_IDS = {
     "a_misalign": 9, "g_misalign": 10,
     "vib_road": 11, "vib_engine": 12,
     "ts_jitter": 13, "ts_gaps": 14,
+    "b_white": 101, "b_gm": 102, "b_offset": 103, "b_cabin": 104, "b_tunnel": 105,
 }
 
 # Allan peak of a first-order GM: max_T ADEV / sigma (0.617 at T = 1.89 tau)
@@ -271,3 +272,70 @@ def simulate_imu(src: ImuTruthSource, cfg: SensorConfig = NOMINAL,
                     w_true=w_true[kept], components={k_: c[kept] for k_, c in comps.items()},
                     constants=consts, bi_model=bi_info, n_grid=n, kept=kept)
     return meas, err
+
+
+# ---------------------------------------------------------------------------------------------
+# Barometer (K7)
+#
+#   h~ = h + b_h0 + b_h,GM(t) + n_h + d_cabin(t) + d_tunnel(s)
+#
+#   d_tunnel = -(k_p / rho_g) * (s - s_entry) inside the tunnel, 0 outside: a pressure gradient
+#   along travel (ventilation) read as altitude. It is zero at the entry portal and returns to
+#   zero after the exit, so the reading steps by k_p * L / rho_g at the exit portal.
+# ---------------------------------------------------------------------------------------------
+@dataclass(frozen=True)
+class BaroTruthSource:
+    t: np.ndarray        # (M,)
+    h: np.ndarray        # (M,) true phone altitude (ENU up)
+    s: np.ndarray        # (M,) along-track position of the reference point
+    s_entry: float
+    s_exit: float
+
+    @classmethod
+    def from_truth(cls, tr, sc) -> "BaroTruthSource":
+        return cls(t=tr.t, h=tr.pos_phone_n[:, 2], s=tr.s,
+                   s_entry=float(sc.road.tunnel.s_entry), s_exit=float(sc.road.tunnel.s_exit))
+
+
+@dataclass
+class BaroErrors:
+    t: np.ndarray
+    h_true: np.ndarray
+    components: dict = field(default_factory=dict)   # name -> (N,)
+    constants: dict = field(default_factory=dict)
+
+
+def tunnel_pressure_altitude(s, s_entry, s_exit, grad_pa_per_km, rho_g_pa_per_m):
+    """d_tunnel(s) [m]: pressure rising along travel reads as falling altitude."""
+    inside = (s >= s_entry) & (s <= s_exit)
+    return np.where(inside, -(grad_pa_per_km / 1000.0) * (s - s_entry) / rho_g_pa_per_m, 0.0)
+
+
+def simulate_baro(src: BaroTruthSource, cfg: SensorConfig = NOMINAL,
+                  switches: Switches = Switches(), seed: int = 0) -> tuple[BaroMeas, BaroErrors]:
+    p, on = cfg.baro, switches
+    fs = float(p.rate_hz.v)
+    dt = 1.0 / fs
+    t0, t1 = float(src.t[0]), float(src.t[-1])
+    n = int(np.floor((t1 - t0) / dt)) + 1
+    t = t0 + np.arange(n) * dt
+    h_true = CubicSpline(src.t, src.h)(t)
+    s = np.interp(t, src.t, src.s)
+
+    comps, consts = {}, {}
+    if on("b_white"):
+        comps["b_white"] = white(term_rng(seed, "b_white"), n, dt, float(p.white_sigma_m.v) * np.sqrt(dt))[:, 0]
+    if on("b_gm"):
+        comps["b_gm"] = gm_sum(term_rng(seed, "b_gm"), n, dt, (float(p.gm_sigma_m.v),), (float(p.gm_tau_s.v),))
+    if on("b_offset"):
+        consts["b_h0"] = float(term_rng(seed, "b_offset").standard_normal() * float(p.offset_sigma_m.v))
+        comps["b_offset"] = np.full(n, consts["b_h0"])
+    if on("b_cabin"):
+        comps["b_cabin"] = gm_sum(term_rng(seed, "b_cabin"), n, dt,
+                                  (float(p.cabin_sigma_m.v),), (float(p.cabin_tau_s.v),))
+    if on("b_tunnel"):
+        comps["b_tunnel"] = tunnel_pressure_altitude(s, src.s_entry, src.s_exit,
+                                                     float(p.tunnel_grad_pa_per_km.v),
+                                                     float(p.rho_g_pa_per_m.v))
+    h = h_true + sum(comps.values(), np.zeros(n))
+    return BaroMeas(t=t, h=h), BaroErrors(t=t, h_true=h_true, components=comps, constants=consts)

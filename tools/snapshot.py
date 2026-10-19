@@ -45,9 +45,15 @@ def truth_metrics():
 
 def sensor_metrics():
     """Sensor-level verification (v0.3): every metric carries target, achieved, tolerance."""
+    import test_sensors_baro as Bt
     import test_sensors_imu as I
     from tunnelsim.profiles import NOMINAL, param_table
     return {
+        "baro": {
+            "params_nominal": param_table(NOMINAL.baro, "baro."),
+            "grade_floor": Bt.grade_floor_report(),
+            "tunnel_gradient": Bt.tunnel_gradient_report(),
+        },
         "imu": {
             "params_nominal": {**param_table(NOMINAL.imu, "imu."), **param_table(NOMINAL.vib, "vib."),
                                **param_table(NOMINAL.timing, "timing.")},

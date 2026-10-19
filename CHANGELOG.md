@@ -37,6 +37,16 @@ New metrics (`sensors.imu` in metrics.json, each with target, achieved, toleranc
   < 5e-6 m/s; a 1 % timestamp scale error gives 23.7 m/s, as predicted (ε·∫f dt).
 - Vibration rms within 2 % of the profile.
 
+Barometer (K7):
+- `simulate_baro`: white + GM + constant offset + cabin GM + tunnel pressure gradient, 25 Hz;
+  `BaroMeas` in meas.py; tagged `BARO` profile replaces the v0.2 placeholder (weather drift
+  term dropped, covered by the GM). Nominal GM(0.1 m, 60 s); white-only, GM(0.3, 300),
+  GM(0.3, 60), cabin, 10 and 30 Pa/km tunnel gradient as named overrides.
+- Note10 barometer part not confirmed; LPS22HB quoted as representative, values [ASSUMED].
+- New metrics `sensors.baro`: grade floor per case and window (exact, Monte Carlo, closed
+  form; MC within 4 % of exact, tolerance 6 %), tunnel gradient exit step (matches k_p L/ρg).
+- Tests +11.
+
 Truth (separate commit): first-order lag on body sideslip, `τ_β β̇ + β = −k_β·a_lat`,
 τ_β = 0.2 s [ASSUMED] (`Vehicle.sideslip_tau_s`; 0 reproduces v0.2).
 - Why: found by the IMU resampling test. With the algebraic model β̇ stepped at clothoid

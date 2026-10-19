@@ -12,8 +12,7 @@ itself be a `Param`, so a swept value cannot lose its tag.
 Units are SI throughout: m, s, rad. Per-axis tuples are (x, y, z) in the frame named by the
 field (phone frame unless stated).
 
-Barometer and GNSS profiles are still the v0.2 placeholders; they are rebuilt (tags, K7 to K9)
-in their own commits.
+The GNSS profile is still the v0.2 placeholder; it is rebuilt (tags, K8, K9) in its own commit.
 """
 from __future__ import annotations
 
@@ -177,15 +176,42 @@ TIMING = TimingProfile(
 
 
 # ---------------------------------------------------------------------------------------------
-# Barometer and GNSS: v0.2 placeholders (plain floats, all assumed), rebuilt in later commits.
+# Barometer (K7): h~ = h + b_h0 + b_h,GM(t) + n_h + d_cabin(t) + d_tunnel(s), altitude units.
+# The Note10 barometer part could not be confirmed; LPS22HB (ST) is quoted as a representative
+# phone barometer only, so values derived from it stay [ASSUMED].
 # ---------------------------------------------------------------------------------------------
+_LPS22HB = "LPS22HB datasheet Table 3 (representative phone part; Note10 part not confirmed)"
+
+
 @dataclass(frozen=True)
 class BaroProfile:
-    rate_hz: float = 25.0
-    noise_sigma_m: float = 0.10
-    drift_m_per_min: float = 0.02
-    cabin_disturbance_m: float = 0.0
-    cabin_disturbance_tau_s: float = 5.0
+    rate_hz: Param
+    white_sigma_m: Param           # n_h, per sample
+    gm_sigma_m: Param              # b_h,GM steady-state std
+    gm_tau_s: Param
+    offset_sigma_m: Param          # b_h0, constant within a drive
+    cabin_sigma_m: Param           # d_cabin, GM; 0 = off (A6 baseline)
+    cabin_tau_s: Param
+    tunnel_grad_pa_per_km: Param   # d_tunnel: pressure gradient along travel inside the tunnel
+    rho_g_pa_per_m: Param          # pressure-altitude conversion
+
+
+BARO = BaroProfile(
+    rate_hz=ASSUMED(25.0, "K7; LPS22HB offers 25 Hz ODR"),
+    white_sigma_m=ASSUMED(0.10, "K7; cf. 0.0075 hPa rms = 0.064 m, " + _LPS22HB),
+    gm_sigma_m=ASSUMED(0.10, "K7 nominal = mildest correlated row; white-only is an override"),
+    gm_tau_s=ASSUMED(60.0, "K7 nominal"),
+    offset_sigma_m=ASSUMED(0.85, "K7; +-0.1 hPa relative accuracy, " + _LPS22HB),
+    cabin_sigma_m=ASSUMED(0.0, "A6 baseline: off"),
+    cabin_tau_s=ASSUMED(5.0, "A6 sensitivity"),
+    tunnel_grad_pa_per_km=ASSUMED(0.0, "K7: nominal off, swept; magnitude not sourced yet"),
+    rho_g_pa_per_m=ASSUMED(11.8, "standard air rho = 1.2 kg/m^3"),
+)
+
+
+# ---------------------------------------------------------------------------------------------
+# GNSS: v0.2 placeholder (plain floats, all assumed), rebuilt in its own commit.
+# ---------------------------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -209,11 +235,11 @@ class SensorConfig:
     imu: ImuProfile
     vib: VibrationProfile
     timing: TimingProfile
-    baro: BaroProfile = field(default_factory=BaroProfile)
+    baro: BaroProfile
     gnss: GnssProfile = field(default_factory=GnssProfile)
 
 
-NOMINAL = SensorConfig(imu=NOTE10_LSM6DSR, vib=VIB_CALM, timing=TIMING)
+NOMINAL = SensorConfig(imu=NOTE10_LSM6DSR, vib=VIB_CALM, timing=TIMING, baro=BARO)
 
 OVERRIDES: dict[str, dict[str, object]] = {
     "imu_lowend":        {"imu": MPU9250_LOWEND},
@@ -227,6 +253,14 @@ OVERRIDES: dict[str, dict[str, object]] = {
     "rate_offset_-2pct": {"timing.rate_offset": ASSUMED(-0.02, "K6 case 1 sweep")},
     "ts_scale_1pct":     {"timing.ts_scale_error": ASSUMED(0.01, "K6 case 2")},
     "no_gaps":           {"timing.gap_rate_hz": ASSUMED(0.0, "isolation")},
+    # barometer (K7): GM rows of the grade-floor table, cabin (A6), tunnel gradient
+    "baro_white_only":   {"baro.gm_sigma_m": ASSUMED(0.0, "K7 table row 1")},
+    "baro_gm_0p3_300":   {"baro.gm_sigma_m": ASSUMED(0.3, "K7 table row 3"),
+                          "baro.gm_tau_s": ASSUMED(300.0, "K7 table row 3")},
+    "baro_gm_0p3_60":    {"baro.gm_sigma_m": ASSUMED(0.3, "K7 table row 4")},
+    "baro_cabin":        {"baro.cabin_sigma_m": ASSUMED(0.3, "A6 sensitivity")},
+    "baro_tunnel_10pa":  {"baro.tunnel_grad_pa_per_km": ASSUMED(10.0, "K7 sweep, illustrative")},
+    "baro_tunnel_30pa":  {"baro.tunnel_grad_pa_per_km": ASSUMED(30.0, "K7 sweep, illustrative")},
 }
 
 

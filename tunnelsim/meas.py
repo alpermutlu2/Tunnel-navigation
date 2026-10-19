@@ -16,3 +16,10 @@ class ImuMeas:
     t: np.ndarray   # (N,)   reported timestamps [s]
     f: np.ndarray   # (N,3)  specific force, phone frame [m/s^2]
     w: np.ndarray   # (N,3)  angular rate, phone frame [rad/s]
+
+
+@dataclass(frozen=True)
+class BaroMeas:
+    """Barometric altitude (pressure already converted by the app), arbitrary datum."""
+    t: np.ndarray   # (N,) [s]
+    h: np.ndarray   # (N,) [m]
