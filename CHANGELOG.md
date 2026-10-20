@@ -19,6 +19,8 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
     the gradient is structurally indistinguishable from a constant pitch error; it fixes
     10–30 Pa/km but costs S1/S3/S5; trace `reports/0.5.1/grad_trace_S5.png`).
 - Error vs distance into the tunnel (S1-5km), `reports/0.5.1/error_vs_distance.png`.
+- Snapshot diff vs 0.5.0 (`tools/snapshot.py --diff 0.5.0 0.5.1`): only new entries for the
+  S1-0.5km/1km/5km scenarios and the test count (158 → 176); every existing metric unchanged.
 
 - Simulator: phone sensor panel (accelerometer, gyroscope, barometer, GNSS speed), error-plot
   y-axis from the ESKF (CV clipped), CLI `--eskf KEY=VALUE`, `--mount-err R,P,Y`,
