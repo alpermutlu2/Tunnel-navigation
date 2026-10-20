@@ -66,6 +66,11 @@ class EskfConfig:
     map_window_m: float = 300.0                  # ŝ searched within ±window of the last ŝ
     map_pre_m: float = 100.0                     # pause starts this far before the diverge
     map_branch_deg: float = 5.0                  # branch decision threshold (as branch.py)
+    # map errors as states, constant per tunnel, reset at each outage (owner, 2026-10-20): lateral
+    # offset of the polyline and a length (scale) error; the curve-matching gain is then bounded
+    # by the map's own uncertainty instead of being taken as exact
+    map_offset_sigma: float = 2.0                # m [ASSUMED]
+    map_scale_sigma: float = 0.005               # 0.5 % [ASSUMED]
     nhc_turn_gate: float = 0.3        # m/s² [ASSUMED, review 7]; 0 = off. Lateral NHC dropped while |ω_z|·v exceeds this
     nhc_rate_hz: float = 5.0
     baro_sigma: float = 0.15          # m, 1 Hz average (E4)
@@ -220,9 +225,10 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     road_map: optional `MapView` of the route (estimator-side map) for the map-in-tunnel layer.
     """
     B, N = f.shape[0], imu_t.size
-    NA = NX + 3          # + speed clone / v_ref (NX), driver wander d (NX + 1), baro gradient g_h (NX + 2)
-    ID = NX + 1
+    NA = NX + 5          # + speed clone / v_ref (NX), driver wander d (NX + 1), baro gradient g_h (NX + 2),
+    ID = NX + 1          #   map lateral offset (NX + 3), map scale error (NX + 4)
     IG = NX + 2
+    IM, IE = NX + 3, NX + 4
     fs = 1.0 / np.median(np.diff(imu_t))
     C_pb = C_bp.T
     fwd_p = C_pb[:, 0]
@@ -264,6 +270,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     s_map = np.full(B, np.nan)              # map-matched along-track position (outage only)
     br_dec = np.zeros(B, int)               # branch decision: 0 none, +1 route (branch), -1 main
     psi_start = np.full(B, np.nan); s_start = np.full(B, np.nan); map_prev_out = np.zeros(B, bool)
+    m_hat = np.zeros(B); e_hat = np.zeros(B)  # map lateral offset [m], map scale error [-]
     if use_map and road_map.s_div is not None:
         sg = np.arange(road_map.s_div, road_map.s_div + road_map.curve_len + 1.0, 0.5)
         _, psg, _ = road_map.at(sg)
@@ -533,6 +540,10 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             out_m = (tk - last_vel > cfg.cruise_no_gnss_s) & (np.linalg.norm(v, axis=1) > 1.0)
             new_m = out_m & ~map_prev_out
             br_dec = np.where(new_m, 0, br_dec); psi_start = np.where(new_m, np.nan, psi_start)
+            if new_m.any():                       # a new tunnel: its map errors are unknown, independent
+                for j, sg_ in ((IM, cfg.map_offset_sigma), (IE, cfg.map_scale_sigma)):
+                    P[new_m, j, :] = 0.0; P[new_m, :, j] = 0.0; P[new_m, j, j] = sg_ ** 2
+                m_hat = np.where(new_m, 0.0, m_hat); e_hat = np.where(new_m, 0.0, e_hat)
             s_map = np.where(out_m, s_map, np.nan)
             map_prev_out = out_m
             if out_m.any():
@@ -566,13 +577,24 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     paused = (br_dec == 0) & (s_map >= road_map.s_div - cfg.map_pre_m)
                 sel = out_m & ~paused
                 if sel.any():
-                    c, psi_m, n = road_map.at(np.nan_to_num(s_map), main=(br_dec == -1))
+                    c, psi_m, n, kap = road_map.at(np.nan_to_num(s_map), main=(br_dec == -1), with_kappa=True)
+                    # a length error also moves the polyline sideways after every turn (the map is a
+                    # scaled copy): the offset state may change by σ_ε·d·|Δψ| over a curve
+                    dpsi_step = np.abs(kap) * np.linalg.norm(v, axis=1) * 1.0
+                    P[:, IM, IM] += np.where(out_m, (cfg.map_scale_sigma * np.maximum(np.nan_to_num(s_map) - road_map.s_entry, 0.0) * dpsi_step) ** 2, 0.0)
+                    t2 = np.stack([np.cos(psi_m), np.sin(psi_m)], 1)
+                    dist = np.nan_to_num(s_map) - road_map.s_entry                    # lever of the scale error
                     H = np.zeros((B, 2, NA))
-                    H[:, 0, 8] = 1.0                                                   # δθ_z
+                    # heading: ψ̂ − (ψ_map(ŝ) + κ·d·ε̂); δz = δθ_z − κ tᵀδp − κ d δε (curve matching)
+                    H[:, 0, 8] = 1.0
+                    H[:, 0, 0:2] = -kap[:, None] * t2
+                    H[:, 0, IE] = -kap * dist
+                    # cross-track: nᵀ(p̂_R − c_map(ŝ)) + m̂; δz = nᵀδp + nᵀ[l×]δθ + δm
                     H[:, 1, 0:2] = n
-                    H[:, 1, 6:9] = np.einsum("bi,bij->bj", np.c_[n, np.zeros(B)], skew_b(l_n))   # nᵀ[l×]
-                    z = np.stack([np.angle(np.exp(1j * (psi_hat - psi_m))),
-                                  np.einsum("bi,bi->b", n, pR[:, :2] - c)], 1) - np.einsum("bij,bj->bi", H, x)
+                    H[:, 1, 6:9] = np.einsum("bi,bij->bj", np.c_[n, np.zeros(B)], skew_b(l_n))
+                    H[:, 1, IM] = 1.0
+                    z = np.stack([np.angle(np.exp(1j * (psi_hat - psi_m - kap * dist * e_hat))),
+                                  np.einsum("bi,bi->b", n, pR[:, :2] - c) + m_hat], 1) - np.einsum("bij,bj->bi", H, x)
                     R = np.zeros((B, 2, 2)); R[:, 0, 0] = cfg.map_heading_sigma ** 2; R[:, 1, 1] = cfg.map_lateral_sigma ** 2
                     w_b = np.einsum("ij,bj->bi", C_bp, w[:, kk] - b_g)
                     turning = np.abs(w_b[:, 2]) * np.linalg.norm(v, axis=1) > cfg.nhc_turn_gate if cfg.nhc_turn_gate > 0 else np.zeros(B, bool)
@@ -622,6 +644,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             s_clone = s_clone - x[:, NX]
             d_hat = d_hat - x[:, ID]
             g_hat = g_hat - x[:, IG]
+            m_hat = m_hat - x[:, IM]; e_hat = e_hat - x[:, IE]
             fc = f[:, kk] - b_a
             a_k = np.einsum("bij,bj->bi", C, fc) + GRAVITY_N
         if reclone.any():

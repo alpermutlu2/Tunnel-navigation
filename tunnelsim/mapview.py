@@ -23,6 +23,8 @@ class MapView:
         self.s = self.s[k_e] + length_scale * (self.s - self.s[k_e])
         self.xy = xy + lat_offset_m * n
         self.psi = np.unwrap(psi)
+        self.kappa = np.gradient(self.psi, self.s)          # map curvature [1/m]
+        self.s_entry = self.s[k_e]
         self.step = step
         self.length = self.s[-1]
         ex = road.exits[0] if road.exits else None
@@ -46,15 +48,16 @@ class MapView:
             out[b] = self.s[a + int(np.argmin(d2))]
         return out
 
-    def at(self, s, main=None):
+    def at(self, s, main=None, with_kappa=False):
         """Centreline point, heading and left normal at map s (B,). main (B,) bool: use the main
         tunnel continuation (straight) instead of the route beyond the diverge."""
         k = np.clip(np.searchsorted(self.s, s), 0, len(self.s) - 1)
-        c, psi = self.xy[k].copy(), self.psi[k].copy()
+        c, psi, kap = self.xy[k].copy(), self.psi[k].copy(), self.kappa[k].copy()
         if main is not None and self.s_div is not None and main.any():
             m = main & (s > self.s_div)
             d = (s[m] - self.s_div)[:, None]
             c[m] = self.main_xy0 + d * np.array([np.cos(self.main_psi), np.sin(self.main_psi)])
             psi[m] = self.main_psi
+            kap[m] = 0.0
         n = np.stack([-np.sin(psi), np.cos(psi)], 1)
-        return c, psi, n
+        return (c, psi, n, kap) if with_kappa else (c, psi, n)
