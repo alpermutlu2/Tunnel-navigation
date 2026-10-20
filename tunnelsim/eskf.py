@@ -43,6 +43,8 @@ class EskfConfig:
     gnss_pos_factor: float = 2.0      # R_pos = (factor · reported σ)²  (E3)
     gnss_vel_factor: float = 3.2      # R_vel = (factor · reported σ)²: 0.10 -> 0.32 m/s eq. white (E3)
     nhc_sigma: float = 0.1            # m/s (E4)
+    nhc_turn_k: float = 0.0           # rad/(m/s²); 0 = off. Lateral NHC inflation in turns (sideslip)
+    nhc_turn_gate: float = 0.0        # m/s²; 0 = off. Lateral NHC dropped while |ω_z|·v exceeds this
     nhc_rate_hz: float = 5.0
     baro_sigma: float = 0.15          # m, 1 Hz average (E4)
     zupt_sigma: float = 0.02          # m/s (E5)
@@ -433,7 +435,6 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             if cfg.cruise_mode == "gm":
                 gm_init = gm_init | start
         # NHC (body y, z velocity at R = 0)
-        # NHC (body y, z velocity at R = 0)
         if (kk - i0) % n_nhc == 0:
             C_bn = C_bp @ np.swapaxes(C, 1, 2)                       # body <- nav
             w_b = np.einsum("ij,bj->bi", C_bp, w[:, kk] - b_g)
@@ -444,6 +445,18 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             H[:, :, 6:9] = (C_bn @ skew_b(v_R))[:, 1:3]
             z = v_b[:, 1:3] - np.einsum("bij,bj->bi", H, x)
             R = np.broadcast_to(np.eye(2) * cfg.nhc_sigma ** 2, (B, 2, 2)).copy()
+            if cfg.nhc_turn_k > 0.0:
+                # sideslip in turns violates the lateral NHC: inflate it by the sideslip a car of
+                # gain k could have, β ≈ k·a_lat with a_lat ≈ ω_z·v (gyro, estimator side)
+                spd_ = np.linalg.norm(v, axis=1)
+                a_lat = np.abs(w_b[:, 2]) * spd_
+                R[:, 0, 0] += (cfg.nhc_turn_k * a_lat * spd_) ** 2
+            if cfg.nhc_turn_gate > 0.0:
+                # the sideslip error is the same sign for the whole curve (correlated), so R
+                # inflation only slows it down; drop the lateral row while turning instead
+                spd_ = np.linalg.norm(v, axis=1)
+                a_lat = np.abs(w_b[:, 2]) * spd_
+                R[:, 0, 0] = np.where(a_lat > cfg.nhc_turn_gate, 1e6, R[:, 0, 0])
             moving = np.linalg.norm(v, axis=1) > 1.0
             Psub, xs = P[moving], x[moving]
             if moving.any():

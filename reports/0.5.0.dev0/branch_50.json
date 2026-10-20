@@ -1,0 +1,1477 @@
+{
+ "note": "50 seeds, exit branch on the route (review 6), barometer fix, cruise gm default vs off. at_diverge = along-track error when the car passes the diverge (straight-tunnel part); real_exit = at the portal (after the branch curve).",
+ "runs": {
+  "S1|gm": {
+   "scenario": "S1",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 135.0,
+   "events": {
+    "gnss_pos_acc": 13950,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 14200,
+    "gnss_vel_rej": 0,
+    "zupt": 0,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 1053,
+    "cruise_updates": 5076
+   },
+   "fixed_180s": {
+    "bias": 0.5475,
+    "rmse": 2.92,
+    "p95_abs": 6.161,
+    "p95_abs_ci90": [
+     4.323,
+     6.904
+    ]
+   },
+   "real_exit": {
+    "bias": -10.93,
+    "rmse": 18.8,
+    "p95_abs": 33.27,
+    "p95_abs_ci90": [
+     26.29,
+     50.98
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 0.98,
+    "mean_norm_sq": 0.49,
+    "sigma_s_mean_m": 26.89
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": 0.08,
+     "rmse": 0.4617,
+     "p95_abs": 0.8,
+     "p95_abs_ci90": [
+      0.7,
+      1.02
+     ]
+    },
+    "late_frac": 0.54,
+    "late_gt_1s_frac": 0.02,
+    "sigma_t_mean_s": 0.879,
+    "within_2sigma_t": 1.0
+   },
+   "at_diverge": {
+    "bias": -1.585,
+    "rmse": 12.13,
+    "p95_abs": 21.13,
+    "p95_abs_ci90": [
+     18.32,
+     27.51
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 2.026,
+     "rmse": 2.028,
+     "p95_abs": 2.1,
+     "p95_abs_ci90": [
+      2.1,
+      2.2
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.242,
+     "rmse": 2.405,
+     "p95_abs": 3.622,
+     "p95_abs_ci90": [
+      3.408,
+      3.72
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 15.810000000000002,
+    "not_converged_in_60s": 0
+   }
+  },
+  "S2|gm": {
+   "scenario": "S2",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 112.5,
+   "events": {
+    "gnss_pos_acc": 15100,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 15350,
+    "gnss_vel_rej": 0,
+    "zupt": 0,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 556,
+    "cruise_updates": 3709
+   },
+   "fixed_180s": {
+    "bias": 0.5383,
+    "rmse": 2.579,
+    "p95_abs": 5.407,
+    "p95_abs_ci90": [
+     3.946,
+     5.787
+    ]
+   },
+   "real_exit": {
+    "bias": -1.511,
+    "rmse": 18.03,
+    "p95_abs": 30.95,
+    "p95_abs_ci90": [
+     28.32,
+     40.25
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 0.98,
+    "mean_norm_sq": 0.978,
+    "sigma_s_mean_m": 18.22
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": -0.084,
+     "rmse": 0.4499,
+     "p95_abs": 0.855,
+     "p95_abs_ci90": [
+      0.6,
+      1.21
+     ]
+    },
+    "late_frac": 0.32,
+    "late_gt_1s_frac": 0.02,
+    "sigma_t_mean_s": 0.555,
+    "within_2sigma_t": 0.98
+   },
+   "at_diverge": {
+    "bias": 1.153,
+    "rmse": 13.73,
+    "p95_abs": 24.59,
+    "p95_abs_ci90": [
+     21.27,
+     29.95
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 1.9,
+     "rmse": 1.907,
+     "p95_abs": 2.1,
+     "p95_abs_ci90": [
+      2.1,
+      2.155
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.422,
+     "rmse": 2.599,
+     "p95_abs": 4.325,
+     "p95_abs_ci90": [
+      3.238,
+      5.464
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 12.310000000000002,
+    "not_converged_in_60s": 0
+   }
+  },
+  "S3|gm": {
+   "scenario": "S3",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 180.0,
+   "events": {
+    "gnss_pos_acc": 11750,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 12000,
+    "gnss_vel_rej": 0,
+    "zupt": 0,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 1505,
+    "cruise_updates": 6860
+   },
+   "fixed_180s": {
+    "bias": -5.766,
+    "rmse": 17.23,
+    "p95_abs": 35.35,
+    "p95_abs_ci90": [
+     25.15,
+     42.23
+    ]
+   },
+   "real_exit": {
+    "bias": -5.766,
+    "rmse": 17.23,
+    "p95_abs": 35.35,
+    "p95_abs_ci90": [
+     25.15,
+     42.23
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 1.0,
+    "mean_norm_sq": 0.365,
+    "sigma_s_mean_m": 28.77
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": 0.162,
+     "rmse": 0.529,
+     "p95_abs": 1.155,
+     "p95_abs_ci90": [
+      0.9,
+      1.2
+     ]
+    },
+    "late_frac": 0.6,
+    "late_gt_1s_frac": 0.04,
+    "sigma_t_mean_s": 1.048,
+    "within_2sigma_t": 1.0
+   },
+   "at_diverge": {
+    "bias": -4.748,
+    "rmse": 12.16,
+    "p95_abs": 23.17,
+    "p95_abs_ci90": [
+     19.47,
+     32.72
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 2.328,
+     "rmse": 2.33,
+     "p95_abs": 2.5,
+     "p95_abs_ci90": [
+      2.455,
+      2.555
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.026,
+     "rmse": 2.21,
+     "p95_abs": 3.657,
+     "p95_abs_ci90": [
+      3.438,
+      3.863
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 17.779999999999973,
+    "not_converged_in_60s": 2
+   }
+  },
+  "S4|gm": {
+   "scenario": "S4",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 337.36,
+   "events": {
+    "gnss_pos_acc": 12100,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 12350,
+    "gnss_vel_rej": 0,
+    "zupt": 323962,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 2507,
+    "cruise_updates": 6813
+   },
+   "fixed_180s": {
+    "bias": -0.6556,
+    "rmse": 6.979,
+    "p95_abs": 13.79,
+    "p95_abs_ci90": [
+     9.903,
+     15.43
+    ]
+   },
+   "real_exit": {
+    "bias": -21.31,
+    "rmse": 40.66,
+    "p95_abs": 82.39,
+    "p95_abs_ci90": [
+     65.35,
+     108.5
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 0.96,
+    "mean_norm_sq": 0.681,
+    "sigma_s_mean_m": 48.77
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": 0.244,
+     "rmse": 1.531,
+     "p95_abs": 2.9,
+     "p95_abs_ci90": [
+      2.6,
+      3.365
+     ]
+    },
+    "late_frac": 0.54,
+    "late_gt_1s_frac": 0.3,
+    "sigma_t_mean_s": 2.962,
+    "within_2sigma_t": 1.0
+   },
+   "at_diverge": {
+    "bias": -5.378,
+    "rmse": 30.98,
+    "p95_abs": 58.54,
+    "p95_abs_ci90": [
+     52.37,
+     63.59
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 2.926,
+     "rmse": 2.962,
+     "p95_abs": 4.0,
+     "p95_abs_ci90": [
+      3.6,
+      4.155
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.119,
+     "rmse": 2.311,
+     "p95_abs": 3.304,
+     "p95_abs_ci90": [
+      3.196,
+      4.592
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 23.379999999999995,
+    "not_converged_in_60s": 15
+   }
+  },
+  "S5|gm": {
+   "scenario": "S5",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 143.52,
+   "events": {
+    "gnss_pos_acc": 15700,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 15950,
+    "gnss_vel_rej": 0,
+    "zupt": 0,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 1241,
+    "cruise_updates": 1384
+   },
+   "fixed_180s": {
+    "bias": -0.6978,
+    "rmse": 4.42,
+    "p95_abs": 7.736,
+    "p95_abs_ci90": [
+     5.744,
+     15.25
+    ]
+   },
+   "real_exit": {
+    "bias": -23.48,
+    "rmse": 30.22,
+    "p95_abs": 58.28,
+    "p95_abs_ci90": [
+     45.01,
+     67.62
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 0.94,
+    "mean_norm_sq": 1.113,
+    "sigma_s_mean_m": 28.66
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": 0.896,
+     "rmse": 1.245,
+     "p95_abs": 2.32,
+     "p95_abs_ci90": [
+      1.81,
+      2.72
+     ]
+    },
+    "late_frac": 0.82,
+    "late_gt_1s_frac": 0.42,
+    "sigma_t_mean_s": 1.674,
+    "within_2sigma_t": 1.0
+   },
+   "at_diverge": {
+    "bias": -19.43,
+    "rmse": 25.11,
+    "p95_abs": 45.96,
+    "p95_abs_ci90": [
+     36.53,
+     52.8
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 2.256,
+     "rmse": 2.259,
+     "p95_abs": 2.455,
+     "p95_abs_ci90": [
+      2.4,
+      2.61
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.657,
+     "rmse": 2.791,
+     "p95_abs": 3.986,
+     "p95_abs_ci90": [
+      3.803,
+      4.116
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 17.810000000000002,
+    "not_converged_in_60s": 0
+   }
+  },
+  "S6|gm": {
+   "scenario": "S6",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 134.8,
+   "events": {
+    "gnss_pos_acc": 13950,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 14200,
+    "gnss_vel_rej": 0,
+    "zupt": 0,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 1027,
+    "cruise_updates": 2386
+   },
+   "fixed_180s": {
+    "bias": 0.5147,
+    "rmse": 2.876,
+    "p95_abs": 6.068,
+    "p95_abs_ci90": [
+     4.219,
+     6.852
+    ]
+   },
+   "real_exit": {
+    "bias": -12.03,
+    "rmse": 19.43,
+    "p95_abs": 34.38,
+    "p95_abs_ci90": [
+     30.48,
+     49.01
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 0.98,
+    "mean_norm_sq": 0.507,
+    "sigma_s_mean_m": 27.35
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": 0.102,
+     "rmse": 0.4994,
+     "p95_abs": 0.9,
+     "p95_abs_ci90": [
+      0.8,
+      1.01
+     ]
+    },
+    "late_frac": 0.6,
+    "late_gt_1s_frac": 0.02,
+    "sigma_t_mean_s": 0.907,
+    "within_2sigma_t": 1.0
+   },
+   "at_diverge": {
+    "bias": -3.4,
+    "rmse": 13.31,
+    "p95_abs": 24.52,
+    "p95_abs_ci90": [
+     19.93,
+     27.41
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 2.086,
+     "rmse": 2.088,
+     "p95_abs": 2.2,
+     "p95_abs_ci90": [
+      2.2,
+      2.255
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.277,
+     "rmse": 2.448,
+     "p95_abs": 3.62,
+     "p95_abs_ci90": [
+      3.502,
+      3.762
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 15.009999999999991,
+    "not_converged_in_60s": 0
+   }
+  },
+  "S6s|gm": {
+   "scenario": "S6s",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 134.89,
+   "events": {
+    "gnss_pos_acc": 13950,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 14200,
+    "gnss_vel_rej": 0,
+    "zupt": 0,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 1143,
+    "cruise_updates": 3807
+   },
+   "fixed_180s": {
+    "bias": 0.5355,
+    "rmse": 2.926,
+    "p95_abs": 6.212,
+    "p95_abs_ci90": [
+     4.298,
+     6.954
+    ]
+   },
+   "real_exit": {
+    "bias": -12.07,
+    "rmse": 19.75,
+    "p95_abs": 33.67,
+    "p95_abs_ci90": [
+     29.26,
+     51.2
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 0.98,
+    "mean_norm_sq": 0.533,
+    "sigma_s_mean_m": 27.11
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": 0.05,
+     "rmse": 0.4962,
+     "p95_abs": 0.855,
+     "p95_abs_ci90": [
+      0.8,
+      1.01
+     ]
+    },
+    "late_frac": 0.48,
+    "late_gt_1s_frac": 0.02,
+    "sigma_t_mean_s": 0.894,
+    "within_2sigma_t": 1.0
+   },
+   "at_diverge": {
+    "bias": -2.798,
+    "rmse": 13.37,
+    "p95_abs": 24.12,
+    "p95_abs_ci90": [
+     19.9,
+     28.61
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 2.048,
+     "rmse": 2.05,
+     "p95_abs": 2.2,
+     "p95_abs_ci90": [
+      2.155,
+      2.2
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.249,
+     "rmse": 2.417,
+     "p95_abs": 3.841,
+     "p95_abs_ci90": [
+      3.458,
+      4.102
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 16.420000000000016,
+    "not_converged_in_60s": 0
+   }
+  },
+  "S6L|gm": {
+   "scenario": "S6L",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 134.62,
+   "events": {
+    "gnss_pos_acc": 13950,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 14200,
+    "gnss_vel_rej": 0,
+    "zupt": 0,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 1027,
+    "cruise_updates": 1342
+   },
+   "fixed_180s": {
+    "bias": 0.5539,
+    "rmse": 2.885,
+    "p95_abs": 6.089,
+    "p95_abs_ci90": [
+     4.303,
+     6.769
+    ]
+   },
+   "real_exit": {
+    "bias": -9.946,
+    "rmse": 17.84,
+    "p95_abs": 30.4,
+    "p95_abs_ci90": [
+     26.49,
+     47.38
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 0.98,
+    "mean_norm_sq": 0.419,
+    "sigma_s_mean_m": 27.62
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": 0.034,
+     "rmse": 0.505,
+     "p95_abs": 0.955,
+     "p95_abs_ci90": [
+      0.8,
+      1.155
+     ]
+    },
+    "late_frac": 0.46,
+    "late_gt_1s_frac": 0.02,
+    "sigma_t_mean_s": 0.92,
+    "within_2sigma_t": 1.0
+   },
+   "at_diverge": {
+    "bias": -2.073,
+    "rmse": 13.22,
+    "p95_abs": 25.4,
+    "p95_abs_ci90": [
+     18.67,
+     31.84
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 2.104,
+     "rmse": 2.106,
+     "p95_abs": 2.255,
+     "p95_abs_ci90": [
+      2.2,
+      2.355
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.205,
+     "rmse": 2.349,
+     "p95_abs": 3.367,
+     "p95_abs_ci90": [
+      3.004,
+      3.997
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 14.689999999999998,
+    "not_converged_in_60s": 0
+   }
+  },
+  "S1|off": {
+   "scenario": "S1",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 135.0,
+   "events": {
+    "gnss_pos_acc": 13950,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 14200,
+    "gnss_vel_rej": 0,
+    "zupt": 0,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 1076,
+    "cruise_updates": 0
+   },
+   "fixed_180s": {
+    "bias": 0.5358,
+    "rmse": 2.918,
+    "p95_abs": 6.166,
+    "p95_abs_ci90": [
+     4.306,
+     6.915
+    ]
+   },
+   "real_exit": {
+    "bias": -11.54,
+    "rmse": 19.65,
+    "p95_abs": 35.67,
+    "p95_abs_ci90": [
+     27.81,
+     53.91
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 0.98,
+    "mean_norm_sq": 0.509,
+    "sigma_s_mean_m": 27.63
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": 0.082,
+     "rmse": 0.4917,
+     "p95_abs": 0.855,
+     "p95_abs_ci90": [
+      0.755,
+      1.12
+     ]
+    },
+    "late_frac": 0.54,
+    "late_gt_1s_frac": 0.02,
+    "sigma_t_mean_s": 0.926,
+    "within_2sigma_t": 1.0
+   },
+   "at_diverge": {
+    "bias": -1.775,
+    "rmse": 13.03,
+    "p95_abs": 21.94,
+    "p95_abs_ci90": [
+     19.73,
+     29.53
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 2.024,
+     "rmse": 2.026,
+     "p95_abs": 2.1,
+     "p95_abs_ci90": [
+      2.1,
+      2.2
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.284,
+     "rmse": 2.447,
+     "p95_abs": 3.635,
+     "p95_abs_ci90": [
+      3.483,
+      3.796
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 16.810000000000002,
+    "not_converged_in_60s": 0
+   }
+  },
+  "S2|off": {
+   "scenario": "S2",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 112.5,
+   "events": {
+    "gnss_pos_acc": 15100,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 15350,
+    "gnss_vel_rej": 0,
+    "zupt": 0,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 566,
+    "cruise_updates": 0
+   },
+   "fixed_180s": {
+    "bias": 0.5376,
+    "rmse": 2.578,
+    "p95_abs": 5.407,
+    "p95_abs_ci90": [
+     3.947,
+     5.787
+    ]
+   },
+   "real_exit": {
+    "bias": -1.463,
+    "rmse": 18.15,
+    "p95_abs": 31.22,
+    "p95_abs_ci90": [
+     28.03,
+     40.71
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 0.98,
+    "mean_norm_sq": 0.979,
+    "sigma_s_mean_m": 18.34
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": -0.094,
+     "rmse": 0.4705,
+     "p95_abs": 0.91,
+     "p95_abs_ci90": [
+      0.655,
+      1.255
+     ]
+    },
+    "late_frac": 0.32,
+    "late_gt_1s_frac": 0.02,
+    "sigma_t_mean_s": 0.565,
+    "within_2sigma_t": 0.96
+   },
+   "at_diverge": {
+    "bias": 1.286,
+    "rmse": 13.91,
+    "p95_abs": 24.82,
+    "p95_abs_ci90": [
+     21.6,
+     30.21
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 1.898,
+     "rmse": 1.905,
+     "p95_abs": 2.1,
+     "p95_abs_ci90": [
+      2.1,
+      2.155
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.436,
+     "rmse": 2.621,
+     "p95_abs": 4.451,
+     "p95_abs_ci90": [
+      3.248,
+      5.511
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 12.310000000000002,
+    "not_converged_in_60s": 0
+   }
+  },
+  "S3|off": {
+   "scenario": "S3",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 180.0,
+   "events": {
+    "gnss_pos_acc": 11750,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 12000,
+    "gnss_vel_rej": 0,
+    "zupt": 0,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 1628,
+    "cruise_updates": 0
+   },
+   "fixed_180s": {
+    "bias": -6.347,
+    "rmse": 21.38,
+    "p95_abs": 45.57,
+    "p95_abs_ci90": [
+     33.58,
+     53.31
+    ]
+   },
+   "real_exit": {
+    "bias": -6.347,
+    "rmse": 21.38,
+    "p95_abs": 45.57,
+    "p95_abs_ci90": [
+     33.58,
+     53.31
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 1.0,
+    "mean_norm_sq": 0.401,
+    "sigma_s_mean_m": 33.78
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": 0.17,
+     "rmse": 0.5781,
+     "p95_abs": 1.2,
+     "p95_abs_ci90": [
+      1.0,
+      1.31
+     ]
+    },
+    "late_frac": 0.6,
+    "late_gt_1s_frac": 0.06,
+    "sigma_t_mean_s": 1.127,
+    "within_2sigma_t": 1.0
+   },
+   "at_diverge": {
+    "bias": -5.891,
+    "rmse": 14.76,
+    "p95_abs": 27.79,
+    "p95_abs_ci90": [
+     24.45,
+     36.53
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 2.336,
+     "rmse": 2.34,
+     "p95_abs": 2.5,
+     "p95_abs_ci90": [
+      2.455,
+      2.722
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.227,
+     "rmse": 2.412,
+     "p95_abs": 3.856,
+     "p95_abs_ci90": [
+      3.63,
+      3.996
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 19.279999999999973,
+    "not_converged_in_60s": 2
+   }
+  },
+  "S4|off": {
+   "scenario": "S4",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 337.36,
+   "events": {
+    "gnss_pos_acc": 12100,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 12350,
+    "gnss_vel_rej": 0,
+    "zupt": 323962,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 2558,
+    "cruise_updates": 0
+   },
+   "fixed_180s": {
+    "bias": -0.7578,
+    "rmse": 7.499,
+    "p95_abs": 15.24,
+    "p95_abs_ci90": [
+     10.31,
+     17.03
+    ]
+   },
+   "real_exit": {
+    "bias": -22.85,
+    "rmse": 41.93,
+    "p95_abs": 86.46,
+    "p95_abs_ci90": [
+     66.53,
+     106.1
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 0.98,
+    "mean_norm_sq": 0.688,
+    "sigma_s_mean_m": 50.68
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": 0.144,
+     "rmse": 1.801,
+     "p95_abs": 3.465,
+     "p95_abs_ci90": [
+      2.908,
+      4.21
+     ]
+    },
+    "late_frac": 0.52,
+    "late_gt_1s_frac": 0.32,
+    "sigma_t_mean_s": 3.411,
+    "within_2sigma_t": 1.0
+   },
+   "at_diverge": {
+    "bias": -3.962,
+    "rmse": 37.03,
+    "p95_abs": 69.0,
+    "p95_abs_ci90": [
+     59.8,
+     80.72
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 3.062,
+     "rmse": 3.125,
+     "p95_abs": 4.2,
+     "p95_abs_ci90": [
+      4.1,
+      4.675
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.169,
+     "rmse": 2.376,
+     "p95_abs": 3.798,
+     "p95_abs_ci90": [
+      3.248,
+      4.627
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 25.379999999999995,
+    "not_converged_in_60s": 15
+   }
+  },
+  "S5|off": {
+   "scenario": "S5",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 143.52,
+   "events": {
+    "gnss_pos_acc": 15700,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 15950,
+    "gnss_vel_rej": 0,
+    "zupt": 0,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 1262,
+    "cruise_updates": 0
+   },
+   "fixed_180s": {
+    "bias": -0.7337,
+    "rmse": 4.431,
+    "p95_abs": 7.851,
+    "p95_abs_ci90": [
+     5.775,
+     15.26
+    ]
+   },
+   "real_exit": {
+    "bias": -24.58,
+    "rmse": 31.09,
+    "p95_abs": 58.8,
+    "p95_abs_ci90": [
+     46.12,
+     68.47
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 0.94,
+    "mean_norm_sq": 1.164,
+    "sigma_s_mean_m": 28.85
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": 0.98,
+     "rmse": 1.32,
+     "p95_abs": 2.465,
+     "p95_abs_ci90": [
+      1.955,
+      2.82
+     ]
+    },
+    "late_frac": 0.86,
+    "late_gt_1s_frac": 0.44,
+    "sigma_t_mean_s": 1.699,
+    "within_2sigma_t": 1.0
+   },
+   "at_diverge": {
+    "bias": -21.04,
+    "rmse": 26.55,
+    "p95_abs": 48.21,
+    "p95_abs_ci90": [
+     38.95,
+     53.39
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 2.258,
+     "rmse": 2.261,
+     "p95_abs": 2.5,
+     "p95_abs_ci90": [
+      2.4,
+      2.61
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.672,
+     "rmse": 2.805,
+     "p95_abs": 3.988,
+     "p95_abs_ci90": [
+      3.801,
+      4.11
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 16.810000000000002,
+    "not_converged_in_60s": 0
+   }
+  },
+  "S6|off": {
+   "scenario": "S6",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 134.8,
+   "events": {
+    "gnss_pos_acc": 13950,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 14200,
+    "gnss_vel_rej": 0,
+    "zupt": 0,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 1028,
+    "cruise_updates": 0
+   },
+   "fixed_180s": {
+    "bias": 0.5208,
+    "rmse": 2.878,
+    "p95_abs": 6.09,
+    "p95_abs_ci90": [
+     4.225,
+     6.844
+    ]
+   },
+   "real_exit": {
+    "bias": -10.45,
+    "rmse": 18.56,
+    "p95_abs": 32.85,
+    "p95_abs_ci90": [
+     28.04,
+     48.6
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 0.98,
+    "mean_norm_sq": 0.451,
+    "sigma_s_mean_m": 27.69
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": 0.046,
+     "rmse": 0.4986,
+     "p95_abs": 0.955,
+     "p95_abs_ci90": [
+      0.8,
+      1.055
+     ]
+    },
+    "late_frac": 0.56,
+    "late_gt_1s_frac": 0.02,
+    "sigma_t_mean_s": 0.93,
+    "within_2sigma_t": 1.0
+   },
+   "at_diverge": {
+    "bias": -1.921,
+    "rmse": 13.14,
+    "p95_abs": 23.94,
+    "p95_abs_ci90": [
+     20.22,
+     28.11
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 2.086,
+     "rmse": 2.088,
+     "p95_abs": 2.2,
+     "p95_abs_ci90": [
+      2.2,
+      2.255
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.211,
+     "rmse": 2.365,
+     "p95_abs": 3.613,
+     "p95_abs_ci90": [
+      3.426,
+      3.749
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 14.509999999999991,
+    "not_converged_in_60s": 0
+   }
+  },
+  "S6s|off": {
+   "scenario": "S6s",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 134.89,
+   "events": {
+    "gnss_pos_acc": 13950,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 14200,
+    "gnss_vel_rej": 0,
+    "zupt": 0,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 1138,
+    "cruise_updates": 0
+   },
+   "fixed_180s": {
+    "bias": 0.5442,
+    "rmse": 2.924,
+    "p95_abs": 6.236,
+    "p95_abs_ci90": [
+     4.311,
+     6.933
+    ]
+   },
+   "real_exit": {
+    "bias": -10.67,
+    "rmse": 19.07,
+    "p95_abs": 31.38,
+    "p95_abs_ci90": [
+     27.9,
+     49.56
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 0.98,
+    "mean_norm_sq": 0.478,
+    "sigma_s_mean_m": 27.65
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": 0.008,
+     "rmse": 0.515,
+     "p95_abs": 0.955,
+     "p95_abs_ci90": [
+      0.8,
+      1.1
+     ]
+    },
+    "late_frac": 0.46,
+    "late_gt_1s_frac": 0.02,
+    "sigma_t_mean_s": 0.929,
+    "within_2sigma_t": 1.0
+   },
+   "at_diverge": {
+    "bias": -1.629,
+    "rmse": 13.54,
+    "p95_abs": 24.96,
+    "p95_abs_ci90": [
+     20.54,
+     29.35
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 2.052,
+     "rmse": 2.054,
+     "p95_abs": 2.2,
+     "p95_abs_ci90": [
+      2.155,
+      2.2
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.21,
+     "rmse": 2.38,
+     "p95_abs": 3.807,
+     "p95_abs_ci90": [
+      3.513,
+      3.948
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 16.420000000000016,
+    "not_converged_in_60s": 0
+   }
+  },
+  "S6L|off": {
+   "scenario": "S6L",
+   "seeds": 50,
+   "overrides": [],
+   "zupt": "detector",
+   "exit_after_portal_s": 134.62,
+   "events": {
+    "gnss_pos_acc": 13950,
+    "gnss_pos_rej": 0,
+    "gnss_vel_acc": 14200,
+    "gnss_vel_rej": 0,
+    "zupt": 0,
+    "gnss_pos_skipped_reacq": 100,
+    "gnss_pos_capped": 1023,
+    "cruise_updates": 0
+   },
+   "fixed_180s": {
+    "bias": 0.5551,
+    "rmse": 2.884,
+    "p95_abs": 6.088,
+    "p95_abs_ci90": [
+     4.307,
+     6.764
+    ]
+   },
+   "real_exit": {
+    "bias": -9.301,
+    "rmse": 17.54,
+    "p95_abs": 30.03,
+    "p95_abs_ci90": [
+     25.49,
+     47.05
+    ]
+   },
+   "consistency_real_exit": {
+    "frac_within_2sigma": 0.98,
+    "mean_norm_sq": 0.399,
+    "sigma_s_mean_m": 27.81
+   },
+   "callout": {
+    "lead_m": 300.0,
+    "timing_error_s": {
+     "bias": 0.014,
+     "rmse": 0.505,
+     "p95_abs": 0.9,
+     "p95_abs_ci90": [
+      0.8,
+      1.155
+     ]
+    },
+    "late_frac": 0.46,
+    "late_gt_1s_frac": 0.02,
+    "sigma_t_mean_s": 0.934,
+    "within_2sigma_t": 1.0
+   },
+   "at_diverge": {
+    "bias": -1.411,
+    "rmse": 13.24,
+    "p95_abs": 24.5,
+    "p95_abs_ci90": [
+     19.49,
+     32.38
+    ]
+   },
+   "branch_confirm": {
+    "confirmed_frac": 1.0,
+    "before_diverge_frac": 0.0,
+    "delay_s": {
+     "bias": 2.104,
+     "rmse": 2.106,
+     "p95_abs": 2.255,
+     "p95_abs_ci90": [
+      2.2,
+      2.355
+     ]
+    }
+   },
+   "recovery": {
+    "max_step_jump_m": {
+     "bias": 2.169,
+     "rmse": 2.309,
+     "p95_abs": 3.358,
+     "p95_abs_ci90": [
+      2.979,
+      3.838
+     ]
+    },
+    "threshold_m": 10.0,
+    "time_to_threshold_s_median": 14.689999999999998,
+    "not_converged_in_60s": 0
+   }
+  }
+ }
+}
