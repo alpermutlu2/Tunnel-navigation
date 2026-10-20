@@ -98,3 +98,86 @@ def calibration_experiment(key, seeds=100, imu_overrides=(), zupt_oracle=False) 
     out["results"]["cv"] = cv
     out["entry_speed_error_mps"] = stats(vh - tr.v[k_fix])
     return out
+
+
+# ---------------------------------------------------------------------------------------------
+# v0.5: ESKF experiments
+# ---------------------------------------------------------------------------------------------
+CALLOUT_LEAD_M = 300.0      # [ASSUMED] the app announces the exit 300 m before the ramp
+
+
+def simulate_run(key, seeds, overrides=(), imu_switches=None):
+    """Sensor data for a batch of seeds: IMU (no gaps; jitter off so the batch shares a time
+    axis), GNSS and barometer at nominal settings plus overrides."""
+    from .sensors import BaroTruthSource, simulate_baro
+    sc = build_scenarios()[key]
+    tr = generate_truth(sc)
+    cfg = configure("no_gaps", *overrides)
+    isrc, gsrc, bsrc = ImuTruthSource.from_truth(tr), GnssTruthSource.from_truth(tr, sc), BaroTruthSource.from_truth(tr, sc)
+    sw = imu_switches or Switches.all_on().without("ts_jitter", "ts_gaps")
+    F, W, G, H = [], [], [], []
+    for s in seeds:
+        m, _ = simulate_imu(isrc, cfg, sw, seed=int(s))
+        g, _ = simulate_gnss(gsrc, cfg, Switches.all_on(), seed=int(s))
+        b, _ = simulate_baro(bsrc, cfg, Switches.all_on(), seed=int(s))
+        F.append(m.f), W.append(m.w), G.append(g), H.append(b.h)
+    gnss = {"t": G[0].t, "pos": np.stack([g.pos for g in G]), "vel": np.stack([g.vel for g in G]),
+            "acc_pos_h": np.stack([g.acc_pos_h for g in G]), "acc_pos_v": np.stack([g.acc_pos_v for g in G]),
+            "acc_vel": np.stack([g.acc_vel for g in G])}
+    return sc, tr, m.t, np.stack(F), np.stack(W), gnss, b.t, np.stack(H)
+
+
+def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=None, keep_tracks=False):
+    from .eskf import EskfConfig, run_eskf
+    sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, np.arange(seeds), overrides)
+    zmask = (tr.v < 0.05) if zupt_oracle else None
+    out = run_eskf(t, F, W, gnss, bt, bh, tr.C_bp, tr.lever_arm_b, eskf_cfg or EskfConfig(), zupt_mask=zmask)
+    i_e = int(np.argmax(tr.in_tunnel))
+    i_x = len(tr.in_tunnel) - int(np.argmax(tr.in_tunnel[::-1]))
+    t_e, t_x = tr.t[i_e], tr.t[min(i_x, len(tr.t) - 1)]
+    idx = np.clip(np.round((out.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
+    tn = _tangent(tr, idx)
+    pR_hat = out.p - np.einsum("bkij,j->bki", out.C @ tr.C_bp.T, tr.lever_arm_b)
+    d = pR_hat - tr.pos_n[idx][None]
+    e_s = np.einsum("bki,ki->bk", d, tn)
+    e_h = np.linalg.norm(d[..., :2], axis=-1)
+    sig_s = np.sqrt(np.einsum("ki,bkij,kj->bk", tn, out.P_pos, tn))
+    s_true = tr.s[idx]
+    s_hat = s_true[None] + e_s
+
+    def at(tt):
+        return int(np.argmin(np.abs(out.t - tt)))
+
+    k180, kx = at(t_e + 180.0), at(t_x - 0.05)
+    res = {"scenario": key, "seeds": seeds, "overrides": list(overrides), "zupt": "oracle" if zupt_oracle else "detector",
+           "exit_after_portal_s": round(t_x - t_e, 2), "events": out.events}
+    res["fixed_180s"] = stats(e_s[:, k180])
+    res["real_exit"] = stats(e_s[:, kx])
+    z = e_s[:, kx] / sig_s[:, kx]
+    res["consistency_real_exit"] = {"frac_within_2sigma": round(float(np.mean(np.abs(z) < 2)), 3),
+                                    "mean_norm_sq": round(float(np.mean(z * z)), 3),
+                                    "sigma_s_mean_m": round(float(sig_s[:, kx].mean()), 2)}
+    # exit callout: announce when ŝ crosses s_ramp − lead
+    if sc.road.exits:
+        s_call = sc.road.exits[0].s - CALLOUT_LEAD_M
+        k_true = int(np.argmax(s_true >= s_call))
+        t_true = out.t[k_true]
+        k_hat = np.argmax(s_hat >= s_call, axis=1)
+        res["callout"] = {"lead_m": CALLOUT_LEAD_M, "timing_error_s": stats(out.t[k_hat] - t_true)}
+    # recovery after the exit
+    after = out.t >= t_x
+    win = after & (out.t <= t_x + 60.0)
+    jumps = np.abs(np.diff(s_hat[:, win], axis=1) - np.diff(s_true[win])[None])
+    conv = []
+    for b in range(seeds):
+        kk = np.nonzero(win)[0]
+        good = e_h[b, kk] < 5.0
+        idx_ok = next((i for i in range(len(kk)) if good[i:].all()), None)
+        conv.append(np.nan if idx_ok is None else out.t[kk[idx_ok]] - t_x)
+    conv = np.array(conv)
+    res["recovery"] = {"max_step_jump_m": stats(jumps.max(axis=1)),
+                       "time_to_5m_s_median": float(np.nanmedian(conv)) if np.isfinite(conv).any() else None,
+                       "not_converged_in_60s": int(np.isnan(conv).sum())}
+    if keep_tracks:
+        res["_tracks"] = {"t": out.t, "e_s": e_s, "sig_s": sig_s, "s_true": s_true, "t_entry": t_e, "t_exit": t_x}
+    return res

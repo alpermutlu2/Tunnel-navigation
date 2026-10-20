@@ -1,0 +1,128 @@
+{
+ "approach_with_maneuvers_gnss_nhc_baro": {
+  "window_s": [
+   10.0,
+   90.0
+  ],
+  "measurements": {
+   "gnss": true,
+   "nhc": true,
+   "baro": true
+  },
+  "rank": 15,
+  "of": 16,
+  "weakest": [
+   {
+    "rel_singular_value": 3.92e-08,
+    "direction": {
+     "dba_x": -0.862,
+     "dth_e": -0.504,
+     "dba_z": -0.044,
+     "dba_y": -0.024
+    }
+   },
+   {
+    "rel_singular_value": 0.000498,
+    "direction": {
+     "dth_u": 0.929,
+     "dbg_y": 0.36,
+     "dbg_z": -0.084,
+     "dth_e": 0.01
+    }
+   },
+   {
+    "rel_singular_value": 0.000729,
+    "direction": {
+     "dba_z": 0.844,
+     "dth_n": -0.505,
+     "dba_y": 0.169,
+     "dba_x": -0.048
+    }
+   }
+  ]
+ },
+ "steady_approach_gnss_nhc_baro": {
+  "window_s": [
+   100.0,
+   195.2
+  ],
+  "measurements": {
+   "gnss": true,
+   "nhc": true,
+   "baro": true
+  },
+  "rank": 15,
+  "of": 16,
+  "weakest": [
+   {
+    "rel_singular_value": 7.59e-17,
+    "direction": {
+     "dba_x": 0.862,
+     "dth_e": 0.504,
+     "dba_z": 0.044,
+     "dba_y": 0.024
+    }
+   },
+   {
+    "rel_singular_value": 0.00028,
+    "direction": {
+     "dth_u": 0.963,
+     "dbg_y": 0.264,
+     "dbg_z": -0.056,
+     "dp_n": -0.005
+    }
+   },
+   {
+    "rel_singular_value": 0.000291,
+    "direction": {
+     "dba_z": -0.843,
+     "dth_n": 0.505,
+     "dba_y": -0.178,
+     "dba_x": 0.048
+    }
+   }
+  ]
+ },
+ "tunnel_nhc_baro_only": {
+  "window_s": [
+   200.2,
+   320.2
+  ],
+  "measurements": {
+   "gnss": false,
+   "nhc": true,
+   "baro": true
+  },
+  "rank": 8,
+  "of": 16,
+  "weakest": [
+   {
+    "rel_singular_value": 0.0,
+    "direction": {
+     "dp_e": 1.0,
+     "dp_n": 0.0,
+     "dp_u": 0.0,
+     "dv_e": 0.0
+    }
+   },
+   {
+    "rel_singular_value": 4.38e-19,
+    "direction": {
+     "dth_u": 0.894,
+     "dv_n": 0.347,
+     "dp_n": 0.279,
+     "dv_e": 0.047
+    }
+   },
+   {
+    "rel_singular_value": 7.06e-19,
+    "direction": {
+     "dv_e": 0.975,
+     "dp_n": 0.198,
+     "dth_u": -0.098,
+     "dv_n": -0.038
+    }
+   }
+  ]
+ }
+}

@@ -7,6 +7,18 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## Unreleased (v0.5.0 in progress): ESKF, visual simulator
+
+- `tunnelsim/eskf.py`: batched 16-state ESKF (GNSS position/velocity with NIS gate, NHC,
+  barometer with offset state, ZUPT from an IMU stop detector). Design and results:
+  `docs/decisions/2026-10-20-v0.5-eskf.md`; `reports/0.5.0.dev0/eskf_50.json`.
+- `tunnelsim/observability.py`: structural rank check of the filter's error model.
+- `tunnelsim/experiments.py`: `simulate_run`, `eskf_experiment` (along-track error, consistency,
+  exit callout timing, exit recovery).
+- `tools/simulate.py` + `tools/simulate_template.html`: visual simulator, one scenario/seed/
+  overrides to a self-contained HTML player.
+- Tests +6.
+
 ## v0.4.0 (2026-10-20): INS, error budget, calibration and reference algorithms
 
 Scope moved by the focus decision: the temperature stress scenario goes to the

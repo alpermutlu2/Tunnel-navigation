@@ -1,0 +1,73 @@
+"""Tests for the ESKF (v0.5)."""
+import ast
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from tunnelsim.eskf import EskfConfig, run_eskf, skew_b, triad, zupt_detector
+from tunnelsim.experiments import eskf_experiment, simulate_run
+from tunnelsim.frames import G0, mount_rotation, rot_z, so3_exp
+from tunnelsim.profiles import NOMINAL
+from tunnelsim.sensors import ImuTruthSource, Switches, simulate_imu
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_eskf_imports_nothing_from_truth_side():
+    tree = ast.parse((ROOT / "tunnelsim" / "eskf.py").read_text())
+    mods = {n.module for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)} | \
+           {a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
+    assert mods <= {"__future__", "dataclasses", "numpy", "scipy.signal", "frames", "ins", "meas"}, mods
+
+
+def test_triad_recovers_attitude():
+    C_bp = mount_rotation(1.0, 12.0, 3.0)
+    C_nb = rot_z(0.7)
+    C_np = C_nb @ C_bp
+    f_p = C_np.T @ np.array([0, 0, G0])
+    v_n = C_nb @ np.array([20.0, 0, 0])
+    np.testing.assert_allclose(triad(f_p, C_bp.T[:, 0], v_n), C_np, atol=1e-12)
+
+
+def test_nhc_jacobian_finite_difference():
+    C_bp = mount_rotation(1, 12, 3)
+    C = rot_z(0.3) @ C_bp
+    v = np.array([20.0, 5.0, 0.3])
+    vb = lambda C_, v_: (C_bp @ C_.T) @ v_
+    H_th = (C_bp @ C.T) @ skew_b(v[None])[0]
+    for i in range(3):
+        d = np.zeros(3); d[i] = 1e-6
+        np.testing.assert_allclose((vb(so3_exp(d) @ C, v) - vb(C, v)) / 1e-6, H_th[:, i], atol=1e-4)
+
+
+def test_zupt_detector_separates_idle_from_driving():
+    """Engine idle (narrow 25 Hz) is outside the road band; driving at 15 km/h is inside."""
+    stop = ImuTruthSource.static(30.0)
+    m0, _ = simulate_imu(stop, NOMINAL, Switches.only("vib_road", "vib_engine", "a_white"), seed=1)
+    drive = ImuTruthSource(t=stop.t, f_p=stop.f_p, w_p=stop.w_p, v=np.full(stop.t.size, 15 / 3.6), C_pb=stop.C_pb)
+    m1, _ = simulate_imu(drive, NOMINAL, Switches.only("vib_road", "vib_engine", "a_white"), seed=1)
+    cfg = EskfConfig()
+    s0 = zupt_detector(m0.t, m0.f[None], cfg, 100.0)[0, 200:-200]
+    s1 = zupt_detector(m1.t, m1.f[None], cfg, 100.0)[0, 200:-200]
+    assert np.mean(s0) > 0.99
+    assert np.mean(s1) < 0.01
+
+
+def test_zupt_detector_on_s4_stops():
+    """S4: detected stops cover the true stops; no detection while the car moves faster than
+    0.5 m/s (a launch after a stop must not be taken as standing)."""
+    from tunnelsim.experiments import simulate_run
+    sc, tr, t, F, W, g, bt, bh = simulate_run("S4", [0])
+    st = zupt_detector(t, F, EskfConfig(), 100.0)[0]
+    stop = tr.v < 0.05
+    assert np.mean(st[stop]) > 0.9
+    assert np.max(tr.v[st]) < 0.5
+
+
+def test_nominal_s1_tracks_through_tunnel():
+    """Nominal sensors, 2 seeds: the along-track error at the S1 exit stays far below the
+    INS-only kilometre scale, and open-sky GNSS is never rejected."""
+    r = eskf_experiment("S1", seeds=2, overrides=())
+    assert r["real_exit"]["rmse"] < 100.0, r["real_exit"]
+    assert r["events"]["gnss_pos_rej"] == 0
