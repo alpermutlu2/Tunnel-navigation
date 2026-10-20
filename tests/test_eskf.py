@@ -94,3 +94,25 @@ def test_reacquisition_reduces_exit_jump():
     off = eskf_experiment("S2", seeds=4, eskf_cfg=EskfConfig(reacq=False))
     assert on["recovery"]["max_step_jump_m"]["p95_abs"] < 0.3 * off["recovery"]["max_step_jump_m"]["p95_abs"]
     assert on["real_exit"]["rmse"] == pytest.approx(off["real_exit"]["rmse"], rel=1e-6)
+
+
+def test_speed_clone_increment_carries_no_information_without_drift():
+    """B (increment mode): right after cloning, speed − clone has zero variance, so the
+    increment pseudo-measurement must not reduce any covariance (the clone holds the
+    correlation that the absolute hold ignored)."""
+    from tunnelsim.eskf import NX, _update
+    rng = np.random.default_rng(3)
+    NA = NX + 1
+    A = rng.normal(size=(NA, NA))
+    P = A @ A.T + np.eye(NA)
+    u = np.array([0.6, 0.8, 0.0])
+    J = np.zeros(NA); J[3:6] = u
+    row = J @ P
+    P[NX, :] = row; P[:, NX] = row; P[NX, NX] = row @ J
+    P = P[None]
+    P0 = P.copy()
+    H = np.zeros((1, 1, NA)); H[0, 0, 3:6] = u; H[0, 0, NX] = -1.0
+    x = np.zeros((1, NA))
+    _update(x, P, np.array([[0.3]]), H, np.full((1, 1, 1), 1e-4), None)
+    assert np.allclose(P, P0, atol=1e-9)
+    assert np.allclose(x, 0.0)

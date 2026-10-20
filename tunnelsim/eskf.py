@@ -73,6 +73,9 @@ class EskfConfig:
     cruise_sigma0: float = 0.05       # m/s
     cruise_no_gnss_s: float = 5.0
     cruise_min_speed: float = 3.0     # m/s
+    cruise_mode: str = "increment"    # "hold" (a: absolute hold) or "increment" (b: cloned 1 s increment)
+    cruise_hold_kP: float = 0.0       # (a) R inflation by k·P_hold
+    cruise_inc_sigma: float = 0.0     # (b) extra white speed noise per increment [ASSUMED 0: truth has no jitter]
     p0_pos: float = 5.0
     p0_vel: float = 0.3
     p0_att_rp: float = np.deg2rad(1.0)
@@ -154,7 +157,7 @@ def _update_capped(x_corr, P, z, H, R, gate, max_step):
     alpha = np.where(step > max_step, max_step / np.maximum(step, 1e-12), 1.0)
     K = K * alpha[:, None, None]
     x_corr += dx * alpha[:, None]
-    IKH = np.eye(NX) - K @ H
+    IKH = np.eye(P.shape[-1]) - K @ H
     P[:] = IKH @ P @ np.swapaxes(IKH, 1, 2) + K @ R @ np.swapaxes(K, 1, 2)
     return ok, alpha
 
@@ -170,7 +173,7 @@ def _update(x_corr, P, z, H, R, gate):
     K = P @ np.swapaxes(H, 1, 2) @ Sinv
     K[~ok] = 0.0
     x_corr += np.einsum("bij,bj->bi", K, z)
-    IKH = np.eye(NX) - K @ H
+    IKH = np.eye(P.shape[-1]) - K @ H
     P[:] = IKH @ P @ np.swapaxes(IKH, 1, 2) + K @ R @ np.swapaxes(K, 1, 2)
     return ok, nis
 
@@ -184,6 +187,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     zupt_mask: optional (N,) or (B,N) bool overriding the detector (oracle stops).
     """
     B, N = f.shape[0], imu_t.size
+    NA = NX + 1          # + speed clone (index NX), used only by the cruise increment mode
     fs = 1.0 / np.median(np.diff(imu_t))
     C_pb = C_bp.T
     fwd_p = C_pb[:, 0]
@@ -199,10 +203,10 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     C = np.stack([triad(f_mean[b], fwd_p, v[b]) for b in range(B)])
     b_a = np.zeros((B, 3)); b_g = np.zeros((B, 3))
     b_h = np.nanmean(baro_h[:, (baro_t >= t0 - 0.5) & (baro_t <= t0 + 0.5)], axis=1) - p[:, 2]
-    P = np.zeros((B, NX, NX))
+    P = np.zeros((B, NA, NA))
     d = np.r_[[cfg.p0_pos] * 3, [cfg.p0_vel] * 3, cfg.p0_att_rp, cfg.p0_att_rp, cfg.p0_att_yaw,
               [cfg.p0_ba] * 3, [cfg.p0_bg] * 3, cfg.p0_bh] ** 2
-    P[:] = np.diag(d)
+    P[:, :NX, :NX] = np.diag(d)
     # --- ZUPT detector
     if zupt_mask is None:
         still = zupt_detector(imu_t, f, cfg, fs)
@@ -223,13 +227,14 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     n_win = max(1, int(round(cfg.cruise_win_s * cfg.cov_rate_hz)))
     a_buf = np.zeros((B, n_win)); a_cnt = 0  # ring buffer of along-track accel at cov rate
     cruise_on = np.zeros(B, bool); calm_since = np.full(B, t0); v_hold = np.zeros(B); t_hold = np.zeros(B)
-    n_upd = np.zeros(B)
+    n_upd = np.zeros(B); P_hold = np.zeros(B)
+    s_clone = np.zeros(B); t_clone = np.zeros(B); clone_ok = np.zeros(B, bool)
     ev["cruise_updates"] = 0
     reacq_start = np.full(B, -np.inf)       # start of the current re-acquisition phase
     reacq_on = np.zeros(B, bool)            # phase active (ends on convergence, not on a timer)
     settle = np.zeros(B, int)               # uncapped position updates in a row within the phase
-    Fsum = np.zeros((B, NX, NX)); dt_sum = 0.0
-    Qc = np.zeros(NX)
+    Fsum = np.zeros((B, NA, NA)); dt_sum = 0.0
+    Qc = np.zeros(NA)
     Qc[3:6] = cfg.accel_noise ** 2; Qc[6:9] = cfg.gyro_noise ** 2
     Qc[9:12] = cfg.accel_bias_rw ** 2; Qc[12:15] = cfg.gyro_bias_rw ** 2; Qc[15] = cfg.baro_bias_rw ** 2
     fc = f[:, i0] - b_a
@@ -247,7 +252,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         v, C, a_k = v_next, C_next, a_next
         # error-state Jacobian, accumulated
         f_n = a_k - GRAVITY_N
-        F = np.zeros((B, NX, NX))
+        F = np.zeros((B, NA, NA))
         F[:, 0:3, 3:6] = np.eye(3)
         F[:, 3:6, 6:9] = -skew_b(f_n)
         F[:, 3:6, 9:12] = -C
@@ -260,10 +265,11 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         if not (do_cov or upd_due):
             continue
         if dt_sum > 0:
-            Phi = np.eye(NX) + Fsum + 0.5 * Fsum @ Fsum
+            Phi = np.eye(NA) + Fsum + 0.5 * Fsum @ Fsum
             P = Phi @ P @ np.swapaxes(Phi, 1, 2) + np.diag(Qc) * dt_sum
             Fsum[:] = 0.0; dt_sum = 0.0
-        x = np.zeros((B, NX))
+        x = np.zeros((B, NA))
+        reclone = np.zeros(B, bool)
         # GNSS
         while gi < len(g_idx) and g_idx[gi] == kk:
             pz = gnss["pos"][:, gi]; vz = gnss["vel"][:, gi]
@@ -291,7 +297,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                 R = np.zeros((B, 3, 3))
                 R[:, 0, 0] = R[:, 1, 1] = (fac * cfg.gnss_pos_factor * np.nan_to_num(sh, nan=1e3)) ** 2
                 R[:, 2, 2] = (fac * cfg.gnss_pos_factor * np.nan_to_num(sv, nan=1e3)) ** 2
-                H = np.zeros((B, 3, NX)); H[:, :, 0:3] = np.eye(3)
+                H = np.zeros((B, 3, NA)); H[:, :, 0:3] = np.eye(3)
                 z = np.where(okp[:, None], p - pz, 0.0) - np.einsum("bij,bj->bi", H, x)
                 cap = okp & in_reacq
                 for sel, capped in ((okp & ~cap, False), (cap, True)):
@@ -313,7 +319,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                 sv_ = cfg.gnss_vel_factor * np.nan_to_num(gnss["acc_vel"][:, gi], nan=1e3)
                 R = np.zeros((B, 3, 3))
                 R[:, 0, 0] = R[:, 1, 1] = sv_ ** 2; R[:, 2, 2] = (1.5 * sv_) ** 2
-                H = np.zeros((B, 3, NX)); H[:, :, 3:6] = np.eye(3)
+                H = np.zeros((B, 3, NA)); H[:, :, 3:6] = np.eye(3)
                 z = np.where(okv[:, None], v - vz, 0.0) - np.einsum("bij,bj->bi", H, x)
                 # in the re-acquisition phase the position part of a velocity update is capped
                 # too: at the end of a long tunnel P_pv is large, so a velocity fix alone can
@@ -335,7 +341,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         while bi < len(baro_idx) and baro_idx[bi] == kk:
             hz = baro_avg[:, bi]
             ok = np.isfinite(hz)
-            H = np.zeros((B, 1, NX)); H[:, 0, 2] = 1.0; H[:, 0, 15] = 1.0
+            H = np.zeros((B, 1, NA)); H[:, 0, 2] = 1.0; H[:, 0, 15] = 1.0
             z = ((p[:, 2] + b_h) - hz)[:, None] - np.einsum("bij,bj->bi", H, x)
             R = np.full((B, 1, 1), cfg.baro_sigma ** 2)
             Psub, xs = P[ok], x[ok]
@@ -345,7 +351,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         # ZUPT
         st = still[:, kk] & (np.linalg.norm(v, axis=1) < cfg.zupt_speed_max)
         if st.any():
-            H = np.zeros((B, 3, NX)); H[:, :, 3:6] = np.eye(3)
+            H = np.zeros((B, 3, NA)); H[:, :, 3:6] = np.eye(3)
             z = v - np.einsum("bij,bj->bi", H, x)
             R = np.broadcast_to(np.eye(3) * cfg.zupt_sigma ** 2, (B, 3, 3)).copy()
             Psub, xs = P[st], x[st]
@@ -356,7 +362,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         if cfg.cruise and do_cov:
             spd = np.linalg.norm(v, axis=1)
             u = v / np.maximum(spd, 1e-6)[:, None]
-            a_buf[:, a_cnt % n_win] = np.einsum("bi,bi->b", a_k - 0.0, u)
+            a_buf[:, a_cnt % n_win] = np.einsum("bi,bi->b", a_k, u)
             a_cnt += 1
             a_mean = a_buf.mean(1) if a_cnt >= n_win else np.full(B, np.inf)
             tk = imu_t[kk]
@@ -366,29 +372,46 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             cruise_on = cruise_on & calm & eligible
             start = ~cruise_on & calm & eligible & (tk - calm_since >= cfg.cruise_win_s)
             v_hold = np.where(start, spd, v_hold); t_hold = np.where(start, tk, t_hold)
+            P_hold = np.where(start, np.einsum("bi,bij,bj->b", u, P[:, 3:6, 3:6], u), P_hold)
             n_upd = np.where(start, 0, n_upd)
+            clone_ok = clone_ok & cruise_on
             cruise_on = cruise_on | start
             if cruise_on.any() and (kk - i0) % int(round(fs)) == 0:
-                H = np.zeros((B, 1, NX)); H[:, 0, 3:6] = u
-                z = (spd - v_hold)[:, None] - np.einsum("bij,bj->bi", H, x)
-                # the same v_hold is re-used every second: these pseudo-measurements are not
-                # independent, so the k-th one gets k times the variance (otherwise the hold's
-                # information accumulates and sigma collapses; found in the first B run)
-                n_upd = n_upd + cruise_on
-                R = ((cfg.cruise_sigma0 ** 2 + (cfg.cruise_acc_th * (tk - t_hold)) ** 2 / 3.0)
-                     * np.maximum(n_upd, 1))[:, None, None]
-                sel = cruise_on
-                Psub, xs = P[sel], x[sel]
-                _update(xs, Psub, z[sel], H[sel], R[sel], None)
-                P[sel], x[sel] = Psub, xs
-                ev["cruise_updates"] += int(sel.sum())
+                H = np.zeros((B, 1, NA)); H[:, 0, 3:6] = u
+                if cfg.cruise_mode == "hold":
+                    # (a) absolute hold, v_hold from the filter's own state; k-th update R×k and
+                    # R inflated by k_P·P_hold (the hold's own variance) -- known to be
+                    # overconfident for any finite k_P (decision note B)
+                    z = (spd - v_hold)[:, None] - np.einsum("bij,bj->bi", H, x)
+                    n_upd = n_upd + cruise_on
+                    R = ((cfg.cruise_sigma0 ** 2 + (cfg.cruise_acc_th * (tk - t_hold)) ** 2 / 3.0
+                          + cfg.cruise_hold_kP * P_hold) * np.maximum(n_upd, 1))[:, None, None]
+                    sel = cruise_on
+                else:
+                    # (b) speed increment over the last second against a stochastic clone of
+                    # the speed: z = speed_k − clone, H = [u on δv, −1 on the clone]. Consecutive
+                    # increments are independent, and the clone carries the correlation with
+                    # the state, so only the along-track drift (accel bias + pitch·g) is observed.
+                    H[:, 0, NX] = -1.0
+                    z = (spd - s_clone)[:, None] - np.einsum("bij,bj->bi", H, x)
+                    dtc = tk - t_clone
+                    R = (cfg.cruise_inc_sigma ** 2 + (cfg.cruise_acc_th * dtc) ** 2 / 3.0)[:, None, None]
+                    sel = cruise_on & clone_ok
+                if sel.any():
+                    Psub, xs = P[sel], x[sel]
+                    _update(xs, Psub, z[sel], H[sel], R[sel], None)
+                    P[sel], x[sel] = Psub, xs
+                    ev["cruise_updates"] += int(sel.sum())
+                if cfg.cruise_mode != "hold":
+                    reclone = cruise_on
+        # NHC (body y, z velocity at R = 0)
         # NHC (body y, z velocity at R = 0)
         if (kk - i0) % n_nhc == 0:
             C_bn = C_bp @ np.swapaxes(C, 1, 2)                       # body <- nav
             w_b = np.einsum("ij,bj->bi", C_bp, w[:, kk] - b_g)
             v_R = v - np.einsum("bij,bj->bi", C @ C_pb, np.cross(w_b, r_b))
             v_b = np.einsum("bij,bj->bi", C_bn, v_R)
-            H = np.zeros((B, 2, NX))
+            H = np.zeros((B, 2, NA))
             H[:, :, 3:6] = C_bn[:, 1:3]
             H[:, :, 6:9] = (C_bn @ skew_b(v_R))[:, 1:3]
             z = v_b[:, 1:3] - np.einsum("bij,bj->bi", H, x)
@@ -406,8 +429,22 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             b_a = b_a - x[:, 9:12]
             b_g = b_g - x[:, 12:15]
             b_h = b_h - x[:, 15]
+            s_clone = s_clone - x[:, NX]
             fc = f[:, kk] - b_a
             a_k = np.einsum("bij,bj->bi", C, fc) + GRAVITY_N
+        if reclone.any():
+            # new clone of the (corrected) speed: δc = uᵀδv, so the clone row/column copy the
+            # speed's covariance with every state
+            spd = np.linalg.norm(v, axis=1)
+            u = v / np.maximum(spd, 1e-6)[:, None]
+            J = np.zeros((B, NA)); J[:, 3:6] = u
+            row = np.einsum("bi,bij->bj", J, P)
+            Pn = P.copy()
+            Pn[:, NX, :] = row; Pn[:, :, NX] = row
+            Pn[:, NX, NX] = np.einsum("bj,bj->b", row, J)
+            P = np.where(reclone[:, None, None], Pn, P)
+            s_clone = np.where(reclone, spd, s_clone); t_clone = np.where(reclone, imu_t[kk], t_clone)
+            clone_ok = clone_ok | reclone
         if do_cov:
             out_t.append(imu_t[kk]); out_p.append(p.copy()); out_v.append(v.copy()); out_C.append(C.copy())
             out_P.append(P[:, 0:3, 0:3].copy()); out_ba.append(b_a.copy()); out_z.append(st.copy())
