@@ -141,6 +141,11 @@ function drawMap() {
     }
     g.stroke();
   }
+  for (const e of D.exits) if (e.main) {                // main tunnel continuation (map only)
+    g.strokeStyle = css("--tunnel"); g.globalAlpha = 0.45; g.lineWidth = Math.max(6, 9 * z);
+    g.beginPath(); e.main.x.forEach((x, i) => i ? g.lineTo(X(x), Y(e.main.y[i])) : g.moveTo(X(x), Y(e.main.y[i])));
+    g.stroke(); g.globalAlpha = 1;
+  }
   g.fillStyle = css("--gnss");
   for (const [t, x, y] of D.gnss) if (t <= D.t[k] && t > D.t[k] - 30) { g.beginPath(); g.arc(X(x), Y(y), 3, 0, 7); g.fill(); }
   for (const e of D.exits) {

@@ -67,13 +67,13 @@ class EskfConfig:
     # and not stopped: if the 5 s mean of the filter's along-track acceleration is below the
     # threshold for 5 s, hold the speed with a pseudo-measurement whose variance grows like an
     # undetectable sub-threshold acceleration: R = σ0² + (a_th Δt)²/3.
-    cruise: bool = True              # B accepted 2026-10-20 in the "increment" (cloned) form
+    cruise: bool = True              # B accepted 2026-10-20; GM speed-wander form by default (review 6)
     cruise_acc_th: float = 0.02       # m/s²
     cruise_win_s: float = 5.0
     cruise_sigma0: float = 0.05       # m/s
     cruise_no_gnss_s: float = 5.0
     cruise_min_speed: float = 3.0     # m/s
-    cruise_mode: str = "increment"    # "hold" (a: absolute hold) or "increment" (b: cloned 1 s increment)
+    cruise_mode: str = "gm"           # "gm" (default since review 6), "increment" (b) or "hold" (a)
     cruise_hold_kP: float = 0.0       # (a) R inflation by k·P_hold
     cruise_inc_sigma: float = 0.0     # (b) extra white speed noise per increment [ASSUMED 0: truth has no jitter]
     # "gm" (review 6): speed = v_ref + d, v_ref a clone of the speed at the start of the mode,

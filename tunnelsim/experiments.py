@@ -175,6 +175,19 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
                           "late_gt_1s_frac": round(float(np.mean(dt_call > CALLOUT_LATE_S)), 3),
                           "sigma_t_mean_s": round(float(sig_t.mean()), 3),
                           "within_2sigma_t": round(float(np.mean(np.abs(dt_call) < 2 * sig_t)), 3)}
+    # exit branch: error at the true diverge (before/after the branch reported separately) and the
+    # gyro branch confirmation (tunnelsim/branch.py; estimator side, no truth)
+    if sc.road.exits and sc.road.exits[0].on_route:
+        from .branch import branch_check
+        ex = sc.road.exits[0]
+        k_div = int(np.argmax(s_true >= ex.s))
+        t_div = out.t[k_div]
+        res["at_diverge"] = stats(e_s[:, k_div])
+        t_conf = branch_check(t, W, out.t, out.C, out.p, out.v, sc.road)
+        delay = t_conf - t_div
+        res["branch_confirm"] = {"confirmed_frac": round(float(np.mean(np.isfinite(delay))), 3),
+                                 "before_diverge_frac": round(float(np.mean(delay < 0)), 3),
+                                 "delay_s": stats(delay[np.isfinite(delay)]) if np.isfinite(delay).any() else None}
     # recovery after the exit
     after = out.t >= t_x
     win = after & (out.t <= t_x + 60.0)

@@ -29,6 +29,17 @@ from tunnelsim.reference import gnss_entry_state  # noqa: E402
 from tunnelsim.scenario import build_scenarios  # noqa: E402
 
 
+def _main_line(road, ex):
+    if not ex.on_route:
+        return None
+    L = road.tunnel.s_exit - ex.s
+    p0 = road.position(np.array([ex.s]))[0, :2]
+    psi = float(road.heading(ex.s))
+    d = np.array([np.cos(psi), np.sin(psi)])   # heading measured from east, counter-clockwise
+    pts = p0[None] + np.arange(0.0, L + 1.0, 50.0)[:, None] * d[None]
+    return {"x": pts[:, 0].round(1).tolist(), "y": pts[:, 1].round(1).tolist()}
+
+
 def run(key, seed, overrides, zupt):
     sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, [seed], tuple(overrides))
     zmask = (tr.v < 0.05) if zupt == "oracle" else None
@@ -63,7 +74,9 @@ def run(key, seed, overrides, zupt):
         "seed": seed, "overrides": overrides, "zupt": zupt,
         "road": {"x": line[:, 0].round(1).tolist(), "y": line[:, 1].round(1).tolist(), "tunnel": tun.tolist()},
         "exits": [{"name": ex.name, "s": ex.s, "xy": road.position(np.array([ex.s]))[0, :2].round(1).tolist(),
-                   "call_s": ex.s - CALLOUT_LEAD_M} for ex in road.exits],
+                   "call_s": ex.s - CALLOUT_LEAD_M,
+                   # main tunnel continuation after the diverge (map only; the route takes the branch)
+                   "main": _main_line(road, ex)} for ex in road.exits],
         "t_entry": round(float(t_e), 2),
         "t_exit": round(float(tr.t[len(tr.in_tunnel) - int(np.argmax(tr.in_tunnel[::-1])) - 1]), 2),
         "t": out.t[sel].round(2).tolist(),

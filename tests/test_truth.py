@@ -216,3 +216,19 @@ def test_centreline_discretisation_error(key):
     err = centreline_error(ALL[key].road)
     print(f"{key}: centreline discretisation error {err * 1000:.3f} mm")
     assert err < 0.01
+
+
+@pytest.mark.parametrize("key", list(SCENARIOS))
+def test_exit_branch_geometry(key):
+    """Review 6: the route turns into the exit branch at the diverge (20° right over 150 m) and
+    the total length / portal position are unchanged against the v0.4 geometry."""
+    sc = SCENARIOS[key]
+    old = build_scenarios(branch=False)[key].road
+    ex = sc.road.exits[0]
+    assert ex.on_route
+    assert sc.road.length == pytest.approx(old.length)
+    assert sc.road.tunnel.s_exit == old.tunnel.s_exit
+    assert ex.s + ex.curve_len < sc.road.tunnel.s_exit
+    dpsi = sc.road.heading(ex.s + ex.curve_len) - sc.road.heading(ex.s)
+    assert dpsi == pytest.approx(np.deg2rad(-20.0), abs=1e-6)
+    np.testing.assert_allclose(sc.road.position(np.array([ex.s - 50.0])), old.position(np.array([ex.s - 50.0])), atol=1e-6)
