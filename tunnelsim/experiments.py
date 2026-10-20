@@ -196,7 +196,7 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
         k_div = int(np.argmax(s_true >= ex.s))
         t_div = out.t[k_div]
         res["at_diverge"] = stats(e_s[:, k_div])
-        t_conf, choice = branch_check(t, W, out.t, out.C, out.p, out.v, map_road)
+        t_conf, choice = branch_check(t, W, out.t, out.C, out.p, out.v, map_road, out_P_pos=out.P_pos)
         delay = t_conf - t_div
         took = 1 if branch else -1                          # what the car really did
         right = choice == took

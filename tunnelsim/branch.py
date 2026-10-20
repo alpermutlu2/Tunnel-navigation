@@ -5,8 +5,12 @@ From a window start ŝ0 = s_div − pre_m the measured heading change Δψ̂ = �
 compared with each map candidate j (main continuation, branch):
     r_j(ŝ) = Δψ̂ − Δψ_map,j(ŝ)
 Reference detector [ASSUMED]: confirm the branch at the first instant with |r_main| > 5° and
-|r_branch| < |r_main|. The map heading profile of the branch is the route's; the main tunnel
-continues straight (Exit.dpsi_main = 0 in every scenario).
+|r_branch| < |r_main| (a turn is positive evidence, no position needed). "Main" needs the absence
+of the turn, which only means something once the car has surely passed the point where the
+branch would have shown 5°: ŝ − 2σ_s ≥ s_5° (σ_s from the filter). Without that condition the
+first version reported "main" for 18 % of S4 seeds that took the branch (ŝ ahead of the car).
+The map heading profile of the branch is the route's; the main tunnel continues straight
+(Exit.dpsi_main = 0 in every scenario).
 """
 from __future__ import annotations
 
@@ -25,7 +29,7 @@ def map_s(road, p_xy, s_lo, s_hi, step=1.0):
     return s[np.argmin(d2, axis=-1)]
 
 
-def branch_check(imu_t, w, out_t, out_C, out_p, out_v, road, thr_deg=CONFIRM_DEG, pre_m=PRE_M):
+def branch_check(imu_t, w, out_t, out_C, out_p, out_v, road, thr_deg=CONFIRM_DEG, pre_m=PRE_M, out_P_pos=None):
     """Per seed: time of the first decision (NaN if none) and the decision (+1 branch, −1 main,
     0 none). Branch: |r_main| > thr and |r_branch| < |r_main|; main: the mirror condition.
     w (B, N, 3) phone gyro; out_* filter output at its own rate; road = the map (route with the
@@ -37,6 +41,8 @@ def branch_check(imu_t, w, out_t, out_C, out_p, out_v, road, thr_deg=CONFIRM_DEG
     choice = np.zeros(B, int)
     thr = np.deg2rad(thr_deg)
     psi0_map = road.heading(ex.s - pre_m)
+    sg = np.arange(ex.s, ex.s + ex.curve_len + 1.0, 0.5)
+    s_thr = sg[int(np.argmax(np.abs(road.heading(sg) - road.heading(ex.s)) >= np.deg2rad(thr_deg)))]
     for b in range(B):
         k0 = int(np.argmax(s_hat[b] >= ex.s - pre_m))
         if s_hat[b, k0] < ex.s - pre_m:
@@ -52,6 +58,10 @@ def branch_check(imu_t, w, out_t, out_C, out_p, out_v, road, thr_deg=CONFIRM_DEG
         r_main = dpsi_k - ex.dpsi_main * np.clip((sh - ex.s) / max(ex.curve_len, 1e-9), 0.0, 1.0)
         hit_b = (np.abs(r_main) > thr) & (np.abs(r_branch) < np.abs(r_main))
         hit_m = (np.abs(r_branch) > thr) & (np.abs(r_main) < np.abs(r_branch))
+        if out_P_pos is not None:
+            tn = np.stack([np.cos(road.heading(sh)), np.sin(road.heading(sh))], 1)
+            sig = np.sqrt(np.einsum("ki,kij,kj->k", tn, out_P_pos[b, k0:, :2, :2], tn))
+            hit_m &= sh - 2.0 * sig >= s_thr
         first = [int(np.argmax(h)) if h.any() else None for h in (hit_b, hit_m)]
         if first[0] is not None and (first[1] is None or first[0] <= first[1]):
             t_conf[b], choice[b] = out_t[k0 + first[0]], 1
