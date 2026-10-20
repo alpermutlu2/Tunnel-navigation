@@ -158,6 +158,13 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
     d = pR_hat - tr.pos_n[idx][None]
     e_s = np.einsum("bki,ki->bk", d, tn)
     e_h = np.linalg.norm(d[..., :2], axis=-1)
+    # cross-track (left of the road +) and heading error of the body x axis vs the road (review 9)
+    nrm = np.stack([-tn[:, 1], tn[:, 0], np.zeros(len(tn))], 1)
+    e_lat = np.einsum("bki,ki->bk", d, nrm)
+    fwd = np.einsum("bkij,j->bki", out.C @ tr.C_bp.T, np.array([1.0, 0.0, 0.0]))
+    psi_hat = np.arctan2(fwd[..., 1], fwd[..., 0])
+    fwd_t = np.einsum("kij,j->ki", tr.C_nb[idx], np.array([1.0, 0.0, 0.0]))
+    e_psi = np.rad2deg(np.angle(np.exp(1j * (psi_hat - np.arctan2(fwd_t[:, 1], fwd_t[:, 0])[None]))))
     sig_s = np.sqrt(np.einsum("ki,bkij,kj->bk", tn, out.P_pos, tn))
     s_true = tr.s[idx]
     s_hat = s_true[None] + e_s
@@ -170,6 +177,8 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
            "exit_after_portal_s": round(t_x - t_e, 2), "events": out.events}
     res["fixed_180s"] = stats(e_s[:, k180])
     res["real_exit"] = stats(e_s[:, kx])
+    res["real_exit_lateral"] = stats(e_lat[:, kx])
+    res["real_exit_heading_deg"] = stats(e_psi[:, kx])
     z = e_s[:, kx] / sig_s[:, kx]
     res["consistency_real_exit"] = {"frac_within_2sigma": round(float(np.mean(np.abs(z) < 2)), 3),
                                     "mean_norm_sq": round(float(np.mean(z * z)), 3),
@@ -196,6 +205,7 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
         k_div = int(np.argmax(s_true >= ex.s))
         t_div = out.t[k_div]
         res["at_diverge"] = stats(e_s[:, k_div])
+        res["at_diverge_lateral"] = stats(e_lat[:, k_div])
         t_conf, choice = branch_check(t, W, out.t, out.C, out.p, out.v, map_road, out_P_pos=out.P_pos)
         delay = t_conf - t_div
         took = 1 if branch else -1                          # what the car really did
@@ -223,5 +233,5 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
                        "time_to_threshold_s_median": float(np.nanmedian(conv)) if np.isfinite(conv).any() else None,
                        "not_converged_in_60s": int(np.isnan(conv).sum())}
     if keep_tracks:
-        res["_tracks"] = {"t": out.t, "e_s": e_s, "sig_s": sig_s, "s_true": s_true, "t_entry": t_e, "t_exit": t_x}
+        res["_tracks"] = {"t": out.t, "e_s": e_s, "e_lat": e_lat, "e_psi": e_psi, "sig_s": sig_s, "s_true": s_true, "t_entry": t_e, "t_exit": t_x}
     return res
