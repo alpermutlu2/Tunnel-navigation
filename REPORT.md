@@ -4,7 +4,7 @@ Pointr case study. A phone in a car estimates its position through a GNSS outage
 tunnel. The navigation app must keep showing the car, call out an exit inside the tunnel at the
 right moment, and recover cleanly when the car comes out. All results are from simulation. Unless
 a section says otherwise they are 50-seed Monte Carlo results (`tools/evaluate.py`,
-`reports/0.5.0/`). Every parameter is tagged: [MEAS] measured and cited, [SPEC] from a datasheet,
+`reports/0.5.1/`). Every parameter is tagged: [MEAS] measured and cited, [SPEC] from a datasheet,
 [ASSUMED] chosen here (`tunnelsim/profiles.py`, `DESIGN.md` §2).
 
 The simulator runs interactively (`python tools/serve.py`, controls for scenario, sensors and filter
@@ -67,12 +67,16 @@ information; "at portal" is where the car comes out. Each tunnel is 2.5–3.5 km
 
 - **Showing the car.** Error is 12–13 m after 1.5–2 min without GNSS at steady speed, and 25–31 m
   with braking or stops. The filter is consistent and slightly conservative: mean (e/σ)²
-  0.35–0.9, and 96–100 % of seeds fall within 2σ.
+  0.35–0.9, and 96–100 % of seeds fall within 2σ. All of this is along the road. Across the road
+  the filter is worse, because it does not use the map inside the tunnel (§5): the cross-track
+  error at the portal is 26 m on S1, 48 m on S3, 99 m on S4 and 106 m at 5 km (20 seeds). An app
+  would snap the displayed car to the road, but the filter itself drifts sideways.
 - **Callout.** 0.4–0.5 s rms at steady speed. The timing uncertainty the filter claims covers
   100 % of the cases.
 - **Recovery.** The largest step at the exit is ≤ 4 m (it was 45–76 m before the re-acquisition
-  phase). The estimate is within 10 m of truth 15–25 s after the exit. The ≤ 2 m-per-fix cap is
-  slow after S4's 5.5 min outage; that is the accepted price of no jumps.
+  phase). The estimate is within 10 m of truth 15–25 s after the exit. After S4's 5.5 min outage
+  the ≤ 2 m-per-fix cap is slow, because it is draining a ~100 m **cross-track** error, not the
+  along-track one. That is the price of no jumps.
 - **Branch.** Taking the branch: reported in all 400 runs, 2–3 s after the diverge, which is the
   time the curve takes to reach 5°. Negative control, with the car going straight on: "main" in
   all 400 runs, branch never. "Main" is decided only once ŝ − 2σ_s is past the 5° point.
@@ -93,8 +97,8 @@ One 5 km run gives the whole curve (`reports/0.5.1/error_vs_distance.png`, 30 se
 error grows faster than linearly with outage time (bias drift ~t²), and the cruise prior softens
 it. The filter σ covers the error everywhere except in the first ~500 m: at the portal it is
 overconfident (σ 1.5 m vs 3.2 m rms), because GNSS degradation just before the portal is not in
-its error model. At the 5 km diverge the exit curve still adds a transient of about +7 m rms,
-which is not yet explained. At 5 km, one callout in six is more than 1 s late, and 11 of 30 seeds take more than
+its error model. At the 5 km diverge the exit curve adds about +7 m rms. This is the cross-track error
+(~60 m there) projected onto the curve's tangent, which turns by up to 20° (sin 20° ≈ 0.34). At 5 km, one callout in six is more than 1 s late, and 11 of 30 seeds take more than
 60 s to settle after the exit.
 
 ## 4. Where it breaks, and why
@@ -192,9 +196,13 @@ map cues.
 - **Simulation only.** The IMU noise terms are measured; their time shape, the vibration,
   sideslip, barometer, pressure-gradient and GNSS behaviour are [ASSUMED]. The bias-model shape
   alone moves the INS budget by ~2.4×.
-- **No map in the filter.** Inside the tunnel the filter does not use the map. The along-track
-  error is the estimate projected onto the true road tangent, which amounts to perfect map
-  matching. The map (polyline, diverge, portals) is taken as exact.
+- **No map in the filter.** Inside the tunnel the filter does not use the map. Heading is not
+  observable in a straight tunnel (gyro z bias: 1–3.4° at the portal), so the estimate drifts
+  across the road by v·δψ·t: 26 m on S1 and 106 m at 5 km. The along-track metrics project the
+  estimate onto the true road tangent, which amounts to perfect map matching for display. A
+  map-heading and cross-track pseudo-measurement would remove this. The external review's
+  prototype also cut the along-track error 3–5× wherever the road curves. It is the next layer
+  (`docs/reviews/2026-10-20-review-9-fable-lateral.md`).
 - **The ZUPT detector is offline** (forward-backward filters, zero delay). A causal version is
   similar at the exit (S4 46 vs 44 m) but worse for the callout (> 1 s late: 50 vs 30 %).
 - **Narrow setting.** The filter is tuned for one IMU class. The car is a single car with a

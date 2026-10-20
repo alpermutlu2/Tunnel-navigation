@@ -96,15 +96,20 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False):
     line = road.position(s_line)
     tun = (s_line >= road.tunnel.s_entry) & (s_line <= road.tunnel.s_exit)
     s_hat = tr.s[idx] + e_s
-    # phone sensor data, sampled on the page's time grid (raw samples, noise included)
-    ti = np.clip(np.searchsorted(t, out.t[sel]), 0, len(t) - 1)
-    tb = np.clip(np.searchsorted(bt, out.t[sel]), 0, len(bt) - 1)
+    nrm = np.stack([-tn[:, 1], tn[:, 0]], 1)
+    e_lat = np.einsum("ki,ki->k", (pR - tr.pos_n[idx])[:, :2], nrm)    # phone sensor data, sampled on the page's time grid (raw samples, noise included)
+    def block_mean(tt, x, centres, half=0.25):          # mean over ±0.25 s (what a 2 Hz log would hold)
+        a = np.clip(np.searchsorted(tt, centres - half), 0, len(tt) - 1)
+        b = np.clip(np.searchsorted(tt, centres + half), 1, len(tt))
+        c = np.concatenate([np.zeros((1,) + x.shape[1:]), np.cumsum(x, axis=0)])
+        return (c[b] - c[a]) / np.maximum(b - a, 1).reshape((-1,) + (1,) * (x.ndim - 1))
     g_spd = np.linalg.norm(gnss["vel"][0][:, :2], axis=1) * 3.6
     gi = np.clip(np.searchsorted(gnss["t"], out.t[sel]), 1, len(gnss["t"]) - 1)
     gi = np.where(np.abs(gnss["t"][gi - 1] - out.t[sel]) < np.abs(gnss["t"][gi] - out.t[sel]), gi - 1, gi)  # nearest fix
     near = np.abs(gnss["t"][gi] - out.t[sel]) < 0.6
-    sens = {"acc": F[0, ti].round(3).T.tolist(), "gyro": np.rad2deg(W[0, ti]).round(3).T.tolist(),
-            "baro": bh[0, tb].round(2).tolist(),
+    sens = {"acc": block_mean(t, F[0], out.t[sel]).round(3).T.tolist(),
+            "gyro": np.rad2deg(block_mean(t, W[0], out.t[sel])).round(3).T.tolist(),
+            "baro": block_mean(bt, np.nan_to_num(bh[0]), out.t[sel]).round(2).tolist(),
             "gnss_kmh": [round(float(v), 2) if (ok and np.isfinite(v)) else None for v, ok in zip(g_spd[gi], near)]}
     data = {
         "title": f"{sc.key}: {sc.title}",
@@ -125,6 +130,7 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False):
         "s_true": tr.s[idx[sel]].round(2).tolist(),
         "s_hat": s_hat[sel].round(2).tolist(),
         "e_s": e_s[sel].round(2).tolist(),
+        "e_lat": e_lat[sel].round(2).tolist(),
         "sig_s": sig_s[sel].round(2).tolist(),
         "v_true": tr.v[idx[sel]].round(3).tolist(),
         "v_est": np.linalg.norm(out.v[0, sel], axis=1).round(3).tolist(),
