@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT))
 import tunnelsim  # noqa: E402
 from tunnelsim.experiments import eskf_experiment  # noqa: E402
 
-ALL = ("S1", "S2", "S3", "S4", "S5", "S6s", "S6", "S6L")
+ALL = ("S1", "S2", "S3", "S4", "S5", "S6s", "S6", "S6L", "S1-1km", "S1-5km")
 
 
 def run(keys=ALL, seeds=50, negative=False):
@@ -49,7 +49,10 @@ def table(res):
         rows.append(f"| {name} | " + " | ".join(cells) + " |")
 
     row("error at diverge, rms [m]", lambda r: f"{r['at_diverge']['rmse']:.1f}")
+    row("cross-track at diverge, rms [m]", lambda r: f"{r['at_diverge_lateral']['rmse']:.1f}")
     row("error at portal, rms [m]", lambda r: f"{r['real_exit']['rmse']:.1f}")
+    row("cross-track at portal, rms [m]", lambda r: f"{r['real_exit_lateral']['rmse']:.1f}")
+    row("heading at portal, rms [°]", lambda r: f"{r['real_exit_heading_deg']['rmse']:.2f}")
     row("error at portal, p95 [m]", lambda r: f"{r['real_exit']['p95_abs']:.1f}")
     row("mean (e/σ)² at portal", lambda r: f"{r['consistency_real_exit']['mean_norm_sq']:.2f}")
     row("callout rms [s]", lambda r: f"{r['callout']['timing_error_s']['rmse']:.2f}")
