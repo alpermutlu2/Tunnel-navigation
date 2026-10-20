@@ -32,6 +32,14 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
 - Fix: barometer 1 s average modelled at its window centre (was the window end, ~0.5 s lag →
   pitch error at grade changes; S3 callout). Changes every ESKF number;
   `reports/0.5.0.dev0/eskf_baro_fix_50.json`.
+- Review 6: GM speed-wander cruise mode (`cruise_mode="gm"`); S6s/S6L wander variants;
+  callout late rate and claimed timing uncertainty. `reports/0.5.0.dev0/cruise_gm_50.json`.
+- Exit branch on the route in every scenario (review 6): 20° right-hand branch at the diverge
+  (clothoid 40 m + arc 70 m + clothoid 40 m), total length kept; S2 diverge moved 1800 → 2000 m
+  (onto the straight). `build_scenarios(branch=False)` keeps the v0.4 geometry, used by the error
+  budget and the observability check. Changes every ESKF number after the diverge; INS
+  error-free attitude floor tolerance 1e-6 → 2e-6 rad.
+- S6 third ramp moved 2000 → 2100 m (after the previous ramp ends).
 
 ## v0.4.0 (2026-10-20): INS, error budget, calibration and reference algorithms
 

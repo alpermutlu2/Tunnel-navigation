@@ -60,7 +60,7 @@ def observability(tr, t0, t1, gnss=True, nhc=True, baro=True, dt=1.0, tol=1e-6):
 def rank_report(key="S1"):
     from .scenario import build_scenarios
     from .truth import generate_truth
-    tr = generate_truth(build_scenarios()[key])
+    tr = generate_truth(build_scenarios(branch=False)[key])
     t_e = tr.t[int(np.argmax(tr.in_tunnel))]
     return {
         "approach_with_maneuvers_gnss_nhc_baro": observability(tr, 10.0, 90.0),

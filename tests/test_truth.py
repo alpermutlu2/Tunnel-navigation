@@ -84,7 +84,7 @@ def test_derivatives_consistent(key):
 
 def test_flat_constant_speed_specific_force():
     """S1 after the approach maneuvers (constant speed from ~76 s on): pure gravity, no rotation."""
-    tr = generate_truth(SCENARIOS["S1"])
+    tr = generate_truth(build_scenarios(branch=False)["S1"])   # straight to the portal (no exit branch)
     k = tr.t > 90.0
     assert np.allclose(tr.f_b[k], [0, 0, 9.80665], atol=1e-9)
     assert np.allclose(tr.w_b[k], 0, atol=1e-12)

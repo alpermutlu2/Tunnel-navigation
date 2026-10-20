@@ -131,7 +131,7 @@ def _tangent(tr, idx):
 
 def run_scenario(key, seeds, configs=CONFIGS, chunk=100, cfg=None) -> ScenarioRun:
     from .scenario import build_scenarios
-    sc = build_scenarios()[key]
+    sc = build_scenarios(branch=False)[key]
     tr = generate_truth(sc)
     cfg = cfg or configure("no_gaps")
     sw = Switches.only(*IMU_TERMS)
@@ -252,7 +252,7 @@ def timestamp_check(key, eps=0.01) -> dict:
     """Clock-scale error alone (all sensor errors off), free attitude, from the portal.
     First-order prediction: e_s ≈ ε (2 Δs − v0 t) (constant speed: ε v0 t)."""
     from .scenario import build_scenarios
-    sc = build_scenarios()[key]
+    sc = build_scenarios(branch=False)[key]
     tr = generate_truth(sc)
     cfgx = configure("no_gaps", "ts_scale_1pct") if eps == 0.01 else None
     m, e = simulate_imu(ImuTruthSource.from_truth(tr), cfgx, Switches.only(), seed=0)
@@ -330,7 +330,7 @@ def vibration_rate_report(key="S1", seeds=100) -> dict:
     from .scenario import build_scenarios
     out = {}
     for rate in (100.0, 200.0):
-        tr = generate_truth(build_scenarios()[key], rate)
+        tr = generate_truth(build_scenarios(branch=False)[key], rate)
         cfg = configure("no_gaps")
         cfg = replace(cfg, imu=replace(cfg.imu, rate_hz=ASSUMED(rate, "vibration rate sensitivity")))
         src = ImuTruthSource.from_truth(tr)

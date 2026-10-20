@@ -31,8 +31,16 @@ class HSeg:
 
 @dataclass(frozen=True)
 class Exit:
+    """Diverge point of an exit branch inside the tunnel. With the branch on the route (v0.5,
+    review 6) the followed road turns into the branch at s; the main tunnel continues as map
+    information only (straight here). dpsi_* are heading changes over the branch curve [rad],
+    left > 0, used by the branch-confirmation check."""
     s: float
     name: str
+    on_route: bool = False
+    dpsi_branch: float = 0.0
+    dpsi_main: float = 0.0
+    curve_len: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -227,6 +235,33 @@ def _straight_road(total: float, s_entry: float, tunnel_len: float, grade_pct: f
     )
 
 
+# Exit branch on the route (review 6, accepted 2026-10-20) [ASSUMED]: right-hand branch, heading
+# change 20 deg over 150 m as clothoid 40 m + arc 70 m + clothoid 40 m (minimum radius 315 m;
+# a single arc would be R = 430 m with a lateral-acceleration step), then straight to the portal.
+BRANCH_DPSI = -np.deg2rad(20.0)
+BRANCH_SEGS = (40.0, 70.0, 40.0)
+
+
+def _add_branch(road: Road) -> Road:
+    """Same road up to the first exit's diverge point, then the branch curve, then straight; total
+    length (and so the portal position along s) unchanged. The main road must be straight there."""
+    ex = road.exits[0]
+    k_div = float(road.curvature(ex.s)[0])
+    assert abs(k_div) < 1e-9, "diverge must be on a straight"
+    a, b, c = BRANCH_SEGS
+    k = BRANCH_DPSI / (a / 2 + b + c / 2)
+    segs, acc = [], 0.0
+    for seg in road.hsegs:
+        if acc + seg.length <= ex.s:
+            segs.append(seg); acc += seg.length; continue
+        if acc < ex.s:
+            segs.append(HSeg(ex.s - acc, seg.k0, seg.k0 if seg.k1 is None else seg.k0 + (seg.k_end - seg.k0) * (ex.s - acc) / seg.length))
+        break
+    segs += [HSeg(a, 0.0, k), HSeg(b, k), HSeg(c, k, 0.0), HSeg(road.length - ex.s - (a + b + c))]
+    exits = [Exit(ex.s, ex.name, True, BRANCH_DPSI, 0.0, a + b + c)] + list(road.exits[1:])
+    return Road(hsegs=segs, grade_points=list(road.grade_points), tunnel=road.tunnel, exits=exits, ds=road.ds)
+
+
 APPROACH_S = 200.0      # [ASSUMED] GNSS time before every portal (v0.4 plan 4: 180 s window + margin)
 AFTER_PORTAL_S = 220.0  # [ASSUMED] road after the portal covers >= 220 s at entry speed (180 s budget)
 LEAD_OUT_MIN = 800.0    # minimum road after the tunnel exit (recovery)
@@ -251,8 +286,13 @@ def _approach_maneuvers(v0: float) -> list[SpeedEvent]:
             SpeedEvent(20.0 * v0, v0, 10.0)]
 
 
-def build_scenarios() -> dict[str, Scenario]:
+def build_scenarios(branch: bool = True) -> dict[str, Scenario]:
     """Scenario catalogue (DESIGN.md section 6).
+
+    branch=True (default since v0.5, review 6): the route leaves the main tunnel through the exit
+    branch at the first exit's diverge point (`_add_branch`). branch=False keeps the v0.4
+    geometry (straight main tunnel to the portal); the error budget and the observability check
+    use it, so the branch curve does not improve the straight-tunnel analysis artificially.
 
     Approach: 200 s of driving at entry speed before the portal (GNSS calibration windows up to
     180 s). Lead-out: at least 800 m after the exit and enough road for 220 s after the portal
@@ -291,7 +331,7 @@ def build_scenarios() -> dict[str, Scenario]:
         title="Curved tunnel",
         description="2.5 km tunnel with an S-bend (R = 400 m), 80 km/h constant.",
         road=Road(hsegs=hs, grade_points=[(0.0, 0.0)], tunnel=Tunnel(s_e, s_e + L_t),
-                  exits=[Exit(s_e + 1800.0, "Exit A")]),
+                  exits=[Exit(s_e + 2000.0, "Exit A")]),   # on the straight after the S-bend (v0.5; was 1800)
         speed=SpeedProfile(v0=v0, events=_approach_maneuvers(v0)),
     )
 
@@ -367,4 +407,7 @@ def build_scenarios() -> dict[str, Scenario]:
                 SpeedEvent(s_e + 2100.0, v0, 40.0),   # after the previous ramp ends (~2070 m)
             ]),
         )
+    if branch:
+        for sc in out.values():
+            sc.road = _add_branch(sc.road)
     return out

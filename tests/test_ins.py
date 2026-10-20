@@ -181,7 +181,7 @@ def test_error_free_mechanisation(key):
     """All errors off: reproduces the truth (v0.3 truth strapdown: <= 0.13 cm on S1-S5)."""
     r = error_free_report_cached()[key]
     assert r["max_pos_err_m"] < 2e-3, r
-    assert r["max_att_err_rad"] < 1e-6, r
+    assert r["max_att_err_rad"] < 2e-6, r   # 1e-6 before v0.5; the exit-branch clothoids add ~0.2e-6 (truth floor)
 
 
 def test_second_order_convergence():
