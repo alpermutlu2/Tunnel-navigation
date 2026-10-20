@@ -18,6 +18,8 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   callout 0.42 → 0.13 s; straight-tunnel diverge unchanged (S1 12.1 m); recovery failures 12 → 0
   (S4); negative controls 500/500 "main". Map-error stress: 93–97 % within 2σ.
 - Cross-track and heading error metrics in the evaluation; evaluation table includes S1-1km/5km.
+- Snapshot diff vs 0.5.1: only the `eskf` section moves (map layer; new cross-track/heading entries
+  and S1-1km/5km); truth, sensors, INS and budget unchanged.
 
 - `tools/serve.py`: local web page with controls (scenario, seed, IMU profile, vibration, tunnel
   pressure gradient, filter mount error, GNSS degradations, filter switches); each change re-runs
