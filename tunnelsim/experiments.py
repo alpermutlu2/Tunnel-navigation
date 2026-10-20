@@ -136,14 +136,19 @@ def simulate_run(key, seeds, overrides=(), imu_switches=None, branch=True, vehic
 
 
 def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=None, keep_tracks=False,
-                    branch=True, vehicle=None):
+                    branch=True, vehicle=None, mount_err_deg=None):
     """branch=False: negative control, the car goes straight on at the diverge while the map (and
     the branch check) still has the branch on the route (review 7)."""
     from .eskf import EskfConfig, run_eskf
     sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, np.arange(seeds), overrides, branch=branch, vehicle=vehicle)
     map_road = build_scenarios(branch=True)[key].road
     zmask = (tr.v < 0.05) if zupt_oracle else None
-    out = run_eskf(t, F, W, gnss, bt, bh, tr.C_bp, tr.lever_arm_b, eskf_cfg or EskfConfig(), zupt_mask=zmask)
+    C_bp_filter = tr.C_bp
+    if mount_err_deg is not None:
+        # assumption removal (C): the filter's mount differs from the true one by these angles
+        from .frames import C_BP_NOMINAL, mount_rotation
+        C_bp_filter = mount_rotation(*mount_err_deg) @ C_BP_NOMINAL.T @ tr.C_bp   # body-frame offset
+    out = run_eskf(t, F, W, gnss, bt, bh, C_bp_filter, tr.lever_arm_b, eskf_cfg or EskfConfig(), zupt_mask=zmask)
     i_e = int(np.argmax(tr.in_tunnel))
     i_x = len(tr.in_tunnel) - int(np.argmax(tr.in_tunnel[::-1]))
     t_e, t_x = tr.t[i_e], tr.t[min(i_x, len(tr.t) - 1)]

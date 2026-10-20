@@ -93,6 +93,16 @@ def budget_metrics():
     return {"analytic_check_s1": Bt.analytic_check_report(), **budget_report(200)}
 
 
+def eskf_metrics():
+    """v0.5: final estimator, Monte Carlo over all scenarios (20 seeds here; the write-up uses
+    tools/evaluate.py with 50 seeds)."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import evaluate
+    res = evaluate.run(seeds=20)
+    keep = ("at_diverge", "real_exit", "consistency_real_exit", "callout", "branch_confirm", "recovery")
+    return {k: {kk: r[kk] for kk in keep if kk in r} for k, r in res["runs"].items()}
+
+
 def run_tests():
     r = subprocess.run([sys.executable, "-m", "pytest", "-q", "--runslow", str(ROOT / "tests")],
                        capture_output=True, text=True, cwd=ROOT)
@@ -106,7 +116,7 @@ def snapshot(force: bool = False):
         sys.exit(f"refusing to overwrite released report {target} (use --force)")
     summary, code = run_tests()
     data = {"version": ver, "tests": summary, "tests_ok": code == 0, "truth": truth_metrics(),
-            "sensors": sensor_metrics(), "ins": ins_metrics(), "budget": budget_metrics()}
+            "sensors": sensor_metrics(), "ins": ins_metrics(), "budget": budget_metrics(), "eskf": eskf_metrics()}
     d = ROOT / "reports" / ver
     d.mkdir(parents=True, exist_ok=True)
     (d / "metrics.json").write_text(json.dumps(data, indent=2) + "\n")

@@ -1,27 +1,75 @@
 # Through the Tunnel
 
-Phone-based position estimation through a GNSS outage of a few minutes (road tunnels,
-500 m to 5 km), using only the phone's own sensors plus the navigation map.
+Phone-based position estimation through a GNSS outage in a road tunnel (single lane, 500 m to
+5 km), for a navigation app that must keep showing the car, call out an exit inside the tunnel at
+the right moment, and recover cleanly when the car comes out. Only the phone's own sensors
+(accelerometer, gyroscope, barometer, GNSS) and the navigation map are used.
 
-Work in progress. Current stage: **v0.4.0**: truth generator, IMU/barometer/GNSS error models
-(verified at sensor level), strapdown INS, error budget, GNSS pre-tunnel calibration and
-reference algorithms (constant velocity, INS, oracle ZUPT). The ESKF (v0.5) and the visual
-simulator follow.
+**Write-up:** [`REPORT.md`](REPORT.md): approach, results, where it breaks and why, AI usage.
 
-- `DESIGN.md`: assumptions, sensor models, error budget, estimator roadmap, decision log
-- `docs/decisions/`, `docs/reviews/`: decision records and external reviews
-- `CHANGELOG.md`: what changed per version and how the numbers moved
-- `reports/<version>/metrics.json`: metrics snapshot per version (target, achieved, tolerance)
-
-Every parameter is tagged [MEAS] (measured, cited), [SPEC] (datasheet) or [ASSUMED]
-(`tunnelsim/profiles.py`); sensitivity cases are named overrides, never defaults.
+## Quick start
 
 ```bash
 pip install numpy scipy matplotlib pytest
-python -m pytest -q tests              # 123 tests (+2 slow: 24 h Allan, budget vs analytic)
-python tools/snapshot.py               # write reports/<version>/metrics.json (runs slow tests)
-python tools/snapshot.py --diff 0.3.0 0.4.0
-python tools/budget.py 1000            # final error budget, 1000 seeds
-python tools/allan_scatter.py          # run-to-run OADEV scatter behind the 24 h tolerances
-python tools/plot_truth.py             # truth review figure
+python tools/simulate.py S1          # writes sim_S1_seed0.html; open it in a browser
 ```
+
+The simulator page is self-contained (no server, no internet). It shows the road from above with
+the tunnel, the exit branch and the main tunnel continuation, the true car, the ESKF estimate with
+its along-track 2σ bar, a constant-velocity reference, GNSS fixes, the error and speed plots, and
+the exit callout (with its timing error against the right moment). Play/pause, speed and zoom
+are on the page.
+
+```bash
+python tools/simulate.py --list                                     # scenarios and named overrides
+python tools/simulate.py S4 --seed 7                                # another noise realisation
+python tools/simulate.py S5 --override gnss_lagging --override vib_noisy   # parameter changes
+python tools/simulate.py S4 --zupt oracle                           # stops given by the truth
+```
+
+New scenarios are added in `tunnelsim/scenario.py` (`build_scenarios`: road geometry, grade
+profile, speed events); sensor parameters and named overrides in `tunnelsim/profiles.py`; filter
+settings in `EskfConfig` (`tunnelsim/eskf.py`).
+
+## Scenarios
+
+| Key | Tunnel | Driving |
+|---|---|---|
+| S1 | 3 km straight, flat | 80 km/h constant (no map features: hardest) |
+| S2 | 2.5 km with an S-bend (R = 400 m) | 80 km/h constant |
+| S3 | 3.5 km V-profile (−5 % / flat / +5 %) | 70 km/h constant |
+| S4 | 3 km straight | stop-and-go: two full stops and a crawl |
+| S5 | 3 km straight | slow drift 90 → 82 km/h, braking to 50 km/h before the exit |
+| S6s / S6 / S6L | as S1 | speed wander ±1 / ±2 / ±4 km/h with 40 s ramps |
+
+In every scenario the route leaves the main tunnel through an exit branch inside the tunnel
+(20° right over 150 m), announced 300 m before the diverge, and comes out at the branch portal.
+Each scenario starts with 200 s of open-sky driving (GNSS calibration, including a few speed
+changes).
+
+## Evaluation
+
+```bash
+python tools/evaluate.py                 # Monte Carlo, 50 seeds per scenario (~1 h on 2 cores)
+python tools/evaluate.py --seeds 20 S1 S4 --negative   # subset + car-goes-straight control
+python -m pytest -q tests                # ~150 tests (+2 slow: --runslow)
+python tools/snapshot.py                 # reports/<version>/metrics.json (tests, truth, sensors, INS, budget, ESKF)
+python tools/snapshot.py --diff 0.4.0 0.5.0
+```
+
+Other tools: `tools/budget.py` (INS error budget, v0.4), `tools/allan_scatter.py`,
+`tools/baro_model_check.py`, `tools/plot_nhc_trace.py`, `tools/plot_truth.py`.
+
+## Repository map
+
+- `tunnelsim/`: truth generator (`truth.py`, `scenario.py`), sensor models (`sensors.py`,
+  `profiles.py`), strapdown INS (`ins.py`), ESKF (`eskf.py`), branch check (`branch.py`),
+  experiments and metrics (`experiments.py`, `budget.py`). The estimator side never imports the
+  truth objects (`docs/contracts.md`).
+- `DESIGN.md`: assumptions, sensor models, error budget, estimator roadmap, decision log.
+- `docs/decisions/`, `docs/reviews/`: decision records and the reviews behind them.
+- `CHANGELOG.md`: what changed per version and how the numbers moved.
+- `reports/<version>/`: metrics snapshots and Monte Carlo results.
+
+Every parameter is tagged [MEAS] (measured, cited), [SPEC] (datasheet) or [ASSUMED]; sensitivity
+cases are named overrides, never defaults.
