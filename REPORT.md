@@ -7,6 +7,9 @@ a section says otherwise they are 50-seed Monte Carlo results (`tools/evaluate.p
 `reports/0.5.0/`). Every parameter is tagged: [MEAS] measured and cited, [SPEC] from a datasheet,
 [ASSUMED] chosen here (`tunnelsim/profiles.py`, `DESIGN.md` §2).
 
+The simulator runs interactively (`python tools/serve.py`, controls for scenario, sensors and filter
+switches) or as a single page per run (`tools/simulate.py`); see the README.
+
 ## 1. Framing
 
 The app has the map, and the tunnel is a single lane, so the car's lateral position is known.

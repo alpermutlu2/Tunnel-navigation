@@ -7,6 +7,16 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## Unreleased (v0.5.2): interactive simulator
+
+- `tools/serve.py`: local web page with controls (scenario, seed, IMU profile, vibration, tunnel
+  pressure gradient, filter mount error, GNSS degradations, filter switches); each change re-runs
+  one seed (~7 s), results cached; standard library only. Test +1.
+- Map draws the true car (ground truth) and the estimated car (and the CV reference) as cars to
+  scale, rotated to their headings, with labels (case text: "one or more cars … show the true
+  position next to your estimate"). Media refreshed.
+- No estimator or metric change.
+
 ## v0.5.1 (2026-10-20): review 8 (Fable) follow-up
 
 - Filter changes, each checked against the 0.5.0 evaluation (50 seeds, `reports/0.5.1/evaluation_50.json`):

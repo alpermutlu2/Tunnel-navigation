@@ -11,8 +11,16 @@ the right moment, and recover cleanly when the car comes out. Only the phone's o
 
 ```bash
 pip install -r requirements.txt      # Python >= 3.10
-python tools/simulate.py S1          # writes sim_S1_seed0.html; open it in a browser
+python tools/serve.py                # interactive: open http://localhost:8000
+python tools/simulate.py S1          # or a single self-contained page: sim_S1_seed0.html
 ```
+
+`tools/serve.py` opens the simulator with controls on the left (scenario, seed, IMU profile,
+vibration, tunnel pressure gradient, the filter's mount error, GNSS degradations, filter switches
+such as the cruise prior, the NHC turn gate and the pressure-gradient state). Every change re-runs
+truth → sensors → ESKF for one seed (~7–10 s; standard library only, results cached). The map
+shows the true car (ground truth) and the estimated car side by side, drawn to scale and rotated
+to their headings.
 
 ![Simulator, S5 after the exit diverge](docs/media/sim_S5_page.png)
 
@@ -21,7 +29,7 @@ before the portal to 45 s after the exit, 10× real time; frames stepped with
 `tools/record_frames.js` and Playwright, encoded with ffmpeg).
 
 The simulator page is self-contained (no server, no internet). It shows the road from above with
-the tunnel, the exit branch and the main tunnel continuation, the true car, the ESKF estimate with
+the tunnel, the exit branch and the main tunnel continuation, the true car and the estimated car with
 its along-track 2σ bar, a constant-velocity reference, GNSS fixes, the error and speed plots, the
 exit callout (with its timing error against the right moment), and the phone sensor data the app
 records (accelerometer, gyroscope, barometer, GNSS speed). Play/pause, speed and zoom are on the

@@ -121,6 +121,7 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False):
         "true_xy": tr.pos_n[idx[sel], :2].round(2).tolist(),
         "est_xy": pR[sel, :2].round(2).tolist(),
         "heading": np.arctan2(tn[sel, 1], tn[sel, 0]).round(4).tolist(),
+        "est_heading": np.arctan2(out.v[0, sel, 1], out.v[0, sel, 0]).round(4).tolist(),
         "s_true": tr.s[idx[sel]].round(2).tolist(),
         "s_hat": s_hat[sel].round(2).tolist(),
         "e_s": e_s[sel].round(2).tolist(),

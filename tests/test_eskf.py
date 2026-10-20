@@ -138,3 +138,14 @@ def test_gm_speed_identity_carries_no_information_at_start():
     x = np.zeros((1, NA))
     _update(x, P, np.array([[0.2]]), H, np.full((1, 1, 1), 1e-4), None)
     assert np.allclose(P, P0, atol=1e-9)
+
+
+def test_interactive_server_page_builds():
+    """tools/serve.py: one parameter set (non-default switches) renders a simulator page."""
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+    import serve
+    page = serve.run_page({"scenario": "S1-0.5km", "seed": "1", "mount_err": "2", "cruise": "0",
+                           "nhc_turn_gate": "0.5", "gnss_coasting": "1"})
+    assert "const D = {" in page and "est_heading" in page

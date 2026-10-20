@@ -55,8 +55,8 @@ input[type=range] { flex: 1; min-width: 140px; }
       <h2>Map (follows the car)</h2>
       <canvas id="map"></canvas>
       <div class="legend">
-        <span><span class="sw" style="background:var(--true)"></span>true car</span>
-        <span><span class="sw" style="background:var(--est)"></span>ESKF estimate</span>
+        <span><span class="sw" style="background:var(--true)"></span>true car (ground truth)</span>
+        <span><span class="sw" style="background:var(--est)"></span>estimated car (ESKF)</span>
         <span><span class="sw" style="background:var(--cv)"></span>constant-velocity reference</span>
         <span><span class="sw" style="background:var(--gnss)"></span>GNSS fix</span>
         <span><span class="sw" style="background:var(--exit)"></span>exit ramp</span>
@@ -174,10 +174,22 @@ function drawMap() {
   g.strokeStyle = css("--band"); g.lineWidth = Math.max(10, 14 * z); g.beginPath();
   for (let s = sh - sg; s <= sh + sg; s += Math.max(2, sg / 40)) { const [x, y] = sToXY(s); s === sh - sg ? g.moveTo(X(x), Y(y)) : g.lineTo(X(x), Y(y)); }
   g.stroke();
-  const car = (x, y, col, r) => { g.fillStyle = col; g.beginPath(); g.arc(X(x), Y(y), r, 0, 7); g.fill(); };
-  const c = cvS(k); if (c !== null) { const [x, y] = sToXY(c); car(x, y, css("--cv"), 6); }
-  car(D.est_xy[k][0], D.est_xy[k][1], css("--est"), 7);
-  car(cx, cy, css("--true"), 5);
+  // cars: drawn to scale (4.6 x 1.9 m) but never smaller than 24 x 11 px, rotated to their heading
+  const L = Math.max(4.6 * sc, 24), Wc = Math.max(1.9 * sc, 11);
+  const drawCar = (x, y, psi, col, label, alpha, dy) => {
+    g.save(); g.globalAlpha = alpha; g.translate(X(x), Y(y)); g.rotate(-psi);
+    g.fillStyle = col; g.strokeStyle = css("--panel"); g.lineWidth = 1.5;
+    g.beginPath(); g.roundRect(-L / 2, -Wc / 2, L, Wc, Wc / 3); g.fill(); g.stroke();
+    g.fillStyle = "rgba(255,255,255,.75)"; g.fillRect(L / 2 - L * 0.32, -Wc / 2 + 2, L * 0.14, Wc - 4);   // windscreen = front
+    g.restore();
+    g.globalAlpha = 1; g.font = "600 11px system-ui"; g.fillStyle = col;
+    const tx = X(x) - g.measureText(label).width / 2, ty = Y(y) + dy;
+    g.strokeStyle = css("--panel"); g.lineWidth = 3; g.strokeText(label, tx, ty); g.fillText(label, tx, ty);
+  };
+  const c = cvS(k); if (c !== null) { const [x, y] = sToXY(c); drawCar(x, y, D.heading[k], css("--cv"), "CV", 0.55, -Wc / 2 - 20); }
+  const eh = isFinite(D.est_heading[k]) ? D.est_heading[k] : D.heading[k];
+  drawCar(D.est_xy[k][0], D.est_xy[k][1], eh, css("--est"), "estimate", 0.9, -Wc / 2 - 7);
+  drawCar(cx, cy, D.heading[k], css("--true"), "true car", 1, Wc / 2 + 15);
   g.fillStyle = css("--muted"); g.font = "12px system-ui";
   const inT = D.t[k] >= D.t_entry && D.t[k] <= D.t_exit;
   g.fillText(inT ? "in the tunnel: no GNSS" : "open sky", 10, 18);
