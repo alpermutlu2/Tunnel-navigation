@@ -30,6 +30,8 @@ main { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); g
 main > section { min-width: 0; }
 canvas { width: 100%; max-width: 100%; display: block; }
 #map { height: 420px; } #strip { height: 70px; } #err { height: 210px; } #spd { height: 150px; }
+#acc, #gyr { height: 120px; } #bar, #gsp { height: 90px; }
+.sens-h { font-size: 12px; color: var(--muted); margin: 6px 0 2px; }
 .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
 button, select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
 input[type=range] { flex: 1; min-width: 140px; }
@@ -73,6 +75,18 @@ input[type=range] { flex: 1; min-width: 140px; }
       <canvas id="strip"></canvas>
       <div class="note">Dark band: tunnel. Orange bar: ESKF estimate ± 2σ along the road.</div>
     </div>
+    <div class="card" style="margin-top:14px">
+      <h2>Phone sensors (what the app records)</h2>
+      <div class="sens-h">accelerometer [m/s²]: <span style="color:var(--est)">x</span> · <span style="color:var(--cv)">y</span> · <span style="color:var(--gnss)">z</span> (phone axes)</div>
+      <canvas id="acc"></canvas>
+      <div class="sens-h">gyroscope [°/s]: <span style="color:var(--est)">x</span> · <span style="color:var(--cv)">y</span> · <span style="color:var(--gnss)">z</span></div>
+      <canvas id="gyr"></canvas>
+      <div class="sens-h">barometric height [m]</div>
+      <canvas id="bar"></canvas>
+      <div class="sens-h">GNSS speed [km/h] (green; grey: true speed; gaps: no fix)</div>
+      <canvas id="gsp"></canvas>
+      <div class="note">Raw samples on the page's 2 Hz grid (IMU 100 Hz, barometer 25 Hz, GNSS 1 Hz in the app); vibration and noise included.</div>
+    </div>
   </section>
   <section>
     <div class="card">
@@ -104,7 +118,10 @@ document.getElementById("title").textContent = D.title;
 document.getElementById("desc").textContent = D.description;
 document.getElementById("meta").textContent =
   `seed ${D.seed} · overrides: ${D.overrides.length ? D.overrides.join(", ") : "none"} · ZUPT: ${D.zupt}` +
-  ` · GNSS updates accepted/rejected: ${D.events.gnss_pos_acc}/${D.events.gnss_pos_rej}`;
+  ` · GNSS updates accepted/rejected: ${D.events.gnss_pos_acc}/${D.events.gnss_pos_rej}` +
+  (D.settings.eskf.length ? ` · filter: ${D.settings.eskf.join(", ")}` : "") +
+  (D.settings.mount_err_deg ? ` · mount error ${D.settings.mount_err_deg.join("/")}°` : "") +
+  (D.settings.no_sideslip ? " · no sideslip" : "") + " · CV clipped to the error axis";
 const scrub = document.getElementById("scrub"); scrub.max = N - 1;
 
 function setup(c) {
@@ -185,7 +202,7 @@ function drawStrip() {
   g.fillStyle = css("--true"); g.beginPath(); g.arc(X(D.s_true[k]), H / 2, 5, 0, 7); g.fill();
 }
 
-function plot(id, series, yfmt, band) {
+function plot(id, series, yfmt, band, lim) {
   const [g, W, H] = setup(document.getElementById(id));
   const l = 44, r = 8, t = 8, b = 22;
   g.fillStyle = css("--panel"); g.fillRect(0, 0, W, H);
@@ -194,14 +211,15 @@ function plot(id, series, yfmt, band) {
   if (band) for (let i = 0; i < N; i++) { lo = Math.min(lo, band.lo[i]); hi = Math.max(hi, band.hi[i]); }
   if (lo === hi) { lo -= 1; hi += 1; }
   const pad = 0.08 * (hi - lo); lo -= pad; hi += pad;
+  if (lim) { lo = lim[0]; hi = lim[1]; }          // fixed range; values outside are clipped
   const X = i => l + (W - l - r) * (D.t[i] - D.t[0]) / (D.t[N - 1] - D.t[0]), Y = v => t + (H - t - b) * (hi - v) / (hi - lo);
   g.fillStyle = "rgba(127,127,127,.13)"; g.fillRect(X(D.t.findIndex(x => x >= D.t_entry)), t, X(D.t.findIndex(x => x >= D.t_exit)) - X(D.t.findIndex(x => x >= D.t_entry)), H - t - b);
   g.strokeStyle = css("--line"); g.lineWidth = 1; g.font = "11px system-ui"; g.fillStyle = css("--muted");
   for (let j = 0; j <= 4; j++) { const v = lo + (hi - lo) * j / 4; g.beginPath(); g.moveTo(l, Y(v)); g.lineTo(W - r, Y(v)); g.stroke(); g.fillText(yfmt(v), 4, Y(v) + 4); }
-  if (band) { g.fillStyle = css("--band"); g.beginPath(); for (let i = 0; i < N; i++) g.lineTo(X(i), Y(band.hi[i])); for (let i = N - 1; i >= 0; i--) g.lineTo(X(i), Y(band.lo[i])); g.fill(); }
+  if (band) { const c = v => Y(Math.max(lo, Math.min(hi, v))); g.fillStyle = css("--band"); g.beginPath(); for (let i = 0; i < N; i++) g.lineTo(X(i), c(band.hi[i])); for (let i = N - 1; i >= 0; i--) g.lineTo(X(i), c(band.lo[i])); g.fill(); }
   for (const s of series) {
     g.strokeStyle = s.c; g.lineWidth = 1.6; g.beginPath(); let on = false;
-    for (let i = 0; i < N; i++) { const v = s.y[i]; if (v === null) { on = false; continue; } on ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)); on = true; }
+    for (let i = 0; i < N; i++) { let v = s.y[i]; if (v === null) { on = false; continue; } v = Math.max(lo, Math.min(hi, v)); on ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)); on = true; }
     g.stroke();
   }
   g.strokeStyle = css("--ink"); g.beginPath(); g.moveTo(X(k), t); g.lineTo(X(k), H - b); g.stroke();
@@ -210,12 +228,19 @@ function plot(id, series, yfmt, band) {
 
 const cvErr = D.t.map((_, i) => { const c = cvS(i); return c === null ? null : c - D.s_true[i]; });
 const errBand = { lo: D.e_s.map((e, i) => -2 * D.sig_s[i]), hi: D.e_s.map((e, i) => 2 * D.sig_s[i]) };
+// error plot range from the ESKF (error and 2σ band); the CV reference is clipped to it
+const errLim = (() => { let m = 5; for (let i = 0; i < N; i++) m = Math.max(m, Math.abs(D.e_s[i]), 2 * D.sig_s[i]); m *= 1.15; return [-m, m]; })();
 const callK = D.exits.length ? D.s_hat.findIndex(s => s >= D.exits[0].call_s) : -1;
 const trueCallK = D.exits.length ? D.s_true.findIndex(s => s >= D.exits[0].call_s) : -1;
 
 function render() {
   drawMap(); drawStrip();
-  plot("err", [{ y: D.e_s, c: css("--est") }, { y: cvErr, c: css("--cv") }], v => v.toFixed(0), errBand);
+  plot("err", [{ y: D.e_s, c: css("--est") }, { y: cvErr, c: css("--cv") }], v => v.toFixed(0), errBand, errLim);
+  const S = D.sensors, xyz = [css("--est"), css("--cv"), css("--gnss")];
+  plot("acc", S.acc.map((y, j) => ({ y, c: xyz[j] })), v => v.toFixed(1));
+  plot("gyr", S.gyro.map((y, j) => ({ y, c: xyz[j] })), v => v.toFixed(1));
+  plot("bar", [{ y: S.baro, c: css("--ink") }], v => v.toFixed(1));
+  plot("gsp", [{ y: D.v_true.map(v => v * 3.6), c: css("--line") }, { y: S.gnss_kmh, c: css("--gnss") }], v => v.toFixed(0));
   plot("spd", [{ y: D.v_true.map(v => v * 3.6), c: css("--true") }, { y: D.v_est.map(v => v * 3.6), c: css("--est") }], v => v.toFixed(0));
   document.getElementById("clock").textContent = `${D.t[k].toFixed(1)} s`;
   document.getElementById("s_err").textContent = `${D.e_s[k].toFixed(1)} m`;

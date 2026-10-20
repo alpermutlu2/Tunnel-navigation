@@ -7,6 +7,21 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## Unreleased (v0.5.1): review 8 (Fable) follow-up
+
+- Simulator: phone sensor panel (accelerometer, gyroscope, barometer, GNSS speed), error-plot
+  y-axis from the ESKF (CV clipped), CLI `--eskf KEY=VALUE`, `--mount-err R,P,Y`,
+  `--no-sideslip`; new recording and screenshot in `docs/media/`.
+- Scenarios S1-0.5km, S1-1km, S1-5km (tunnel-length sweep); `EskfConfig.zupt_causal` option
+  (default off, offline detector unchanged). No change to existing scenario or filter numbers.
+- Checks: `reports/0.5.0/fable_checks_30.json` (length sweep, pressure gradient, low-end IMU gate
+  lock, causal ZUPT).
+- `REPORT.md` shortened (~3500 → ~2300 words) and extended with the length sweep, pressure
+  gradient, gate lock, offline ZUPT and "no map in the filter" points; AI-usage section names the
+  other AI reviewers.
+- `requirements.txt` (Python ≥ 3.10); `tools/record_frames.js` takes the browser from PW_CHROMIUM.
+- From this version the commit author is the owner; Claude stays as co-author.
+
 ## v0.5.0 (2026-10-20): ESKF, visual simulator, exit branch, evaluation, write-up
 
 - `tunnelsim/eskf.py`: batched 16-state ESKF (GNSS position/velocity with NIS gate, NHC,

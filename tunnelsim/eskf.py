@@ -22,7 +22,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import numpy as np
-from scipy.signal import butter, sosfiltfilt
+from scipy.signal import butter, sosfiltfilt, sosfilt
 
 from .frames import GRAVITY_N
 from .ins import so3_exp_batch
@@ -53,6 +53,7 @@ class EskfConfig:
     zupt_hold_s: float = 0.3          # s: debounce
     zupt_lowf_std: float = 0.05       # m/s²: 1 s std of the < 2 Hz specific force vector (a launch
                                       # or a brake moves it by ~1 m/s²; a stopped car does not)
+    zupt_causal: bool = False         # True: causal filters (real time); False: forward-backward (offline, optimistic)
     zupt_speed_max: float = 2.0       # m/s: filter speed must be below this
     cov_rate_hz: float = 10.0         # covariance propagation rate
     # GNSS re-acquisition after an outage (v0.5 A, accepted 2026-10-20): robust over fast
@@ -139,10 +140,11 @@ def zupt_detector(t, f, cfg, fs, win_s=1.0):
         return np.concatenate([np.repeat(m[..., :1], n - 1, axis=-1), m], axis=-1)   # length N
 
     sos = butter(4, cfg.zupt_band_hz, btype="bandpass", fs=fs, output="sos")
-    xb = sosfiltfilt(sos, np.linalg.norm(f, axis=-1), axis=-1)
+    filt = (lambda so, x, axis: sosfilt(so, x, axis=axis)) if cfg.zupt_causal else sosfiltfilt
+    xb = filt(sos, np.linalg.norm(f, axis=-1), axis=-1)
     band_rms = np.sqrt(np.maximum(mov(xb * xb), 0.0))
     lp = butter(2, 2.0, btype="lowpass", fs=fs, output="sos")
-    fl = sosfiltfilt(lp, f, axis=-2)                                  # (B,N,3)
+    fl = filt(lp, f, axis=-2)                                         # (B,N,3)
     var = sum(np.maximum(mov(fl[..., i] ** 2) - mov(fl[..., i]) ** 2, 0.0) for i in range(3))
     raw = (band_rms < cfg.zupt_band_rms) & (np.sqrt(var) < cfg.zupt_lowf_std)
     # debounce: both conditions held without a break for the last zupt_hold_s

@@ -407,6 +407,20 @@ def build_scenarios(branch: bool = True) -> dict[str, Scenario]:
                 SpeedEvent(s_e + 2100.0, v0, 40.0),   # after the previous ramp ends (~2070 m)
             ]),
         )
+    # Tunnel-length sweep (Fable review): S1 geometry and speed, tunnel 0.5 / 1 / 5 km. Diverge at
+    # min(0.73 L, L - 200 m) [ASSUMED] (S1: 2200 of 3000 m), so the 150 m branch curve ends inside.
+    for L_t in (500.0, 1000.0, 5000.0):
+        v0 = kmh(80)
+        s_e = _approach(v0)
+        key = f"S1-{L_t / 1000:g}km"
+        out[key] = Scenario(
+            key=key,
+            title=f"Straight, flat, constant speed, {L_t / 1000:g} km",
+            description=f"As S1 with a {L_t / 1000:g} km tunnel (length sweep).",
+            road=_straight_road(s_e + L_t + _lead_out(v0, L_t), s_e, L_t, 0.0,
+                                exits=[Exit(s_e + min(0.73 * L_t, L_t - 200.0), "Exit A")]),
+            speed=SpeedProfile(v0=v0, events=_approach_maneuvers(v0)),
+        )
     if branch:
         for sc in out.values():
             sc.road = _add_branch(sc.road)

@@ -5,13 +5,19 @@ self-contained HTML player.
     python tools/simulate.py S5 --seed 7 --override gnss_lagging --override vib_noisy
     python tools/simulate.py S4 --zupt oracle         # stops given by the truth (upper bound)
     python tools/simulate.py --list                   # scenarios and named overrides
+    python tools/simulate.py S1 --eskf cruise=False --eskf nhc_turn_gate=0   # filter settings
+    python tools/simulate.py S1 --mount-err 0,3,3     # filter's mount wrong by roll,pitch,yaw [deg]
+    python tools/simulate.py S2 --no-sideslip         # car without sideslip (truth)
+    python tools/simulate.py S1-5km                   # tunnel-length variants: S1-0.5km, S1-1km, S1-5km
 
 Output: sim_<scenario>_seed<k>.html (open in a browser; no server, no internet needed).
 The page shows the road from above with the tunnel and the exit ramp, the true car, the ESKF
 estimate (with its along-track 2-sigma bar), the constant-velocity (CV) reference, GNSS fixes,
-the exit callout, and time plots of along-track error and speed.
+the exit callout, time plots of along-track error and speed, and the phone sensor data
+(accelerometer, gyroscope, barometer, GNSS speed) the app records.
 """
 import argparse
+import dataclasses
 import json
 import sys
 from pathlib import Path
@@ -40,10 +46,32 @@ def _main_line(road, ex):
     return {"x": pts[:, 0].round(1).tolist(), "y": pts[:, 1].round(1).tolist()}
 
 
-def run(key, seed, overrides, zupt):
-    sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, [seed], tuple(overrides))
+def _eskf_config(pairs):
+    """--eskf key=value pairs -> EskfConfig (values parsed as Python literals)."""
+    import ast
+    kw = {}
+    fields = {f.name for f in dataclasses.fields(EskfConfig)}
+    for p in pairs:
+        k, v = p.split("=", 1)
+        if k not in fields:
+            sys.exit(f"unknown EskfConfig field {k!r}; fields: {', '.join(sorted(fields))}")
+        try:
+            kw[k] = ast.literal_eval(v)
+        except (ValueError, SyntaxError):
+            kw[k] = v
+    return dataclasses.replace(EskfConfig(), **kw)
+
+
+def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False):
+    from tunnelsim.scenario import Vehicle
+    vehicle = Vehicle(sideslip_gain_rad_per_mps2=0.0) if no_sideslip else None
+    sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, [seed], tuple(overrides), vehicle=vehicle)
     zmask = (tr.v < 0.05) if zupt == "oracle" else None
-    out = run_eskf(t, F, W, gnss, bt, bh, tr.C_bp, tr.lever_arm_b, EskfConfig(), zupt_mask=zmask)
+    C_bp_f = tr.C_bp
+    if mount_err is not None:
+        from tunnelsim.frames import C_BP_NOMINAL, mount_rotation
+        C_bp_f = mount_rotation(*mount_err) @ C_BP_NOMINAL.T @ tr.C_bp
+    out = run_eskf(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, _eskf_config(eskf), zupt_mask=zmask)
     idx = np.clip(np.round((out.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
     tn = _tangent(tr, idx)
     pR = out.p[0] - np.einsum("kij,j->ki", out.C[0] @ tr.C_bp.T, tr.lever_arm_b)
@@ -68,6 +96,16 @@ def run(key, seed, overrides, zupt):
     line = road.position(s_line)
     tun = (s_line >= road.tunnel.s_entry) & (s_line <= road.tunnel.s_exit)
     s_hat = tr.s[idx] + e_s
+    # phone sensor data, sampled on the page's time grid (raw samples, noise included)
+    ti = np.clip(np.searchsorted(t, out.t[sel]), 0, len(t) - 1)
+    tb = np.clip(np.searchsorted(bt, out.t[sel]), 0, len(bt) - 1)
+    g_spd = np.linalg.norm(gnss["vel"][0][:, :2], axis=1) * 3.6
+    gi = np.clip(np.searchsorted(gnss["t"], out.t[sel]), 1, len(gnss["t"]) - 1)
+    gi = np.where(np.abs(gnss["t"][gi - 1] - out.t[sel]) < np.abs(gnss["t"][gi] - out.t[sel]), gi - 1, gi)  # nearest fix
+    near = np.abs(gnss["t"][gi] - out.t[sel]) < 0.6
+    sens = {"acc": F[0, ti].round(3).T.tolist(), "gyro": np.rad2deg(W[0, ti]).round(3).T.tolist(),
+            "baro": bh[0, tb].round(2).tolist(),
+            "gnss_kmh": [round(float(v), 2) if (ok and np.isfinite(v)) else None for v, ok in zip(g_spd[gi], near)]}
     data = {
         "title": f"{sc.key}: {sc.title}",
         "description": sc.description,
@@ -94,6 +132,8 @@ def run(key, seed, overrides, zupt):
         "gnss": [[round(float(tt), 1), round(float(x), 1), round(float(y), 1)]
                  for tt, (x, y) in zip(gnss["t"], gnss["pos"][0][:, :2]) if np.isfinite(x)],
         "events": out.events,
+        "sensors": sens,
+        "settings": {"eskf": list(eskf), "mount_err_deg": mount_err, "no_sideslip": no_sideslip},
     }
     return data
 
@@ -107,6 +147,11 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--override", action="append", default=[], help="named override (repeatable)")
     ap.add_argument("--zupt", choices=["detector", "oracle"], default="detector")
+    ap.add_argument("--eskf", action="append", default=[], metavar="KEY=VALUE",
+                    help="EskfConfig field (repeatable), e.g. cruise=False, nhc_turn_gate=0.5")
+    ap.add_argument("--mount-err", default=None, metavar="R,P,Y",
+                    help="filter's mount error in degrees (roll,pitch,yaw), e.g. 0,3,3")
+    ap.add_argument("--no-sideslip", action="store_true", help="car without sideslip (truth)")
     ap.add_argument("--out", default=None)
     ap.add_argument("--list", action="store_true")
     a = ap.parse_args()
@@ -115,7 +160,8 @@ def main():
             print(f"{k}: {sc.title} - {sc.description}")
         print("overrides:", ", ".join(sorted(OVERRIDES)))
         return
-    data = run(a.scenario, a.seed, a.override, a.zupt)
+    me = tuple(float(x) for x in a.mount_err.split(",")) if a.mount_err else None
+    data = run(a.scenario, a.seed, a.override, a.zupt, a.eskf, me, a.no_sideslip)
     out = Path(a.out or f"sim_{a.scenario}_seed{a.seed}.html")
     out.write_text(HTML.read_text().replace("/*DATA*/null", json.dumps(data)))
     print(f"wrote {out}")

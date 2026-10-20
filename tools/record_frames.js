@@ -1,8 +1,9 @@
-// Frame-stepped recording of a simulator page: node tools/record_frames.js <abs path to sim html> <frame dir>
+// Frame-stepped recording of a simulator page (needs `npm i playwright`; set PW_CHROMIUM to use a
+// specific Chromium binary): node tools/record_frames.js <abs path to sim html> <frame dir>
 // then: ffmpeg -framerate 20 -i <frame dir>/f%04d.png -c:v libx264 -pix_fmt yuv420p out.mp4
 const { chromium } = require('playwright');
 (async () => {
-  const b = await chromium.launch({executablePath: '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell'});
+  const b = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
   const p = await b.newPage({ viewport: { width: 1300, height: 860 } });
   await p.goto('file://' + process.argv[2]);
   await p.waitForTimeout(800);

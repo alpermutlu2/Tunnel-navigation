@@ -10,11 +10,11 @@ the right moment, and recover cleanly when the car comes out. Only the phone's o
 ## Quick start
 
 ```bash
-pip install numpy scipy matplotlib pytest
+pip install -r requirements.txt      # Python >= 3.10
 python tools/simulate.py S1          # writes sim_S1_seed0.html; open it in a browser
 ```
 
-![Simulator, S5 after the exit diverge](docs/media/sim_S5_after_diverge.png)
+![Simulator, S5 after the exit diverge](docs/media/sim_S5_page.png)
 
 Recording: [`docs/media/sim_S5_seed0.mp4`](docs/media/sim_S5_seed0.mp4) (S5, seed 0, from 15 s
 before the portal to 45 s after the exit, 10× real time; frames stepped with
@@ -22,15 +22,21 @@ before the portal to 45 s after the exit, 10× real time; frames stepped with
 
 The simulator page is self-contained (no server, no internet). It shows the road from above with
 the tunnel, the exit branch and the main tunnel continuation, the true car, the ESKF estimate with
-its along-track 2σ bar, a constant-velocity reference, GNSS fixes, the error and speed plots, and
-the exit callout (with its timing error against the right moment). Play/pause, speed and zoom
-are on the page.
+its along-track 2σ bar, a constant-velocity reference, GNSS fixes, the error and speed plots, the
+exit callout (with its timing error against the right moment), and the phone sensor data the app
+records (accelerometer, gyroscope, barometer, GNSS speed). Play/pause, speed and zoom are on the
+page.
 
 ```bash
 python tools/simulate.py --list                                     # scenarios and named overrides
 python tools/simulate.py S4 --seed 7                                # another noise realisation
 python tools/simulate.py S5 --override gnss_lagging --override vib_noisy   # parameter changes
 python tools/simulate.py S4 --zupt oracle                           # stops given by the truth
+python tools/simulate.py S1 --eskf cruise=False --eskf nhc_turn_gate=0   # any EskfConfig field
+python tools/simulate.py S1 --mount-err 0,3,3                       # filter's mount wrong [deg]
+python tools/simulate.py S2 --no-sideslip                           # car without sideslip
+python tools/simulate.py S1-5km                                     # tunnel length 0.5/1/5 km variants
+python tools/simulate.py S3 --override baro_tunnel_30pa             # tunnel pressure gradient
 ```
 
 New scenarios are added in `tunnelsim/scenario.py` (`build_scenarios`: road geometry, grade
@@ -47,6 +53,7 @@ settings in `EskfConfig` (`tunnelsim/eskf.py`).
 | S4 | 3 km straight | stop-and-go: two full stops and a crawl |
 | S5 | 3 km straight | slow drift 90 → 82 km/h, braking to 50 km/h before the exit |
 | S6s / S6 / S6L | as S1 | speed wander ±1 / ±2 / ±4 km/h with 40 s ramps |
+| S1-0.5km / S1-1km / S1-5km | as S1, other lengths | 80 km/h constant |
 
 In every scenario the route leaves the main tunnel through an exit branch inside the tunnel
 (20° right over 150 m), announced 300 m before the diverge, and comes out at the branch portal.
