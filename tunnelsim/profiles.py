@@ -278,6 +278,10 @@ NOMINAL = SensorConfig(imu=NOTE10_LSM6DSR, vib=VIB_CALM, timing=TIMING, baro=BAR
 
 OVERRIDES: dict[str, dict[str, object]] = {
     "imu_lowend":        {"imu": MPU9250_LOWEND},
+    # forward axis = phone z; its B (1.62e-3) was measured with z vertical (Suvorkin bending
+    # note). Sensitivity: z at the x/y level. (review 5, decision c)
+    "imu_fwd_bi_xy":     {"imu.accel_bias_instab": ASSUMED((6.63e-4, 6.79e-4, 6.71e-4),
+                                                           "z set to mean(x, y); review 5")},
     "imu_bi_gm1":        {"imu.bi_model": "gm1"},
     "gyro_turnon_0p2":   {"imu.gyro_turn_on_sigma": ASSUMED(0.2 * DEG, "K2 sweep")},
     "gyro_turnon_1":     {"imu.gyro_turn_on_sigma": ASSUMED(1.0 * DEG, "K2 sweep (SPEC bound)")},

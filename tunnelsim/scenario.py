@@ -240,6 +240,17 @@ def _lead_out(v0: float, tunnel_len: float) -> float:
     return max(LEAD_OUT_MIN, AFTER_PORTAL_S * v0 - tunnel_len)
 
 
+def _approach_maneuvers(v0: float) -> list[SpeedEvent]:
+    """Excitation for the pre-tunnel calibration (v0.4 focus decision, 2026-10-20): accelerate
+    +15 km/h, brake to v0 - 15 km/h, return to v0; all ramps done ~90 s before the portal, so the
+    entry speed is steady. Why: with constant speed the GNSS-aided filter can only estimate a
+    lumped forward offset; speed changes let it show that it estimates the bias rather than
+    assume it. [ASSUMED] magnitudes and timing."""
+    return [SpeedEvent(20.0 * v0, v0 + kmh(15), 8.0, dwell=15.0),
+            SpeedEvent(20.0 * v0, v0 - kmh(15), 8.0, dwell=15.0),
+            SpeedEvent(20.0 * v0, v0, 10.0)]
+
+
 def build_scenarios() -> dict[str, Scenario]:
     """Scenario catalogue (DESIGN.md section 6).
 
@@ -260,7 +271,7 @@ def build_scenarios() -> dict[str, Scenario]:
         description="3 km straight tunnel, 0 % grade, 80 km/h constant. No map features.",
         road=_straight_road(s_e + L_t + _lead_out(v0, L_t), s_e, L_t, 0.0,
                             exits=[Exit(s_e + 2200, "Exit A")]),
-        speed=SpeedProfile(v0=v0),
+        speed=SpeedProfile(v0=v0, events=_approach_maneuvers(v0)),
     )
 
     # S2: curved tunnel (S-bend with clothoid transitions).
@@ -281,7 +292,7 @@ def build_scenarios() -> dict[str, Scenario]:
         description="2.5 km tunnel with an S-bend (R = 400 m), 80 km/h constant.",
         road=Road(hsegs=hs, grade_points=[(0.0, 0.0)], tunnel=Tunnel(s_e, s_e + L_t),
                   exits=[Exit(s_e + 1800.0, "Exit A")]),
-        speed=SpeedProfile(v0=v0),
+        speed=SpeedProfile(v0=v0, events=_approach_maneuvers(v0)),
     )
 
     # S3: V-profile (undersea type): -5 % down, flat bottom, +5 % up.
@@ -299,7 +310,7 @@ def build_scenarios() -> dict[str, Scenario]:
             tunnel=Tunnel(s_e, s_e + L_t),
             exits=[Exit(s_e + 2700.0, "Exit A")],
         ),
-        speed=SpeedProfile(v0=v0),
+        speed=SpeedProfile(v0=v0, events=_approach_maneuvers(v0)),
     )
 
     # S4: stop-and-go inside a flat straight tunnel.
@@ -311,7 +322,7 @@ def build_scenarios() -> dict[str, Scenario]:
         description="3 km flat straight tunnel, two full stops and a slow crawl inside.",
         road=_straight_road(s_e + L_t + _lead_out(v0, L_t), s_e, L_t, 0.0,
                             exits=[Exit(s_e + 2400, "Exit A")]),
-        speed=SpeedProfile(v0=v0, events=[
+        speed=SpeedProfile(v0=v0, events=_approach_maneuvers(v0) + [
             SpeedEvent(s_e + 400.0, 0.0, 8.0, dwell=20.0),
             SpeedEvent(s_e + 400.0, kmh(30), 10.0, dwell=30.0),
             SpeedEvent(s_e + 1100.0, 0.0, 6.0, dwell=45.0),
@@ -330,7 +341,7 @@ def build_scenarios() -> dict[str, Scenario]:
                     "then a brake to 50 km/h and a slow recovery.",
         road=_straight_road(s_e + L_t + _lead_out(v0, L_t), s_e, L_t, 0.0,
                             exits=[Exit(s_e + 2500, "Exit A")]),
-        speed=SpeedProfile(v0=v0, events=[
+        speed=SpeedProfile(v0=v0, events=_approach_maneuvers(v0) + [
             SpeedEvent(s_e + 200.0, kmh(82), 60.0),
             SpeedEvent(s_e + 1800.0, kmh(50), 5.0, dwell=10.0),
             SpeedEvent(s_e + 1800.0, kmh(75), 40.0),

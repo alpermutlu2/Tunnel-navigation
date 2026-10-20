@@ -83,9 +83,11 @@ def test_derivatives_consistent(key):
 # ----------------------------------------------------------------- physics spot checks
 
 def test_flat_constant_speed_specific_force():
+    """S1 after the approach maneuvers (constant speed from ~76 s on): pure gravity, no rotation."""
     tr = generate_truth(SCENARIOS["S1"])
-    assert np.allclose(tr.f_b, [0, 0, 9.80665], atol=1e-9)
-    assert np.allclose(tr.w_b, 0, atol=1e-12)
+    k = tr.t > 90.0
+    assert np.allclose(tr.f_b[k], [0, 0, 9.80665], atol=1e-9)
+    assert np.allclose(tr.w_b[k], 0, atol=1e-12)
 
 
 def test_grade_gravity_projection():

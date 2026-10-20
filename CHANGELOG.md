@@ -40,6 +40,16 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   421, S4 475 → 585, S5 242 → 463), strapdown residuals accumulate over the longer run (S2
   3.1e-5 → 5.3e-5 m, S3 4.8e-6 → 1.6e-5, S5 4.95e-4 → 8.8e-4, S1 5e-11 → 7e-9), centreline
   discretisation S2 5.1e-5 → 1.0e-4 m (longer road), time in tunnel −0.01 s (sample alignment).
+- Focus decision (`docs/decisions/2026-10-20-focus.md`): estimable baseline first, then remove
+  assumptions; observability reduced to a rank check; ESKF next.
+- Scenarios (truth change): approach maneuvers in every scenario (+15 / −15 km/h / back to v0
+  at 20, 43, 66 s; steady from 76 s, portal at ~200 s), so the pre-tunnel filter must estimate
+  the bias from excitation. Truth metrics moved vs 0.3.0 (beyond the approach-length change):
+  strapdown residuals now include the maneuvers (S1 1.6e-4, S2 1.8e-4, S3 1.6e-4, S4 1.5e-3,
+  S5 1.0e-3 m), vertical NHC violation from suspension pitch in the approach (S1/S2 0 → 0.117,
+  S3 0.015 → 0.103 m/s). The 200-seed budget (`budget_200.json`) was computed before the
+  maneuvers; it starts at the portal at the same speed, so it is not affected beyond seed noise.
+- Override `imu_fwd_bi_xy`: forward-axis (phone z) BI at the x/y level (review 5).
 - Step 3, error budget (`tunnelsim/budget.py`, analysis harness): fixed 180 s INS-only budget
   and real-exit error for S1–S5, 22 configurations, 200 seeds (paired), bias / rmse / p95_abs
   with bootstrap CI, growth curves, variance shares and additivity; per-seed IMU generated once
