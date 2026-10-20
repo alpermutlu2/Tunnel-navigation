@@ -46,7 +46,7 @@ class EskfConfig:
     nhc_turn_k: float = 0.0           # rad/(m/s²); 0 = off. Lateral NHC inflation in turns (sideslip)
     # Tunnel pressure gradient (Fable review, accepted 2026-10-20): during an outage the barometer
     # offset drifts with distance, ḃ_h = g_h·|v|; g_h restarts at 0 with σ_g at each outage.
-    baro_grad: bool = True
+    baro_grad: bool = False            # experimental: fixes 10-30 Pa/km, costs S3/S5 nominal (decision note)
     baro_grad_sigma: float = 3e-3      # m/m ≈ 35 Pa/km [ASSUMED]
     # GNSS gate lock recovery (accepted 2026-10-20): (i) after N consecutive rejections in open
     # sky, inflate P (non-position states) so the current innovation fits the gate ×1.5;
@@ -250,6 +250,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     out_t, out_p, out_v, out_C, out_P, out_ba, out_z = [], [], [], [], [], [], []
     g_hat = np.zeros(B)                     # tunnel pressure gradient as height per metre [m/m]
     outage_prev = np.zeros(B, bool)
+    d_acc = np.zeros(B)                     # distance travelled in the current outage (gradient lever)
     n_rej = np.zeros(B, int)                # consecutive open-sky GNSS rejections (pos or vel)
     q_scale = np.ones(B)                    # adaptive accel/gyro noise scale (α)
     ev = {"gate_inflations": 0, "gnss_pos_acc": 0, "gnss_pos_rej": 0, "gnss_vel_acc": 0, "gnss_vel_rej": 0, "zupt": 0,
@@ -317,6 +318,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             out_k = imu_t[k + 1] - last_vel > cfg.cruise_no_gnss_s
             F[:, 15, IG] = np.where(out_k, spd_k, 0.0)
             b_h = b_h + np.where(out_k, g_hat * spd_k * dt, 0.0)
+            d_acc = d_acc + np.where(out_k, spd_k * dt, 0.0)
         Fsum += F * dt; dt_sum += dt
         kk = k + 1
         do_cov = (kk - i0) % n_cov == 0
@@ -348,6 +350,16 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                 P[new_out, IG, :] = 0.0; P[new_out, :, IG] = 0.0
                 P[new_out, IG, IG] = cfg.baro_grad_sigma ** 2
                 g_hat = np.where(new_out, 0.0, g_hat)
+                d_acc = np.where(new_out, 0.0, d_acc)
+            ended = ~outage & outage_prev
+            if ended.any():
+                # out of the tunnel the gradient's pressure offset is gone: remove the accumulated
+                # part c = g_h·d from b_h, δb_h' = δb_h − d·δg_h (exact transform of P)
+                b_h = np.where(ended, b_h - g_hat * d_acc, b_h)
+                T = np.broadcast_to(np.eye(NA), (B, NA, NA)).copy()
+                T[:, 15, IG] = -np.where(ended, d_acc, 0.0)
+                P = np.where(ended[:, None, None], T @ P @ np.swapaxes(T, 1, 2), P)
+                d_acc = np.where(ended, 0.0, d_acc)
             outage_prev = outage
         # GNSS
         while gi < len(g_idx) and g_idx[gi] == kk:
