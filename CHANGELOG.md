@@ -7,7 +7,18 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
-## Unreleased (v0.5.1): review 8 (Fable) follow-up
+## v0.5.1 (2026-10-20): review 8 (Fable) follow-up
+
+- Filter changes, each checked against the 0.5.0 evaluation (50 seeds, `reports/0.5.1/evaluation_50.json`):
+  - lateral NHC row skipped in turns instead of R = 10⁶: every reported metric identical to 0.5.0
+    at the reported precision (expected < 1 m);
+  - GNSS gate-lock recovery (P inflation after 5 open-sky rejections) and adaptive accel/gyro
+    noise from the NIS: on by default, never fired on the nominal scenarios (0 inflations, 0
+    rejections), so no metric change; low-end IMU 3.5 → 1.3 km at the portal, (e/σ)² ≈ 2000;
+  - pressure-gradient state: implemented, **off by default** (on a straight constant-grade tunnel
+    the gradient is structurally indistinguishable from a constant pitch error; it fixes
+    10–30 Pa/km but costs S1/S3/S5; trace `reports/0.5.1/grad_trace_S5.png`).
+- Error vs distance into the tunnel (S1-5km), `reports/0.5.1/error_vs_distance.png`.
 
 - Simulator: phone sensor panel (accelerometer, gyroscope, barometer, GNSS speed), error-plot
   y-axis from the ESKF (CV clipped), CLI `--eskf KEY=VALUE`, `--mount-err R,P,Y`,

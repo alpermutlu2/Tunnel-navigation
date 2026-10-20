@@ -33,6 +33,7 @@ accelerometer and gyro bias, and barometer offset; cruise mode adds two more.
 | Layer | Role |
 |---|---|
 | GNSS position and velocity, χ² gate (99.9 %), R inflated ×2 / ×3.2 for correlated noise | Calibrates biases and attitude before the outage |
+| Gate-lock recovery: P inflated after 5 open-sky rejections; accel/gyro noise scaled by the GNSS NIS | Safety net; never fires on the nominal scenarios (§4.5) |
 | Small bias random walks (robust over optimal) | A bias that follows GNSS noise costs δb·t²/2 in the tunnel |
 | Non-holonomic constraint (NHC): no lateral or vertical body velocity, σ 0.1 m/s | Holds pitch and heading. Gives no speed information |
 | Lateral NHC dropped while \|ω_z\|·v > 0.3 m/s² | The car's sideslip in curves violates NHC (§4.3) |
@@ -84,7 +85,7 @@ information; "at portal" is where the car comes out. Each tunnel is 2.5–3.5 km
 ¹ With a 300 m lead the callout point of a 0.5 km tunnel is at the portal, still under GNSS, so the
 callout says nothing about the outage there; the error at the portal is the relevant number.
 
-One 5 km run gives the whole curve (`reports/0.5.1.dev0/error_vs_distance.png`, 30 seeds): rms
+One 5 km run gives the whole curve (`reports/0.5.1/error_vs_distance.png`, 30 seeds): rms
 3 m at the portal, 5 m after 1 km, 9 m after 2 km, 15 m after 3 km and 28 m after 4.5 km. The
 error grows faster than linearly with outage time (bias drift ~t²), and the cruise prior softens
 it. The filter σ covers the error everywhere except in the first ~500 m: at the portal it is
@@ -133,20 +134,46 @@ sideslip.
 
 **4.4 Tunnel pressure gradient: the barometer's weak point.** Ventilation and the piston effect
 can create a longitudinal pressure gradient that the barometer reads as height. Its magnitude is
-[ASSUMED] and not sourced yet. At 10 Pa/km (≈ 0.85 m of apparent height per km) the S3 error at
-the diverge is 44 m, and half of the branch decisions are wrong. At 30 Pa/km the error is
-110–120 m, (e/σ)² is 9–14, and every branch decision says "main". The filter reads the apparent
-climb as pitch; the gravity component then integrates into speed; and the overconfident σ_s lets
-the branch check decide too early. This is the most serious open risk. A gradient state, or
-de-weighting the barometer for pitch inside the tunnel, are the candidate fixes.
+[ASSUMED] and not sourced yet.
+
+- At 10 Pa/km (≈ 0.85 m of apparent height per km), the S3 error at the diverge is 44 m and
+  half of the branch decisions are wrong.
+- At 30 Pa/km, the error is 110–120 m, (e/σ)² is 9–14, and every branch decision is "main".
+
+The filter reads the apparent climb as pitch, the gravity component integrates into speed, and
+the overconfident σ_s lets the branch check decide too early.
+
+A gradient state (ḃ_h = g_h·|v| during the outage, σ_g 3·10⁻³) removes the gradient error: at
+30 Pa/km the diverge error drops from 156 to 19 m and every branch decision is right. It is still
+off by default, because it costs accuracy on nominal roads: S1 at the portal 17 → 21 m, S3
+callouts more than 1 s late 4 → 30 %, S5 diverge 23 → 109 m.
+
+The reason is structural. On a straight tunnel with a constant grade, a constant pitch error gives
+(through NHC) a height error linear in s, exactly like a gradient, and the barometer cannot tell
+them apart. The barometer trend gets split between pitch and gradient, so the pitch hold loosens
+(S5 trace: mean tilt error −0.02° → −0.06°). A strong pitch–gradient correlation builds up,
+and S5's braking turns it into a 0.9 m/s speed step (`reports/0.5.1/grad_trace_S5.png`).
+
+The fix has to come from a measured gradient (a real tunnel recording) or from a second
+observable, not from a looser model. With the state on, 12 of 30 seeds still do not settle within
+60 s at 30 Pa/km. The truth makes the gradient offset decay over 200 m after the exit; the filter
+does not model that decay.
 
 **4.5 Low-end IMU: gate lock.** An MPU9250-class IMU [MEAS] has 30–80× the Note10's gyro bias
 instability. With the same tuning the filter diverges **before the tunnel**: it becomes
-overconfident, the χ² gate then rejects 61 % of the GNSS position fixes and 71 % of the velocity
-fixes, and the error reaches 3.5 km at the exit. One retune of the filter's noise brings that to
-484 m. Two things are needed: (1) a gate that recovers after N consecutive rejections, by
-inflating P, and (2) noise settings per IMU class detected at start-up. Even with both, a cheap
-phone should fall back to CV and map cues.
+overconfident, and the χ² gate then rejects 61 % of the GNSS position fixes and 71 % of the
+velocity fixes. The error reaches 3.5 km at the exit.
+
+Two safety nets are now on by default. Both never fire on the nominal scenarios:
+
+- After 5 consecutive open-sky rejections, P is inflated so that the current innovation fits the
+  gate.
+- The accelerometer and gyro noise scale with the GNSS NIS (rising over 20 s, decaying over 60 s).
+
+With them the filter accepts GNSS again and the exit error drops to 1.3 km. But (e/σ)² ≈ 2000:
+the filter no longer diverges, yet its uncertainty is still far too small. A low-end phone is
+outside the scope of this design. It needs an IMU-class check at start-up and a fallback to CV and
+map cues.
 
 **4.6 Assumptions that did not matter** (S1, 30 seeds, `reports/0.5.0/assumptions_30.json`):
 
