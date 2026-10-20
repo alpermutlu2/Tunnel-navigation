@@ -104,6 +104,9 @@ def calibration_experiment(key, seeds=100, imu_overrides=(), zupt_oracle=False) 
 # v0.5: ESKF experiments
 # ---------------------------------------------------------------------------------------------
 CALLOUT_LEAD_M = 300.0      # [ASSUMED] the app announces the exit 300 m before the ramp
+RECOVERY_M = 10.0           # recovered = horizontal error stays below this; ~2x the open-sky GNSS
+                            # horizontal error (3 m per axis -> 4.2 m rms), so GNSS noise alone
+                            # does not count as "not recovered"
 
 
 def simulate_run(key, seeds, overrides=(), imu_switches=None):
@@ -171,12 +174,13 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
     conv = []
     for b in range(seeds):
         kk = np.nonzero(win)[0]
-        good = e_h[b, kk] < 5.0
+        good = e_h[b, kk] < RECOVERY_M
         idx_ok = next((i for i in range(len(kk)) if good[i:].all()), None)
         conv.append(np.nan if idx_ok is None else out.t[kk[idx_ok]] - t_x)
     conv = np.array(conv)
     res["recovery"] = {"max_step_jump_m": stats(jumps.max(axis=1)),
-                       "time_to_5m_s_median": float(np.nanmedian(conv)) if np.isfinite(conv).any() else None,
+                       "threshold_m": RECOVERY_M,
+                       "time_to_threshold_s_median": float(np.nanmedian(conv)) if np.isfinite(conv).any() else None,
                        "not_converged_in_60s": int(np.isnan(conv).sum())}
     if keep_tracks:
         res["_tracks"] = {"t": out.t, "e_s": e_s, "sig_s": sig_s, "s_true": s_true, "t_entry": t_e, "t_exit": t_x}

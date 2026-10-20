@@ -71,3 +71,26 @@ def test_nominal_s1_tracks_through_tunnel():
     r = eskf_experiment("S1", seeds=2, overrides=())
     assert r["real_exit"]["rmse"] < 100.0, r["real_exit"]
     assert r["events"]["gnss_pos_rej"] == 0
+
+
+def test_capped_update_limits_position_step_and_keeps_covariance_valid():
+    from tunnelsim.eskf import NX, _update_capped
+    rng = np.random.default_rng(0)
+    A = rng.normal(size=(NX, NX))
+    P = np.stack([A @ A.T * 100.0 + np.eye(NX)])
+    x = np.zeros((1, NX))
+    H = np.zeros((1, 3, NX)); H[0, :, 0:3] = np.eye(3)
+    z = np.array([[40.0, -30.0, 5.0]])                       # 50 m innovation
+    R = np.eye(3)[None] * 9.0
+    ok, alpha = _update_capped(x, P, z, H, R, None, 2.0)
+    assert np.linalg.norm(x[0, 0:3]) == pytest.approx(2.0, rel=1e-9)
+    assert alpha[0] < 1.0
+    assert np.all(np.linalg.eigvalsh(P[0]) > 0)
+
+
+def test_reacquisition_reduces_exit_jump():
+    """S2, 4 seeds: the re-acquisition phase keeps the largest exit step small."""
+    on = eskf_experiment("S2", seeds=4)
+    off = eskf_experiment("S2", seeds=4, eskf_cfg=EskfConfig(reacq=False))
+    assert on["recovery"]["max_step_jump_m"]["p95_abs"] < 0.3 * off["recovery"]["max_step_jump_m"]["p95_abs"]
+    assert on["real_exit"]["rmse"] == pytest.approx(off["real_exit"]["rmse"], rel=1e-6)

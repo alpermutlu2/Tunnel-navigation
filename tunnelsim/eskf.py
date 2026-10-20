@@ -53,6 +53,16 @@ class EskfConfig:
                                       # or a brake moves it by ~1 m/s²; a stopped car does not)
     zupt_speed_max: float = 2.0       # m/s: filter speed must be below this
     cov_rate_hz: float = 10.0         # covariance propagation rate
+    # GNSS re-acquisition after an outage (v0.5 A, accepted 2026-10-20): robust over fast
+    reacq_gap_s: float = 10.0         # an outage longer than this starts a re-acquisition phase
+    reacq_min_s: float = 10.0         # the phase lasts at least this long ...
+    reacq_settle_fixes: int = 5       # ... and ends after this many uncapped position updates in a row
+    reacq_vel_only_s: float = 3.0     # first seconds: velocity (Doppler) only, no position
+    reacq_r_factor: float = 10.0      # position sigma inflation at the start of the phase ...
+    reacq_r_tau_s: float = 8.0        # ... decaying to 1 with this time constant
+    reacq_max_step_m: float = 2.0     # largest position correction per fix in the phase (gain scaled)
+    gnss_max_reported_sigma_m: float = 10.0   # position fixes reporting more than this are not used
+    reacq: bool = True                # switch for A/B comparison
     p0_pos: float = 5.0
     p0_vel: float = 0.3
     p0_att_rp: float = np.deg2rad(1.0)
@@ -120,6 +130,25 @@ def zupt_detector(t, f, cfg, fs, win_s=1.0):
     return mov(raw.astype(float)) > 1.0 - 1e-9
 
 
+def _update_capped(x_corr, P, z, H, R, gate, max_step):
+    """As _update, but the gain is scaled by α ≤ 1 so the position correction is at most
+    max_step (per seed). Joseph form keeps the covariance valid for any gain."""
+    S = H @ P @ np.swapaxes(H, 1, 2) + R
+    Sinv = np.linalg.inv(S)
+    nis = np.einsum("bi,bij,bj->b", z, Sinv, z)
+    ok = nis < gate if gate is not None else np.ones(len(z), bool)
+    K = P @ np.swapaxes(H, 1, 2) @ Sinv
+    K[~ok] = 0.0
+    dx = np.einsum("bij,bj->bi", K, z)
+    step = np.linalg.norm(dx[:, 0:3], axis=1)
+    alpha = np.where(step > max_step, max_step / np.maximum(step, 1e-12), 1.0)
+    K = K * alpha[:, None, None]
+    x_corr += dx * alpha[:, None]
+    IKH = np.eye(NX) - K @ H
+    P[:] = IKH @ P @ np.swapaxes(IKH, 1, 2) + K @ R @ np.swapaxes(K, 1, 2)
+    return ok, alpha
+
+
 def _update(x_corr, P, z, H, R, gate):
     """Batched update. z = h(x̂) − measurement − H·x_corr (innovation in the estimate − truth
     convention, net of corrections already accumulated this epoch); the filter then estimates the
@@ -177,7 +206,12 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     baro_idx = np.searchsorted(imu_t, baro_1hz_t)
     baro_avg = np.stack([np.nanmean(baro_h[:, (baro_t > tt - 1.0) & (baro_t <= tt)], axis=1) for tt in baro_1hz_t], 1)
     out_t, out_p, out_v, out_C, out_P, out_ba, out_z = [], [], [], [], [], [], []
-    ev = {"gnss_pos_acc": 0, "gnss_pos_rej": 0, "gnss_vel_acc": 0, "gnss_vel_rej": 0, "zupt": 0}
+    ev = {"gnss_pos_acc": 0, "gnss_pos_rej": 0, "gnss_vel_acc": 0, "gnss_vel_rej": 0, "zupt": 0,
+          "gnss_pos_skipped_reacq": 0, "gnss_pos_capped": 0}
+    last_fix = np.full(B, t0)              # time of the last position fix used
+    reacq_start = np.full(B, -np.inf)       # start of the current re-acquisition phase
+    reacq_on = np.zeros(B, bool)            # phase active (ends on convergence, not on a timer)
+    settle = np.zeros(B, int)               # uncapped position updates in a row within the phase
     Fsum = np.zeros((B, NX, NX)); dt_sum = 0.0
     Qc = np.zeros(NX)
     Qc[3:6] = cfg.accel_noise ** 2; Qc[6:9] = cfg.gyro_noise ** 2
@@ -217,18 +251,46 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         # GNSS
         while gi < len(g_idx) and g_idx[gi] == kk:
             pz = gnss["pos"][:, gi]; vz = gnss["vel"][:, gi]
-            okp = np.isfinite(pz[:, 0])
+            tf = g_t[gi]
+            sh, sv = gnss["acc_pos_h"][:, gi], gnss["acc_pos_v"][:, gi]
+            okp = np.isfinite(pz[:, 0]) & (np.nan_to_num(sh, nan=1e9) <= cfg.gnss_max_reported_sigma_m)
+            fac = np.ones(B)
+            in_reacq = np.zeros(B, bool)
+            if cfg.reacq:
+                any_fix = okp | np.isfinite(vz[:, 0])
+                new_phase = any_fix & (tf - last_fix > cfg.reacq_gap_s)
+                reacq_start = np.where(new_phase, tf, reacq_start)
+                reacq_on = reacq_on | new_phase
+                settle = np.where(new_phase, 0, settle)
+                age = tf - reacq_start
+                done = reacq_on & (age >= cfg.reacq_min_s) & (settle >= cfg.reacq_settle_fixes)
+                reacq_on = reacq_on & ~done
+                in_reacq = reacq_on
+                skip = okp & in_reacq & (age < cfg.reacq_vel_only_s)
+                ev["gnss_pos_skipped_reacq"] += int(skip.sum())
+                last_fix = np.where(any_fix, tf, last_fix)  # the outage is over once fixes return
+                okp = okp & ~skip
+                fac = np.where(in_reacq, 1.0 + (cfg.reacq_r_factor - 1.0) * np.exp(-np.maximum(age, 0) / cfg.reacq_r_tau_s), 1.0)
             if okp.any():
-                sh, sv = gnss["acc_pos_h"][:, gi], gnss["acc_pos_v"][:, gi]
                 R = np.zeros((B, 3, 3))
-                R[:, 0, 0] = R[:, 1, 1] = (cfg.gnss_pos_factor * np.nan_to_num(sh, nan=1e3)) ** 2
-                R[:, 2, 2] = (cfg.gnss_pos_factor * np.nan_to_num(sv, nan=1e3)) ** 2
+                R[:, 0, 0] = R[:, 1, 1] = (fac * cfg.gnss_pos_factor * np.nan_to_num(sh, nan=1e3)) ** 2
+                R[:, 2, 2] = (fac * cfg.gnss_pos_factor * np.nan_to_num(sv, nan=1e3)) ** 2
                 H = np.zeros((B, 3, NX)); H[:, :, 0:3] = np.eye(3)
                 z = np.where(okp[:, None], p - pz, 0.0) - np.einsum("bij,bj->bi", H, x)
-                Psub, xs = P[okp], x[okp]
-                acc, _ = _update(xs, Psub, z[okp], H[okp], R[okp], CHI2_3_999)
-                P[okp], x[okp] = Psub, xs
-                ev["gnss_pos_acc"] += int(acc.sum()); ev["gnss_pos_rej"] += int((~acc).sum())
+                cap = okp & in_reacq
+                for sel, capped in ((okp & ~cap, False), (cap, True)):
+                    if not sel.any():
+                        continue
+                    Psub, xs = P[sel], x[sel]
+                    if capped:
+                        acc, alpha = _update_capped(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999, cfg.reacq_max_step_m)
+                        ev["gnss_pos_capped"] += int((alpha < 1).sum())
+                        sidx = np.nonzero(sel)[0]
+                        settle[sidx] = np.where(alpha < 1, 0, settle[sidx] + 1)
+                    else:
+                        acc, _ = _update(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999)
+                    P[sel], x[sel] = Psub, xs
+                    ev["gnss_pos_acc"] += int(acc.sum()); ev["gnss_pos_rej"] += int((~acc).sum())
             okv = np.isfinite(vz[:, 0])
             if okv.any():
                 sv_ = cfg.gnss_vel_factor * np.nan_to_num(gnss["acc_vel"][:, gi], nan=1e3)
@@ -236,10 +298,21 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                 R[:, 0, 0] = R[:, 1, 1] = sv_ ** 2; R[:, 2, 2] = (1.5 * sv_) ** 2
                 H = np.zeros((B, 3, NX)); H[:, :, 3:6] = np.eye(3)
                 z = np.where(okv[:, None], v - vz, 0.0) - np.einsum("bij,bj->bi", H, x)
-                Psub, xs = P[okv], x[okv]
-                acc, _ = _update(xs, Psub, z[okv], H[okv], R[okv], CHI2_3_999)
-                P[okv], x[okv] = Psub, xs
-                ev["gnss_vel_acc"] += int(acc.sum()); ev["gnss_vel_rej"] += int((~acc).sum())
+                # in the re-acquisition phase the position part of a velocity update is capped
+                # too: at the end of a long tunnel P_pv is large, so a velocity fix alone can
+                # move the position by tens of metres
+                capv = okv & in_reacq
+                for sel, capped in ((okv & ~capv, False), (capv, True)):
+                    if not sel.any():
+                        continue
+                    Psub, xs = P[sel], x[sel]
+                    if capped:
+                        acc, alpha = _update_capped(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999, cfg.reacq_max_step_m)
+                        ev["gnss_pos_capped"] += int((alpha < 1).sum())
+                    else:
+                        acc, _ = _update(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999)
+                    P[sel], x[sel] = Psub, xs
+                    ev["gnss_vel_acc"] += int(acc.sum()); ev["gnss_vel_rej"] += int((~acc).sum())
             gi += 1
         # barometer (1 Hz average)
         while bi < len(baro_idx) and baro_idx[bi] == kk:

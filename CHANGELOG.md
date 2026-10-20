@@ -18,6 +18,10 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
 - `tools/simulate.py` + `tools/simulate_template.html`: visual simulator, one scenario/seed/
   overrides to a self-contained HTML player.
 - Tests +6.
+- A, exit re-acquisition phase (velocity-only start, decaying R inflation, gain-capped updates
+  of ≤ 2 m incl. velocity updates, convergence-based end, reported-σ limit): exit step p95
+  45–76 m → 4–6 m; slower settling after S4 (16/50 not within 10 m in 60 s). Recovery metric
+  threshold 5 → 10 m (≈ 2× GNSS horizontal rms). Tests +2.
 
 ## v0.4.0 (2026-10-20): INS, error budget, calibration and reference algorithms
 
