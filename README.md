@@ -17,7 +17,8 @@ python tools/simulate.py S1          # or a single self-contained page: sim_S1_s
 
 `tools/serve.py` opens the simulator with controls on the left (scenario, seed, IMU profile,
 vibration, tunnel pressure gradient, the filter's mount error, GNSS degradations, filter switches
-such as the cruise prior, the NHC turn gate and the pressure-gradient state). Every change re-runs
+such as the map in the tunnel, the cruise prior, the NHC turn gate and the pressure-gradient
+state). Every change re-runs
 truth → sensors → ESKF for one seed (~7–10 s; standard library only, results cached). The map
 shows the true car (ground truth) and the estimated car side by side, drawn to scale and rotated
 to their headings.

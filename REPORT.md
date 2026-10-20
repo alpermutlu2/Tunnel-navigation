@@ -31,7 +31,8 @@ A measured error budget set the design (200 seeds, 180 s from the portal, `DESIG
 
 The estimator is an error-state Kalman filter (`tunnelsim/eskf.py`). It runs on 100 Hz IMU data
 and propagates its covariance at 10 Hz. It has 16 states: position, velocity, attitude,
-accelerometer and gyro bias, and barometer offset; cruise mode adds two more.
+accelerometer and gyro bias, and barometer offset. Cruise mode adds two states, and the map layer
+adds two more (map lateral offset and map scale error).
 
 | Layer | Role |
 |---|---|
@@ -44,6 +45,7 @@ accelerometer and gyro bias, and barometer offset; cruise mode adds two more.
 | ZUPT from an IMU stop detector | Stop-and-go traffic |
 | Cruise prior: speed = v_ref + d, d Gauss–Markov (σ_d 0.5 m/s, τ_d 60 s) | Assumes the driver holds speed with slow wander, used when the filter's own acceleration stays below 0.02 m/s² (§4.2) |
 | Re-acquisition phase: 3 s velocity only, decaying position R, ≤ 2 m per update, ends on convergence | No jump at the exit, even with multipath |
+| Map in the tunnel: 1 Hz heading (σ 1°) and cross-track (σ 1.5 m) against the route polyline; map lateral offset (σ 2 m) and length error (σ 0.5 %) as states per tunnel; paused around the diverge until the in-loop branch decision | Heading and lateral position, which NHC cannot give in a straight tunnel; along-track information from curves (curve matching), bounded by the map's own uncertainty |
 | Callout at ŝ = s_diverge − 300 m. Branch check from the gyro heading change against the map's two profiles (`branch.py`) | Requirements (b), and the car shown on the right road |
 
 The estimator never imports truth objects (`docs/contracts.md`, enforced by a test). Each sensor
@@ -52,54 +54,56 @@ error term has its own random stream and can be switched off.
 ## 3. Results
 
 In every scenario the route leaves the main tunnel through a 20° branch inside it. The callout
-comes before that diverge. "At diverge" is the straight-tunnel result, before the curve adds
-information; "at portal" is where the car comes out. Each tunnel is 2.5–3.5 km.
+comes before that diverge. "At diverge" is the result for the straight tunnel, before the curve
+adds information; "at portal" is where the car comes out. 50 seeds per scenario
+(`reports/0.5.2/evaluation_50.json`):
 
-| | S1 | S2 | S3 | S4 | S5 | S6s | S6 | S6L |
-|---|---|---|---|---|---|---|---|---|
-| | straight | S-bend | V-profile | stop-and-go | braking | wander ±1 km/h | ±2 km/h | ±4 km/h |
-| error at diverge, rms [m] | 12.1 | 13.4 | 12.2 | 31.0 | 25.1 | 13.4 | 13.3 | 13.2 |
-| error at portal, rms / p95 [m] | 17 / 30 | 18 / 29 | 19 / 39 | 44 / 90 | 28 / 56 | 19 / 32 | 19 / 33 | 18 / 30 |
-| mean (e/σ)² at portal | 0.36 | 0.90 | 0.41 | 0.69 | 0.85 | 0.42 | 0.40 | 0.35 |
-| callout rms [s] / > 1 s late | 0.46 / 2 % | 0.42 / 2 % | 0.53 / 4 % | 1.53 / 30 % | 1.24 / 40 % | 0.50 / 2 % | 0.50 / 2 % | 0.51 / 2 % |
-| largest exit step, p95 [m] | 3.6 | 3.8 | 3.5 | 3.8 | 4.0 | 3.6 | 3.9 | 3.7 |
-| not < 10 m 60 s after the exit | 0/50 | 0/50 | 2/50 | 12/50 | 0/50 | 0/50 | 0/50 | 0/50 |
+| | S1 | S2 | S3 | S4 | S5 | S6s | S6 | S6L | S1-1km | S1-5km |
+|---|---|---|---|---|---|---|---|---|---|---|
+| | 3 km straight | S-bend | V-profile | stop-and-go | braking | wander ±1 km/h | ±2 km/h | ±4 km/h | 1 km | 5 km |
+| along-track at diverge, rms [m] | 12.1 | 3.2 | 12.1 | 31.1 | 25.0 | 13.4 | 13.3 | 13.2 | 4.8 | 24.6 |
+| along-track at portal, rms / p95 [m] | 3.8 / 7 | 3.2 / 6 | 7.2 / 16 | 5.1 / 10 | 4.1 / 8 | 4.0 / 8 | 4.2 / 7 | 4.1 / 7 | 2.0 / 4 | 10.0 / 19 |
+| cross-track at portal, rms [m] | 1.5 | 1.4 | 1.5 | 0.8 | 1.5 | 1.4 | 1.5 | 1.5 | 1.5 | 1.5 |
+| mean (e/σ)² at portal | 0.15 | 0.24 | 0.20 | 0.23 | 0.28 | 0.16 | 0.18 | 0.16 | 0.18 | 0.34 |
+| callout rms [s] / > 1 s late | 0.46 / 2 % | 0.13 / 0 % | 0.53 / 4 % | 1.53 / 30 % | 1.24 / 40 % | 0.50 / 2 % | 0.50 / 2 % | 0.51 / 2 % | 0.17 / 0 % | 0.96 / 24 % |
+| largest exit step, p95 [m] | 4.1 | 4.8 | 4.5 | 4.7 | 4.7 | 4.0 | 4.1 | 4.0 | 4.1 | 4.1 |
+| not < 10 m 60 s after the exit | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 
-- **Showing the car.** Error is 12–13 m after 1.5–2 min without GNSS at steady speed, and 25–31 m
-  with braking or stops. The filter is consistent and slightly conservative: mean (e/σ)²
-  0.35–0.9, and 96–100 % of seeds fall within 2σ. All of this is along the road. Across the road
-  the filter is worse, because it does not use the map inside the tunnel (§5): the cross-track
-  error at the portal is 26 m on S1, 48 m on S3, 99 m on S4 and 106 m at 5 km (20 seeds). An app
-  would snap the displayed car to the road, but the filter itself drifts sideways.
-- **Callout.** 0.4–0.5 s rms at steady speed. The timing uncertainty the filter claims covers
-  100 % of the cases.
-- **Recovery.** The largest step at the exit is ≤ 4 m (it was 45–76 m before the re-acquisition
-  phase). The estimate is within 10 m of truth 15–25 s after the exit. After S4's 5.5 min outage
-  the ≤ 2 m-per-fix cap is slow, because it is draining a ~100 m **cross-track** error, not the
-  along-track one. That is the price of no jumps.
-- **Branch.** Taking the branch: reported in all 400 runs, 2–3 s after the diverge, which is the
-  time the curve takes to reach 5°. Negative control, with the car going straight on: "main" in
-  all 400 runs, branch never. "Main" is decided only once ŝ − 2σ_s is past the 5° point.
-  Without that condition, 18 % of S4 cars on the branch were reported as "main".
+- **Showing the car.**
+  - Along the road: 12–13 m after 1.5–2 min of steady driving in a straight tunnel; 25–31 m with
+    braking or stops; 25 m after 3.6 km.
+  - Across the road: 1.5 m everywhere, and heading to 0.1°. This comes from the map layer;
+    without it, the cross-track error was 26 m on S1 and 106 m at 5 km, because heading is not
+    observable in a straight tunnel.
+  - Wherever the road curves, the map also gives along-track information. On S2 the error at the
+    diverge drops from 13 to 3 m, and the exit curve brings every portal error down to 2–10 m.
+  - The filter is consistent and conservative: mean (e/σ)² is 0.15–0.34.
+- **Callout.** 0.4–0.5 s rms on straight tunnels at steady speed, 0.13 s where curves come
+  before the callout (S2). The timing uncertainty the filter claims covers 96–100 % of the cases.
+- **Recovery.** The largest step at the exit is ≤ 5 m (it was 45–76 m before the re-acquisition
+  phase). The estimate is within 10 m of truth after the exit in 499 of 500 runs.
+- **Branch.**
+  - Car takes the branch: the branch is reported in 496 of 500 runs, 2–3 s after the diverge,
+    which is the time the curve needs to reach 5°. The exceptions are 2 of 50 S4 runs, where the
+    evaluation's offline check said "main"; the filter's own in-loop decision is separate.
+  - Car goes straight on (negative control, the map still has the branch): "main" in 500 of 500
+    runs, and the filter does not pull the car onto the branch.
 
-**Tunnel length** (S1 geometry, 30 seeds, diverge at min(0.73·L, L − 200 m) [ASSUMED]):
+**Without the map layer** (v0.5.1, `reports/0.5.1/evaluation_50.json`), the portal error was
+17–19 m on steady scenarios, 44 m on S4 and 34 m at 5 km. The cross-track error was 26–106 m,
+and after S4 the ≤ 2 m-per-fix recovery took over 60 s for 12 of 50 seeds, because it was
+draining a ~100 m cross-track error. The along-track error at the diverge of a straight tunnel
+is the same with and without the map (S1: 12.1 m). On a straight road the map gives no
+along-track information, so the core question stays the speed.
 
-| Tunnel | 0.5 km | 1 km | 3 km | 5 km |
-|---|---|---|---|---|
-| error at portal, rms [m] | 4.2 | 5.3 | 17.4 | 34.1 |
-| callout rms / > 1 s late | — ¹ | 0.18 s / 0 % | 0.46 / 2 % | 0.81 / 17 % |
-
-¹ With a 300 m lead the callout point of a 0.5 km tunnel is at the portal, still under GNSS, so the
-callout says nothing about the outage there; the error at the portal is the relevant number.
-
-One 5 km run gives the whole curve (`reports/0.5.1/error_vs_distance.png`, 30 seeds): rms
-3 m at the portal, 5 m after 1 km, 9 m after 2 km, 15 m after 3 km and 28 m after 4.5 km. The
-error grows faster than linearly with outage time (bias drift ~t²), and the cruise prior softens
-it. The filter σ covers the error everywhere except in the first ~500 m: at the portal it is
-overconfident (σ 1.5 m vs 3.2 m rms), because GNSS degradation just before the portal is not in
-its error model. At the 5 km diverge the exit curve adds about +7 m rms. This is the cross-track error
-(~60 m there) projected onto the curve's tangent, which turns by up to 20° (sin 20° ≈ 0.34). At 5 km, one callout in six is more than 1 s late, and 11 of 30 seeds take more than
-60 s to settle after the exit.
+**Tunnel length.** The diverge sits at min(0.73·L, L − 200 m) [ASSUMED]. Along-track error at the
+diverge: 4.8 m at 1 km, 12 m at 3 km, 25 m at 5 km. At 0.5 km the callout point is at the portal,
+still under GNSS, so the callout says nothing about the outage there. Without the map, one 5 km
+run gives the along-track error as a function of distance (`reports/0.5.1/error_vs_distance.png`).
+On the straight part it grows faster than linearly (bias drift ~t²): 5 m after 1 km, 9 m after
+2 km, 15 m after 3 km. At the portal the filter is overconfident for the first ~500 m, because the
+GNSS degradation just before the portal is not in its error model. At 5 km, 24 % of callouts
+are more than 1 s late.
 
 ## 4. Where it breaks, and why
 
@@ -191,23 +195,31 @@ map cues.
 - A single-GM bias model instead of three GM terms: within noise.
 - Twice the assumed sideslip: 3 m more at the portal. On S2, 93 % of seeds fall within 2σ.
 
+**4.7 What the map adds, and what it costs.** In a straight tunnel the map fixes heading and
+lateral position but gives no along-track information. Curves give it, but only as well as the
+map places them. A map that is 0.5 % too long draws the exit curve 11 m off, and the curve
+matching then pulls the estimate by about that much. With the map errors as states the filter
+knows this, and treating them as white noise was the mistake to avoid: the same correlated-error
+lesson as the absolute speed hold (§4.2) and the sideslip/NHC interaction (§4.3).
+
 ## 5. Limitations
 
 - **Simulation only.** The IMU noise terms are measured; their time shape, the vibration,
   sideslip, barometer, pressure-gradient and GNSS behaviour are [ASSUMED]. The bias-model shape
   alone moves the INS budget by ~2.4×.
-- **No map in the filter.** Inside the tunnel the filter does not use the map. Heading is not
-  observable in a straight tunnel (gyro z bias: 1–3.4° at the portal), so the estimate drifts
-  across the road by v·δψ·t: 26 m on S1 and 106 m at 5 km. The along-track metrics project the
-  estimate onto the true road tangent, which amounts to perfect map matching for display. A
-  map-heading and cross-track pseudo-measurement would remove this. The external review's
-  prototype also cut the along-track error 3–5× wherever the road curves. It is the next layer
-  (`docs/reviews/2026-10-20-review-9-fable-lateral.md`).
+- **Map quality.**
+  - The map layer treats the polyline as correct up to a constant lateral offset (σ 2 m) and a
+    length error (σ 0.5 %), both [ASSUMED].
+  - Stress test, every seed with a 2 m offset and a +0.5 % length error (the exit curve drawn
+    ~11 m too far on): portal error 8–17 m, and 93–97 % of seeds within 2σ. Before the map errors
+    became states, only 63–77 % were within 2σ (`reports/0.5.2/map_ab_30.json`).
+  - Real polyline errors (shape, missing curves, a wrong diverge position) are not simulated.
+    The truth car drives on the lane centre, so lane-keeping wander is covered only by σ 1.5 m.
 - **The ZUPT detector is offline** (forward-backward filters, zero delay). A causal version is
   similar at the exit (S4 46 vs 44 m) but worse for the callout (> 1 s late: 50 vs 30 %).
 - **Narrow setting.** The filter is tuned for one IMU class. The car is a single car with a
-  rigid phone mount, in a single lane, and it always takes the announced exit (the negative
-  control only tests the branch check).
+  rigid phone mount, in a single lane. The negative control (car goes straight on at the
+  diverge) covers the map layer and the branch decision.
 
 ## 6. AI usage
 

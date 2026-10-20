@@ -7,7 +7,17 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
-## Unreleased (v0.5.2): interactive simulator
+## v0.5.2 (2026-10-21): map in the tunnel, interactive simulator
+
+- Map layer (review 9, owner's design): 1 Hz heading and cross-track pseudo-measurements against the
+  route during the outage, map lateral offset and scale error as states (reset per tunnel),
+  explicit curve-matching Jacobian, offset noise in curves, pause around the diverge until the
+  in-loop branch decision (`tunnelsim/mapview.py`, `EskfConfig.map_in_tunnel`, default on).
+  50 seeds (`reports/0.5.2/evaluation_50.json`) vs 0.5.1: portal along-track 17–19 → 3–7 m
+  (S4 44 → 5, 5 km 34 → 10 m); cross-track (new metric) 26–106 → 1.5 m; S2 diverge 13 → 3 m and
+  callout 0.42 → 0.13 s; straight-tunnel diverge unchanged (S1 12.1 m); recovery failures 12 → 0
+  (S4); negative controls 500/500 "main". Map-error stress: 93–97 % within 2σ.
+- Cross-track and heading error metrics in the evaluation; evaluation table includes S1-1km/5km.
 
 - `tools/serve.py`: local web page with controls (scenario, seed, IMU profile, vibration, tunnel
   pressure gradient, filter mount error, GNSS degradations, filter switches); each change re-runs
