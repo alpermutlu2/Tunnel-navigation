@@ -149,3 +149,22 @@ def test_interactive_server_page_builds():
     page = serve.run_page({"scenario": "S1-0.5km", "seed": "1", "mount_err": "2", "cruise": "0",
                            "nhc_turn_gate": "0.5", "gnss_coasting": "1"})
     assert "const D = {" in page and "est_heading" in page
+
+
+def test_mapview_matching_and_main_continuation():
+    """Map view (review 9): windowed nearest-point matching, lateral offset stress, and the
+    straight main-tunnel continuation after the diverge."""
+    from tunnelsim.mapview import MapView
+    from tunnelsim.scenario import build_scenarios
+    road = build_scenarios()["S2"].road
+    mv = MapView(road)
+    s0 = np.array([1000.0, road.exits[0].s + 120.0])
+    p = road.position(s0)[:, :2]
+    np.testing.assert_allclose(mv.nearest(p, np.array([np.nan, s0[1] + 50.0])), s0, atol=1.0)
+    c, psi, n = mv.at(s0)
+    np.testing.assert_allclose(c, p, atol=1.0)
+    mo = MapView(road, lat_offset_m=2.0)
+    c2, _, _ = mo.at(s0)
+    np.testing.assert_allclose(np.einsum("bi,bi->b", c2 - c, n), 2.0, atol=0.05)
+    cm, psim, _ = mv.at(s0, main=np.array([False, True]))
+    assert abs(psim[1] - mv.main_psi) < 1e-12 and abs(psi[1] - mv.main_psi) > np.deg2rad(5)

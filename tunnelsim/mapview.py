@@ -13,20 +13,24 @@ import numpy as np
 class MapView:
     def __init__(self, road, lat_offset_m: float = 0.0, length_scale: float = 1.0, step: float = 1.0):
         self.s = np.arange(0.0, road.length, step)
-        s_true = self.s / length_scale                     # map s -> road s
-        xy = road.position(s_true)[:, :2]
-        psi = road.heading(s_true)
+        xy = road.position(self.s)[:, :2]
+        psi = road.heading(self.s)
         n = np.stack([-np.sin(psi), np.cos(psi)], 1)       # left normal
+        # length error: the polyline itself is stretched about the tunnel entry (features inside
+        # the tunnel, e.g. the exit curve, sit (scale − 1)·distance further on), arc length with it
+        k_e = int(round(road.tunnel.s_entry / step))
+        xy = xy[k_e] + length_scale * (xy - xy[k_e])
+        self.s = self.s[k_e] + length_scale * (self.s - self.s[k_e])
         self.xy = xy + lat_offset_m * n
         self.psi = np.unwrap(psi)
         self.step = step
         self.length = self.s[-1]
         ex = road.exits[0] if road.exits else None
-        self.s_div = None if ex is None else ex.s * length_scale
+        self.s_div = None if ex is None else self.s[k_e] + length_scale * (ex.s - self.s[k_e])
         self.curve_len = 0.0 if ex is None else ex.curve_len * length_scale
         # main tunnel continuation after the diverge: straight along the diverge heading
         if ex is not None and ex.on_route:
-            k = int(round(self.s_div / step))
+            k = int(np.argmin(np.abs(self.s - self.s_div)))
             self.main_xy0, self.main_psi = self.xy[k], self.psi[k]
 
     def nearest(self, p_xy, s_prev, window=300.0):
@@ -35,7 +39,7 @@ class MapView:
         out = np.empty(len(p_xy))
         for b in range(len(p_xy)):
             if np.isfinite(s_prev[b]):
-                a = max(0, int((s_prev[b] - window) / self.step)); e = min(len(self.s), int((s_prev[b] + window) / self.step) + 1)
+                a, e = np.searchsorted(self.s, [s_prev[b] - window, s_prev[b] + window + self.step])
             else:
                 a, e = 0, len(self.s)
             d2 = ((self.xy[a:e] - p_xy[b]) ** 2).sum(1)
@@ -45,7 +49,7 @@ class MapView:
     def at(self, s, main=None):
         """Centreline point, heading and left normal at map s (B,). main (B,) bool: use the main
         tunnel continuation (straight) instead of the route beyond the diverge."""
-        k = np.clip(np.round(s / self.step).astype(int), 0, len(self.s) - 1)
+        k = np.clip(np.searchsorted(self.s, s), 0, len(self.s) - 1)
         c, psi = self.xy[k].copy(), self.psi[k].copy()
         if main is not None and self.s_div is not None and main.any():
             m = main & (s > self.s_div)
