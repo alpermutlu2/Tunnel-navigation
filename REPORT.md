@@ -61,7 +61,22 @@ main tunnel through a 20° right-hand branch inside it. "At diverge" is the alon
 the car reaches the diverge; this is the straight-tunnel part, before the curve adds any
 information. "At portal" is the error when the car comes out.
 
-RESULTS_TABLE
+50 seeds per scenario (`reports/0.5.0/evaluation_50.json`):
+
+| | S1 | S2 | S3 | S4 | S5 | S6s | S6 | S6L |
+|---|---|---|---|---|---|---|---|---|
+| error at diverge, rms [m] | 12.1 | 13.4 | 12.2 | 31.0 | 25.1 | 13.4 | 13.3 | 13.2 |
+| error at portal, rms [m] | 17.4 | 18.3 | 19.4 | 44.4 | 28.5 | 18.9 | 18.6 | 17.6 |
+| error at portal, p95 [m] | 30.1 | 29.4 | 39.4 | 89.8 | 55.9 | 32.1 | 32.9 | 29.6 |
+| mean (e/σ)² at portal | 0.36 | 0.90 | 0.41 | 0.69 | 0.85 | 0.42 | 0.40 | 0.35 |
+| callout rms [s] | 0.46 | 0.42 | 0.53 | 1.53 | 1.24 | 0.50 | 0.50 | 0.51 |
+| callout bias [s] (+ late) | +0.08 | -0.00 | +0.16 | +0.24 | +0.89 | +0.05 | +0.10 | +0.03 |
+| callout > 1 s late | 2 % | 2 % | 4 % | 30 % | 40 % | 2 % | 2 % | 2 % |
+| claimed σ_t [s] / coverage 2σ | 0.88 / 100 % | 0.63 / 100 % | 1.05 / 100 % | 2.96 / 100 % | 1.67 / 100 % | 0.89 / 100 % | 0.91 / 100 % | 0.92 / 100 % |
+| branch reported / main reported | 100 / 0 % | 100 / 0 % | 100 / 0 % | 100 / 0 % | 100 / 0 % | 100 / 0 % | 100 / 0 % | 100 / 0 % |
+| decision delay mean [s] | 2.0 | 1.9 | 2.3 | 2.9 | 2.3 | 2.0 | 2.1 | 2.1 |
+| exit step p95 [m] | 3.6 | 3.8 | 3.5 | 3.8 | 4.0 | 3.6 | 3.9 | 3.7 |
+| not < 10 m 60 s after exit | 0/50 | 0/50 | 2/50 | 12/50 | 0/50 | 0/50 | 0/50 | 0/50 |
 
 Reading:
 
@@ -72,10 +87,16 @@ Reading:
   than 1 s late. S4 and S5 are the weak spots: 30 % and 40 % of callouts are more than 1 s late.
   The claimed timing σ covers every case.
 - **Recovery.** The largest step at the exit is 3.5–4 m (p95). Before the re-acquisition phase it
-  was 45–76 m. The estimate is within 10 m of truth 15–25 s after the portal. The exception is S4:
-  after 5.5 min underground, 12 of 50 seeds take more than 60 s to drain a ~45 m error at ≤ 2 m
-  per fix. That is the accepted price of no jumps.
-- **Branch.** BRANCH_SENTENCE
+  was 45–76 m. The estimate is within 10 m of truth 15–25 s after the portal. The exceptions are S4 and S3:
+  after 5.5 min underground on S4, 12 of 50 seeds take more than 60 s to drain a ~45 m error at
+  ≤ 2 m per fix (S3: 2 of 50). That is the accepted price of no jumps.
+- **Branch.** When the car takes the branch, the branch is reported in all 400 runs. The report
+  comes 2–3 s after the diverge, which is the time the curve needs to reach 5°. In the negative
+  control the car goes straight on while the map still has the branch; "main tunnel" is reported
+  in all 400 runs and the branch never. The main decision comes later, 3.6–11 s after the
+  diverge, because it waits until the position is certain (ŝ − 2σ_s past the 5° point). A first
+  version without that condition reported "main" for 18 % of the S4 cars that had taken the
+  branch.
 
 ## 4. Where it breaks, and why
 
