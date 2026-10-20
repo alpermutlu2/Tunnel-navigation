@@ -53,7 +53,8 @@ def run_page(q: dict) -> str:
             f"baro_grad={q.get('baro_grad', '0') == '1'}",
             f"gate_recover={q.get('gate_recover', '1') == '1'}",
             f"adaptive_q={q.get('gate_recover', '1') == '1'}",
-            f"reacq={q.get('reacq', '1') == '1'}"]
+            f"reacq={q.get('reacq', '1') == '1'}",
+            f"map_in_tunnel={q.get('map_in_tunnel', '1') == '1'}"]
     me = float(q.get("mount_err", 0.0))
     mount = (0.0, me, me) if me else None
     data = simulate.run(key, seed, overrides, q.get("zupt", "detector"), eskf, mount, q.get("no_sideslip") == "1")
@@ -91,6 +92,7 @@ iframe {{ width:100%; height:100vh; border:0; background:var(--bg); }}
 <label><div class="row"><span>filter's mount error (pitch & yaw)</span><span id="mount_err_v">0°</span></div><input type="range" name="mount_err" min="0" max="5" step="0.5" value="0"></label>
 {gnss}
 <h2>Filter</h2>
+<label><input type="checkbox" name="map_in_tunnel" value="1" checked> map in the tunnel (heading + cross-track)</label>
 <label><input type="checkbox" name="cruise" value="1" checked> cruise prior</label>
 <label>cruise model <select name="cruise_mode">{opt([("gm", "GM speed wander (default)"), ("increment", "speed increment (driver holds speed)")], "gm")}</select></label>
 <label><div class="row"><span>lateral NHC turn gate</span><span id="nhc_turn_gate_v">0.3 m/s²</span></div><input type="range" name="nhc_turn_gate" min="0" max="1" step="0.1" value="0.3"></label>

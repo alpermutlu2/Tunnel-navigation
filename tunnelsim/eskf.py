@@ -57,6 +57,15 @@ class EskfConfig:
     adaptive_q_max: float = 30.0       # [ASSUMED]
     adaptive_q_rise_s: float = 20.0
     adaptive_q_fall_s: float = 60.0
+    # Map in the tunnel (review 9, owner's design 2026-10-20): during an outage, 1 Hz heading and
+    # cross-track pseudo-measurements against the route polyline; paused from 100 m before the
+    # diverge until the in-loop branch decision, then the decided geometry (route or main).
+    map_in_tunnel: bool = True
+    map_heading_sigma: float = np.deg2rad(1.0)   # polyline heading (~0.5°) + driver in lane (~0.5°) [ASSUMED]
+    map_lateral_sigma: float = 1.5               # m: lane-centre deviation + polyline error [ASSUMED]
+    map_window_m: float = 300.0                  # ŝ searched within ±window of the last ŝ
+    map_pre_m: float = 100.0                     # pause starts this far before the diverge
+    map_branch_deg: float = 5.0                  # branch decision threshold (as branch.py)
     nhc_turn_gate: float = 0.3        # m/s² [ASSUMED, review 7]; 0 = off. Lateral NHC dropped while |ω_z|·v exceeds this
     nhc_rate_hz: float = 5.0
     baro_sigma: float = 0.15          # m, 1 Hz average (E4)
@@ -202,12 +211,13 @@ def _update(x_corr, P, z, H, R, gate):
 
 
 def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = EskfConfig(),
-             zupt_mask=None, t_start=None):
+             zupt_mask=None, t_start=None, road_map=None):
     """Run the filter.
 
     imu_t (N,) shared time axis; f, w (B,N,3); gnss: dict of (B,M,...) arrays t (M,), pos, vel,
     acc_pos_h, acc_pos_v, acc_vel (NaN where missing); baro_t (L,), baro_h (B,L).
     zupt_mask: optional (N,) or (B,N) bool overriding the detector (oracle stops).
+    road_map: optional `MapView` of the route (estimator-side map) for the map-in-tunnel layer.
     """
     B, N = f.shape[0], imu_t.size
     NA = NX + 3          # + speed clone / v_ref (NX), driver wander d (NX + 1), baro gradient g_h (NX + 2)
@@ -250,11 +260,19 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     baro_lag = np.array([tt - baro_t[(baro_t > tt - 1.0) & (baro_t <= tt)].mean() for tt in baro_1hz_t])
     out_t, out_p, out_v, out_C, out_P, out_ba, out_z, out_aux = [], [], [], [], [], [], [], []
     g_hat = np.zeros(B)                     # tunnel pressure gradient as height per metre [m/m]
+    use_map = cfg.map_in_tunnel and road_map is not None
+    s_map = np.full(B, np.nan)              # map-matched along-track position (outage only)
+    br_dec = np.zeros(B, int)               # branch decision: 0 none, +1 route (branch), -1 main
+    psi_start = np.full(B, np.nan); s_start = np.full(B, np.nan); map_prev_out = np.zeros(B, bool)
+    if use_map and road_map.s_div is not None:
+        sg = np.arange(road_map.s_div, road_map.s_div + road_map.curve_len + 1.0, 0.5)
+        _, psg, _ = road_map.at(sg)
+        s_thr5 = sg[int(np.argmax(np.abs(psg - psg[0]) >= np.deg2rad(cfg.map_branch_deg)))]
     outage_prev = np.zeros(B, bool)
     d_acc = np.zeros(B)                     # distance travelled in the current outage (gradient lever)
     n_rej = np.zeros(B, int)                # consecutive open-sky GNSS rejections (pos or vel)
     q_scale = np.ones(B)                    # adaptive accel/gyro noise scale (α)
-    ev = {"gate_inflations": 0, "gnss_pos_acc": 0, "gnss_pos_rej": 0, "gnss_vel_acc": 0, "gnss_vel_rej": 0, "zupt": 0,
+    ev = {"map_updates": 0, "map_branch": 0, "map_main": 0, "gate_inflations": 0, "gnss_pos_acc": 0, "gnss_pos_rej": 0, "gnss_vel_acc": 0, "gnss_vel_rej": 0, "zupt": 0,
           "gnss_pos_skipped_reacq": 0, "gnss_pos_capped": 0}
     def _gate_monitor(sel, acc, nis, open_sky):
         """(i) gate-lock recovery and (ii) adaptive noise from the GNSS NIS (3-dof updates)."""
@@ -509,6 +527,61 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     reclone = cruise_on
             if cfg.cruise_mode == "gm":
                 gm_init = gm_init | start
+        # map in the tunnel: heading + cross-track at 1 Hz during the outage (review 9)
+        if use_map and (kk - i0) % int(round(fs)) == 0:
+            tk = imu_t[kk]
+            out_m = (tk - last_vel > cfg.cruise_no_gnss_s) & (np.linalg.norm(v, axis=1) > 1.0)
+            new_m = out_m & ~map_prev_out
+            br_dec = np.where(new_m, 0, br_dec); psi_start = np.where(new_m, np.nan, psi_start)
+            s_map = np.where(out_m, s_map, np.nan)
+            map_prev_out = out_m
+            if out_m.any():
+                l_n = np.einsum("bij,j->bi", C, C_bp.T @ r_b)                     # phone -> R lever, nav
+                pR = p - l_n
+                fwd = np.einsum("bij,j->bi", C, C_bp.T @ np.array([1.0, 0.0, 0.0]))
+                psi_hat = np.arctan2(fwd[:, 1], fwd[:, 0])
+                s_new = road_map.nearest(pR[:, :2], s_map)
+                if road_map.s_div is not None:
+                    tm = np.array([np.cos(road_map.main_psi), np.sin(road_map.main_psi)])
+                    s_main = road_map.s_div + (pR[:, :2] - road_map.main_xy0) @ tm
+                    s_new = np.where(br_dec == -1, np.maximum(s_main, road_map.s_div), s_new)
+                s_map = np.where(out_m, s_new, np.nan)
+                paused = np.zeros(B, bool)
+                if road_map.s_div is not None:
+                    inwin = out_m & (br_dec == 0) & (s_map >= road_map.s_div - cfg.map_pre_m)
+                    first = inwin & ~np.isfinite(psi_start)
+                    psi_start = np.where(first, psi_hat, psi_start); s_start = np.where(first, s_map, s_start)
+                    if inwin.any():
+                        _, ps0, _ = road_map.at(np.nan_to_num(s_start))
+                        _, ps1, _ = road_map.at(np.nan_to_num(s_map))
+                        dpsi = np.angle(np.exp(1j * (psi_hat - psi_start)))
+                        thr = np.deg2rad(cfg.map_branch_deg)
+                        r_b_ = dpsi - (ps1 - ps0); r_m = dpsi
+                        t2 = np.stack([np.cos(ps1), np.sin(ps1)], 1)
+                        sig_s = np.sqrt(np.einsum("bi,bij,bj->b", t2, P[:, 0:2, 0:2], t2))
+                        go_b = inwin & (np.abs(r_m) > thr) & (np.abs(r_b_) < np.abs(r_m))
+                        go_m = inwin & ~go_b & (np.abs(r_b_) > thr) & (np.abs(r_m) < np.abs(r_b_)) & (s_map - 2 * sig_s >= s_thr5)
+                        br_dec = np.where(go_b, 1, np.where(go_m, -1, br_dec))
+                        ev["map_branch"] += int(go_b.sum()); ev["map_main"] += int(go_m.sum())
+                    paused = (br_dec == 0) & (s_map >= road_map.s_div - cfg.map_pre_m)
+                sel = out_m & ~paused
+                if sel.any():
+                    c, psi_m, n = road_map.at(np.nan_to_num(s_map), main=(br_dec == -1))
+                    H = np.zeros((B, 2, NA))
+                    H[:, 0, 8] = 1.0                                                   # δθ_z
+                    H[:, 1, 0:2] = n
+                    H[:, 1, 6:9] = np.einsum("bi,bij->bj", np.c_[n, np.zeros(B)], skew_b(l_n))   # nᵀ[l×]
+                    z = np.stack([np.angle(np.exp(1j * (psi_hat - psi_m))),
+                                  np.einsum("bi,bi->b", n, pR[:, :2] - c)], 1) - np.einsum("bij,bj->bi", H, x)
+                    R = np.zeros((B, 2, 2)); R[:, 0, 0] = cfg.map_heading_sigma ** 2; R[:, 1, 1] = cfg.map_lateral_sigma ** 2
+                    w_b = np.einsum("ij,bj->bi", C_bp, w[:, kk] - b_g)
+                    turning = np.abs(w_b[:, 2]) * np.linalg.norm(v, axis=1) > cfg.nhc_turn_gate if cfg.nhc_turn_gate > 0 else np.zeros(B, bool)
+                    for ss, rows in ((sel & ~turning, slice(0, 2)), (sel & turning, slice(1, 2))):   # heading off in turns (sideslip)
+                        if ss.any():
+                            Psub, xs = P[ss], x[ss]
+                            _update(xs, Psub, z[ss][:, rows], H[ss][:, rows], R[ss][:, rows, rows], None)
+                            P[ss], x[ss] = Psub, xs
+                    ev["map_updates"] += int(sel.sum())
         # NHC (body y, z velocity at R = 0)
         if (kk - i0) % n_nhc == 0:
             C_bn = C_bp @ np.swapaxes(C, 1, 2)                       # body <- nav

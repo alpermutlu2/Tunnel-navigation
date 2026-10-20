@@ -71,7 +71,9 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False):
     if mount_err is not None:
         from tunnelsim.frames import C_BP_NOMINAL, mount_rotation
         C_bp_f = mount_rotation(*mount_err) @ C_BP_NOMINAL.T @ tr.C_bp
-    out = run_eskf(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, _eskf_config(eskf), zupt_mask=zmask)
+    from tunnelsim.mapview import MapView
+    out = run_eskf(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, _eskf_config(eskf), zupt_mask=zmask,
+                   road_map=MapView(build_scenarios()[key].road))
     idx = np.clip(np.round((out.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
     tn = _tangent(tr, idx)
     pR = out.p[0] - np.einsum("kij,j->ki", out.C[0] @ tr.C_bp.T, tr.lever_arm_b)
