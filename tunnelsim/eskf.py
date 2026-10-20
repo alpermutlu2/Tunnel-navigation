@@ -76,6 +76,11 @@ class EskfConfig:
     cruise_mode: str = "increment"    # "hold" (a: absolute hold) or "increment" (b: cloned 1 s increment)
     cruise_hold_kP: float = 0.0       # (a) R inflation by k·P_hold
     cruise_inc_sigma: float = 0.0     # (b) extra white speed noise per increment [ASSUMED 0: truth has no jitter]
+    # "gm" (review 6): speed = v_ref + d, v_ref a clone of the speed at the start of the mode,
+    # d a Gauss-Markov driver speed wander; a statistical prior on the driver, not a sensor.
+    cruise_gm_sigma: float = 0.5      # m/s, σ_d [ASSUMED, review 6 nominal]
+    cruise_gm_tau: float = 60.0       # s, τ_d [ASSUMED, review 6 nominal]
+    cruise_gm_r: float = 0.02         # m/s, residual of the identity 0 = v∥ − v_ref − d [ASSUMED]
     p0_pos: float = 5.0
     p0_vel: float = 0.3
     p0_att_rp: float = np.deg2rad(1.0)
@@ -187,7 +192,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     zupt_mask: optional (N,) or (B,N) bool overriding the detector (oracle stops).
     """
     B, N = f.shape[0], imu_t.size
-    NA = NX + 1          # + speed clone (index NX), used only by the cruise increment mode
+    NA = NX + 2          # + speed clone / v_ref (index NX) and driver wander d (NX + 1), cruise only
+    ID = NX + 1
     fs = 1.0 / np.median(np.diff(imu_t))
     C_pb = C_bp.T
     fwd_p = C_pb[:, 0]
@@ -233,6 +239,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     cruise_on = np.zeros(B, bool); calm_since = np.full(B, t0); v_hold = np.zeros(B); t_hold = np.zeros(B)
     n_upd = np.zeros(B); P_hold = np.zeros(B)
     s_clone = np.zeros(B); t_clone = np.zeros(B); clone_ok = np.zeros(B, bool)
+    d_hat = np.zeros(B)                     # driver wander estimate (gm mode)
+    gm_mode = cfg.cruise and cfg.cruise_mode == "gm"
     ev["cruise_updates"] = 0
     reacq_start = np.full(B, -np.inf)       # start of the current re-acquisition phase
     reacq_on = np.zeros(B, bool)            # phase active (ends on convergence, not on a timer)
@@ -270,10 +278,17 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             continue
         if dt_sum > 0:
             Phi = np.eye(NA) + Fsum + 0.5 * Fsum @ Fsum
+            if gm_mode:
+                # d: discrete GM, φ = exp(−Δt/τ_d), Q_d = σ_d²(1 − φ²) (review 6)
+                phi_d = np.exp(-dt_sum / cfg.cruise_gm_tau)
+                Phi[:, ID, ID] = phi_d
+                d_hat = d_hat * phi_d
             P = Phi @ P @ np.swapaxes(Phi, 1, 2) + np.diag(Qc) * dt_sum
+            if gm_mode:
+                P[:, ID, ID] += cfg.cruise_gm_sigma ** 2 * (1.0 - phi_d ** 2)
             Fsum[:] = 0.0; dt_sum = 0.0
         x = np.zeros((B, NA))
-        reclone = np.zeros(B, bool)
+        reclone = np.zeros(B, bool); gm_init = np.zeros(B, bool)
         # GNSS
         while gi < len(g_idx) and g_idx[gi] == kk:
             pz = gnss["pos"][:, gi]; vz = gnss["vel"][:, gi]
@@ -402,13 +417,21 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     dtc = tk - t_clone
                     R = (cfg.cruise_inc_sigma ** 2 + (cfg.cruise_acc_th * dtc) ** 2 / 3.0)[:, None, None]
                     sel = cruise_on & clone_ok
+                if cfg.cruise_mode == "gm":
+                    # identity 0 = v∥ − v_ref − d; the speed-change uncertainty is in d's process
+                    H[:, 0, NX] = -1.0; H[:, 0, ID] = -1.0
+                    z = (spd - s_clone - d_hat)[:, None] - np.einsum("bij,bj->bi", H, x)
+                    R = np.full((B, 1, 1), cfg.cruise_gm_r ** 2)
+                    sel = cruise_on & clone_ok
                 if sel.any():
                     Psub, xs = P[sel], x[sel]
                     _update(xs, Psub, z[sel], H[sel], R[sel], None)
                     P[sel], x[sel] = Psub, xs
                     ev["cruise_updates"] += int(sel.sum())
-                if cfg.cruise_mode != "hold":
+                if cfg.cruise_mode == "increment":
                     reclone = cruise_on
+            if cfg.cruise_mode == "gm":
+                gm_init = gm_init | start
         # NHC (body y, z velocity at R = 0)
         # NHC (body y, z velocity at R = 0)
         if (kk - i0) % n_nhc == 0:
@@ -435,6 +458,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             b_g = b_g - x[:, 12:15]
             b_h = b_h - x[:, 15]
             s_clone = s_clone - x[:, NX]
+            d_hat = d_hat - x[:, ID]
             fc = f[:, kk] - b_a
             a_k = np.einsum("bij,bj->bi", C, fc) + GRAVITY_N
         if reclone.any():
@@ -450,6 +474,26 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             P = np.where(reclone[:, None, None], Pn, P)
             s_clone = np.where(reclone, spd, s_clone); t_clone = np.where(reclone, imu_t[kk], t_clone)
             clone_ok = clone_ok | reclone
+        if gm_init.any():
+            # start of the gm mode: v̂_ref = speed, d̂ = 0. With δ = estimate − truth,
+            # δv_ref = δs − δd, d ~ N(0, σ_d²) independent of the state: P_ref,ref = P_ss + σ_d²,
+            # P_ref,d = −σ_d², P_d,d = σ_d², P_ref,x = P_s,x (cross-covariance kept, review 6)
+            spd = np.linalg.norm(v, axis=1)
+            u = v / np.maximum(spd, 1e-6)[:, None]
+            J = np.zeros((B, NA)); J[:, 3:6] = u
+            row = np.einsum("bi,bij->bj", J, P)
+            Pn = P.copy()
+            Pn[:, ID, :] = 0.0; Pn[:, :, ID] = 0.0
+            row[:, ID] = 0.0
+            Pn[:, NX, :] = row; Pn[:, :, NX] = row
+            sd2 = cfg.cruise_gm_sigma ** 2
+            Pn[:, NX, NX] = np.einsum("bj,bj->b", row, J) + sd2
+            Pn[:, NX, ID] = Pn[:, ID, NX] = -sd2
+            Pn[:, ID, ID] = sd2
+            P = np.where(gm_init[:, None, None], Pn, P)
+            s_clone = np.where(gm_init, spd, s_clone); d_hat = np.where(gm_init, 0.0, d_hat)
+            t_clone = np.where(gm_init, imu_t[kk], t_clone)
+            clone_ok = clone_ok | gm_init
         if do_cov:
             out_t.append(imu_t[kk]); out_p.append(p.copy()); out_v.append(v.copy()); out_C.append(C.copy())
             out_P.append(P[:, 0:3, 0:3].copy()); out_ba.append(b_a.copy()); out_z.append(st.copy())

@@ -116,3 +116,25 @@ def test_speed_clone_increment_carries_no_information_without_drift():
     _update(x, P, np.array([[0.3]]), H, np.full((1, 1, 1), 1e-4), None)
     assert np.allclose(P, P0, atol=1e-9)
     assert np.allclose(x, 0.0)
+
+
+def test_gm_speed_identity_carries_no_information_at_start():
+    """gm cruise mode (review 6): right after the start (v_ref cloned, d ~ N(0, σ_d²)),
+    v∥ − v_ref − d has zero variance, so the first pseudo-measurement must not change P."""
+    from tunnelsim.eskf import NX, _update
+    rng = np.random.default_rng(5)
+    NA, ID = NX + 2, NX + 1
+    A = rng.normal(size=(NX, NX))
+    P = np.zeros((NA, NA)); P[:NX, :NX] = A @ A.T + np.eye(NX)
+    u = np.array([0.0, 0.6, 0.8])
+    J = np.zeros(NA); J[3:6] = u
+    row = J @ P
+    sd2 = 0.25
+    P[NX, :] = row; P[:, NX] = row; P[NX, NX] = row @ J + sd2
+    P[NX, ID] = P[ID, NX] = -sd2; P[ID, ID] = sd2
+    assert np.all(np.linalg.eigvalsh(P) > -1e-9)
+    P = P[None]; P0 = P.copy()
+    H = np.zeros((1, 1, NA)); H[0, 0, 3:6] = u; H[0, 0, NX] = -1.0; H[0, 0, ID] = -1.0
+    x = np.zeros((1, NA))
+    _update(x, P, np.array([[0.2]]), H, np.full((1, 1, 1), 1e-4), None)
+    assert np.allclose(P, P0, atol=1e-9)

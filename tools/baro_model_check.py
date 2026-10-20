@@ -1,6 +1,6 @@
-import sys, numpy as np
 """Barometer model check (review 6, item 4): second-order error of the window-centre model and
 the statistics of the 1 s average error, to compare with the filter R."""
+import sys, numpy as np
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[1]))
 from tunnelsim.experiments import simulate_run
 for key in ("S3", "S1"):

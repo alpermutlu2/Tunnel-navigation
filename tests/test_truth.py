@@ -159,7 +159,7 @@ def test_event_trigger_position(key):
             p_idx, p_t0, _ = tr.event_log[idx - 1]
             p = sc.speed.events[p_idx]
             prev_end = p_t0 + p.duration + p.dwell
-        if t0 > prev_end + tr.dt:                    # not held back by a dwell: exact trigger
+        if t0 > prev_end + 1.5 * tr.dt:              # not held back (half-sample margin: float time grid)
             assert s_pred - ev.at_s <= tr.v[k - 1] * tr.dt + 1e-9
 
 
