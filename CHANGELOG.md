@@ -26,6 +26,12 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   not accepted): exit rms improves on S1/S4/S5 but the filter becomes overconfident (mean
   (e/σ)² 6–33). No metric change with the default. `reports/0.5.0.dev0/cruise_ab_50.json`.
 - Scenario S6 (S1 with ±2 km/h, 40 s speed ramps inside the tunnel): breaking case for B.
+- B accepted in the "increment" form (speed clone state, 1 s increment pseudo-measurement) and
+  on by default: exit rms S1–S5 20/18/32/54/36 → 13/14/10/39/28 m, consistent; S6 breaks
+  (58 m, (e/σ)² 4.7). `(a)` absolute hold kept as `cruise_mode="hold"` for comparison.
+- Fix: barometer 1 s average modelled at its window centre (was the window end, ~0.5 s lag →
+  pitch error at grade changes; S3 callout). Changes every ESKF number;
+  `reports/0.5.0.dev0/eskf_baro_fix_50.json`.
 
 ## v0.4.0 (2026-10-20): INS, error budget, calibration and reference algorithms
 
