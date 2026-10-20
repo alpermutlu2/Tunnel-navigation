@@ -116,6 +116,7 @@ class EskfOutput:
     b_a: np.ndarray            # (B,K,3)
     zupt: np.ndarray           # (B,K) bool, ZUPT applied
     events: dict = field(default_factory=dict)   # counts of accepted / rejected updates
+    aux: dict = field(default_factory=dict)      # diagnostics: b_h, g_h, cruise flag (B,K)
 
 
 def skew_b(v):
@@ -247,7 +248,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     # epoch: predicted h = p_z − lag·v_z + b_h (on a 5 % grade at 70 km/h the uncorrected lag is
     # ~0.5 m and was read as a pitch error at every grade change; found on S3)
     baro_lag = np.array([tt - baro_t[(baro_t > tt - 1.0) & (baro_t <= tt)].mean() for tt in baro_1hz_t])
-    out_t, out_p, out_v, out_C, out_P, out_ba, out_z = [], [], [], [], [], [], []
+    out_t, out_p, out_v, out_C, out_P, out_ba, out_z, out_aux = [], [], [], [], [], [], [], []
     g_hat = np.zeros(B)                     # tunnel pressure gradient as height per metre [m/m]
     outage_prev = np.zeros(B, bool)
     d_acc = np.zeros(B)                     # distance travelled in the current outage (gradient lever)
@@ -586,5 +587,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         if do_cov:
             out_t.append(imu_t[kk]); out_p.append(p.copy()); out_v.append(v.copy()); out_C.append(C.copy())
             out_P.append(P[:, 0:3, 0:3].copy()); out_ba.append(b_a.copy()); out_z.append(st.copy())
+            out_aux.append(np.stack([b_h, g_hat, cruise_on.astype(float), np.sqrt(P[:, IG, IG])], 1))
     return EskfOutput(t=np.array(out_t), p=np.stack(out_p, 1), v=np.stack(out_v, 1), C=np.stack(out_C, 1),
-                      P_pos=np.stack(out_P, 1), b_a=np.stack(out_ba, 1), zupt=np.stack(out_z, 1), events=ev)
+                      P_pos=np.stack(out_P, 1), b_a=np.stack(out_ba, 1), zupt=np.stack(out_z, 1), events=ev,
+                      aux=dict(zip(("b_h", "g_h", "cruise", "sigma_g"), np.moveaxis(np.stack(out_aux, 1), -1, 0))))
