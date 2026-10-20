@@ -7,7 +7,7 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
-## Unreleased (v0.5.0 in progress): ESKF, visual simulator
+## v0.5.0 (2026-10-20): ESKF, visual simulator, exit branch, evaluation, write-up
 
 - `tunnelsim/eskf.py`: batched 16-state ESKF (GNSS position/velocity with NIS gate, NHC,
   barometer with offset state, ZUPT from an IMU stop detector). Design and results:
@@ -40,6 +40,16 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   budget and the observability check. Changes every ESKF number after the diverge; INS
   error-free attitude floor tolerance 1e-6 → 2e-6 rad.
 - S6 third ramp moved 2000 → 2100 m (after the previous ramp ends).
+- Review 7: lateral NHC dropped while |ω_z|·v > 0.3 m/s² (default; sideslip in the exit curve
+  gave a −20 m common-mode along-track transient); threshold and no-sideslip checks; two-sided
+  branch decision with a position-certainty condition for "main" (negative control: car straight
+  on); filter mount-error option; assumption-removal runs (C).
+- `tools/evaluate.py` (final Monte Carlo, `reports/0.5.0/evaluation_50.json`), ESKF section in the
+  snapshot, `tools/plot_nhc_trace.py`, `tools/baro_model_check.py`.
+- `REPORT.md` (write-up incl. AI usage), README rewritten.
+- Metric diff vs 0.4.0: truth/sensor metrics move through the scenario changes (exit branch on the
+  route, S2 diverge 1800 → 2000 m, S6 variants); budget and observability use the v0.4 geometry
+  (`branch=False`) and should not move beyond seed noise; new `eskf` section.
 
 ## v0.4.0 (2026-10-20): INS, error budget, calibration and reference algorithms
 

@@ -141,7 +141,38 @@ The window-centre model fixes it. The remaining second-order error is under 3 cm
 
 ### 4.5 Assumption removal
 
-ASSUMPTION_TABLE
+Four dimensions, nominal against stressing cases, S1 with 30 seeds unless noted
+(`reports/0.5.0/assumptions_30.json`). Differences of 1–2 m are within seed noise.
+
+| Dimension | Case | Error at diverge, rms | Error at portal, rms | Mean (e/σ)² | Callout rms |
+|---|---|---|---|---|---|
+| — | nominal (50 seeds) | 12.1 m | 17.4 m | 0.36 | 0.46 s |
+| GNSS entry quality | receiver coasts 5 s into the tunnel | 12.5 | 15.7 | 0.29 | 0.48 |
+| | reported accuracy 0.7× the real error (optimistic) | 12.2 | 15.8 | 0.32 | 0.47 |
+| Phone mount known to the filter | 1° pitch and yaw error | 11.7 | 16.1 | 0.31 | 0.45 |
+| | 3° pitch and yaw error | 12.2 | 16.4 | 0.32 | 0.47 |
+| Bias model | single GM (τ 300 s) instead of 3 GM | 11.3 | 17.3 | 0.35 | 0.44 |
+| | **low-end IMU (MPU9250 [MEAS])**, same tuning | **3.2 km** | **3.5 km** | 2·10⁴ | 266 s |
+| | low-end IMU, filter noise retuned once | 193 | 484 | 27 | 53 |
+| Sideslip | 2× gain (0.8°/(m/s²)) | 11.6 | 20.5 | 0.51 | 0.44 |
+| | 2× gain, S2 (long curves) | 13.2 | 21.4 | 1.22 (93 % in 2σ) | 0.44 |
+
+- **GNSS entry quality.** Coasting fixes and optimistic accuracy do not hurt. The filter already
+  inflates GNSS R (×2 position, ×3.2 velocity), and the slow bias states do not follow short
+  disturbances.
+- **Mount error.** Up to 3° is absorbed. The NHC turns the filter's attitude so that its (wrong)
+  body frame lines up with the velocity. The pitch part then appears as g·sin θ in the
+  along-track channel, which GNSS calibrates as part of the lumped accelerometer bias
+  (`DESIGN.md` §4.2). This holds while the mount is rigid. A phone that moves in the mount
+  during the tunnel is not covered.
+- **Bias model.** The design is not sensitive to the shape of the bias model. It is very
+  sensitive to the IMU class. The MPU9250's gyro bias instability is 3–7·10⁻³ rad/s, 30–80× the
+  Note10, and NHC with the barometer cannot hold pitch against it. One retune of the filter noise
+  is not enough. A low-end phone needs a different approach (speed cues, map matching, CV), not
+  this INS.
+- **Sideslip magnitude.** With twice the assumed sideslip, the portal error grows by 3 m and the
+  filter becomes slightly optimistic on S2 (93 % within 2σ). The gate removes the curve itself;
+  what remains is the sideslip just below the 0.3 m/s² threshold.
 
 ## 5. Limitations
 
@@ -150,8 +181,10 @@ ASSUMPTION_TABLE
     time-domain shape (three Gauss–Markov terms), the vibration, sideslip, barometer and GNSS
     behaviour are [ASSUMED].
   - The bias-model shape alone moves the INS budget by a factor of ~2.4 (§4.3 of `DESIGN.md`).
-- **The mount is given to the filter.** A 1° error is tolerated; 3° is not (§4.5). A real app
-  needs mount estimation while GNSS is good, which the NHC and the speed changes make possible.
+- **The mount is given to the filter.** Errors up to 3° are absorbed while the mount stays
+  rigid (§4.5). A phone that shifts in its mount is not covered.
+- **One IMU class.** The filter is tuned for a mid-range phone IMU (LSM6DSR). A low-end IMU
+  (MPU9250) breaks it (§4.5).
 - **Map.**
   - The map is treated as exact: the polyline, the diverge position and the portal positions.
   - The map's grade profile is not used, because tunnel grade is often missing or wrong in maps.
@@ -164,8 +197,8 @@ ASSUMPTION_TABLE
 - An uncertainty-aware callout that stays on the early side (§4.1).
 - A motion-mode layer (constant velocity vs INS, IMM) for the steady parts. The CV estimate is
   2× better there, but only when the speed really is constant.
-- Mount estimation and real-device traces (a logger app in an Istanbul tunnel, portals as
-  checkpoints).
+- Real-device traces (a logger app in an Istanbul tunnel, portals as checkpoints), and an IMU
+  class check at start-up, so that a low-end phone falls back to CV and map cues.
 - A properly normalised branch decision (yaw σ and σ_s), and skipping the lateral NHC row instead
   of setting its R to 10⁶.
 
@@ -185,4 +218,41 @@ ASSUMPTION_TABLE
 
 ## 8. AI usage
 
-AI_USAGE
+This project was built with an AI coding agent: Claude (Anthropic), working in a cloud
+workspace attached to the GitHub repository. The division of work:
+
+- **The author (Alper Mutlu) decided.** He decided the problem framing, the assumptions, every
+  filter-design and error-budget choice, the scenarios and the acceptance criteria. Before each
+  piece of code, Claude proposed options with formulas and reasons, and the author approved,
+  changed or rejected them. His reviews are recorded in `docs/reviews/`, the decisions in
+  `docs/decisions/`. Two examples:
+  - "robust over optimal: restrict only the bias states' rate of change";
+  - correcting the observability claim of the GM speed model (review 6).
+- **Claude implemented.** It wrote the simulator, the sensor models, the filter, the tests and
+  the experiments. It ran the Monte Carlo studies, reported numbers and diagnoses, and drafted
+  the documents, this write-up included. The author reviewed them.
+- **Process controls**, used because generated code can be confidently wrong:
+  - every number is tagged [MEAS], [SPEC] or [ASSUMED];
+  - truth and estimator are separated in code;
+  - each version gets a CHANGELOG entry and a metrics snapshot, and a changed metric must be
+    explained;
+  - every decision and review is a commit;
+  - release tags are set by the author, not by the agent.
+
+Errors made on the AI side and caught by this process (all in the decision log):
+
+- **Caught in the author's reviews:**
+  - a sign error in the attitude-error convention (review 4);
+  - an oracle lower bound in the error budget presented as achievable (15.8 m vs 21.6 m,
+    review 5);
+  - an observability claim stronger than the model supports (review 6).
+- **Caught by consistency metrics, not by the final error:**
+  - the absolute speed hold that made the filter overconfident;
+  - the barometer timestamp lag;
+  - the sideslip/NHC interaction.
+- **Implementation bugs caught by tests and Monte Carlo:**
+  - an innovation sign;
+  - a barometer index that never advanced;
+  - a stop detector that fired at launch.
+
+The agent could not tag releases, and it did not use any real sensor data.
