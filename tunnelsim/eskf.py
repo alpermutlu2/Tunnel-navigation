@@ -44,6 +44,19 @@ class EskfConfig:
     gnss_vel_factor: float = 3.2      # R_vel = (factor · reported σ)²: 0.10 -> 0.32 m/s eq. white (E3)
     nhc_sigma: float = 0.1            # m/s (E4)
     nhc_turn_k: float = 0.0           # rad/(m/s²); 0 = off. Lateral NHC inflation in turns (sideslip)
+    # Tunnel pressure gradient (Fable review, accepted 2026-10-20): during an outage the barometer
+    # offset drifts with distance, ḃ_h = g_h·|v|; g_h restarts at 0 with σ_g at each outage.
+    baro_grad: bool = True
+    baro_grad_sigma: float = 3e-3      # m/m ≈ 35 Pa/km [ASSUMED]
+    # GNSS gate lock recovery (accepted 2026-10-20): (i) after N consecutive rejections in open
+    # sky, inflate P (non-position states) so the current innovation fits the gate ×1.5;
+    # (ii) adaptive accel/gyro noise from the GNSS NIS (rises with a 20 s window, decays with 60 s).
+    gate_recover: bool = True
+    gate_recover_n: int = 5            # [ASSUMED]
+    adaptive_q: bool = True
+    adaptive_q_max: float = 30.0       # [ASSUMED]
+    adaptive_q_rise_s: float = 20.0
+    adaptive_q_fall_s: float = 60.0
     nhc_turn_gate: float = 0.3        # m/s² [ASSUMED, review 7]; 0 = off. Lateral NHC dropped while |ω_z|·v exceeds this
     nhc_rate_hz: float = 5.0
     baro_sigma: float = 0.15          # m, 1 Hz average (E4)
@@ -196,8 +209,9 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     zupt_mask: optional (N,) or (B,N) bool overriding the detector (oracle stops).
     """
     B, N = f.shape[0], imu_t.size
-    NA = NX + 2          # + speed clone / v_ref (index NX) and driver wander d (NX + 1), cruise only
+    NA = NX + 3          # + speed clone / v_ref (NX), driver wander d (NX + 1), baro gradient g_h (NX + 2)
     ID = NX + 1
+    IG = NX + 2
     fs = 1.0 / np.median(np.diff(imu_t))
     C_pb = C_bp.T
     fwd_p = C_pb[:, 0]
@@ -234,8 +248,33 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     # ~0.5 m and was read as a pitch error at every grade change; found on S3)
     baro_lag = np.array([tt - baro_t[(baro_t > tt - 1.0) & (baro_t <= tt)].mean() for tt in baro_1hz_t])
     out_t, out_p, out_v, out_C, out_P, out_ba, out_z = [], [], [], [], [], [], []
-    ev = {"gnss_pos_acc": 0, "gnss_pos_rej": 0, "gnss_vel_acc": 0, "gnss_vel_rej": 0, "zupt": 0,
+    g_hat = np.zeros(B)                     # tunnel pressure gradient as height per metre [m/m]
+    outage_prev = np.zeros(B, bool)
+    n_rej = np.zeros(B, int)                # consecutive open-sky GNSS rejections (pos or vel)
+    q_scale = np.ones(B)                    # adaptive accel/gyro noise scale (α)
+    ev = {"gate_inflations": 0, "gnss_pos_acc": 0, "gnss_pos_rej": 0, "gnss_vel_acc": 0, "gnss_vel_rej": 0, "zupt": 0,
           "gnss_pos_skipped_reacq": 0, "gnss_pos_capped": 0}
+    def _gate_monitor(sel, acc, nis, open_sky):
+        """(i) gate-lock recovery and (ii) adaptive noise from the GNSS NIS (3-dof updates)."""
+        nonlocal P, q_scale
+        idx = np.nonzero(sel)[0]
+        if cfg.adaptive_q:
+            r = nis / 3.0
+            up = r > q_scale[idx]
+            a = np.where(up, 1.0 / cfg.adaptive_q_rise_s, 1.0 / cfg.adaptive_q_fall_s)
+            q_scale[idx] = np.clip(q_scale[idx] + a * (r - q_scale[idx]), 1.0, cfg.adaptive_q_max)
+        if cfg.gate_recover:
+            cnt = np.where(~acc & open_sky, n_rej[idx] + 1, 0)
+            fire = cnt >= cfg.gate_recover_n
+            if fire.any():
+                lam = np.maximum(1.0, nis[fire] / CHI2_3_999) * 1.5
+                S = np.ones((int(fire.sum()), NA)); S[:, 3:] = np.sqrt(lam)[:, None]
+                fi = idx[fire]
+                P[fi] = P[fi] * S[:, :, None] * S[:, None, :]      # S P S: stays PSD
+                ev["gate_inflations"] += int(fire.sum())
+                cnt = np.where(fire, 0, cnt)
+            n_rej[idx] = cnt
+
     last_fix = np.full(B, t0)              # time of the last position fix used
     last_vel = np.full(B, t0)              # time of the last GNSS velocity
     n_win = max(1, int(round(cfg.cruise_win_s * cfg.cov_rate_hz)))
@@ -273,6 +312,11 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         F[:, 3:6, 6:9] = -skew_b(f_n)
         F[:, 3:6, 9:12] = -C
         F[:, 6:9, 12:15] = -C
+        if cfg.baro_grad:
+            spd_k = np.linalg.norm(v, axis=1)
+            out_k = imu_t[k + 1] - last_vel > cfg.cruise_no_gnss_s
+            F[:, 15, IG] = np.where(out_k, spd_k, 0.0)
+            b_h = b_h + np.where(out_k, g_hat * spd_k * dt, 0.0)
         Fsum += F * dt; dt_sum += dt
         kk = k + 1
         do_cov = (kk - i0) % n_cov == 0
@@ -287,12 +331,24 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                 phi_d = np.exp(-dt_sum / cfg.cruise_gm_tau)
                 Phi[:, ID, ID] = phi_d
                 d_hat = d_hat * phi_d
-            P = Phi @ P @ np.swapaxes(Phi, 1, 2) + np.diag(Qc) * dt_sum
+            Qk = np.broadcast_to(np.diag(Qc), (B, NA, NA)).copy()
+            if cfg.adaptive_q:
+                Qk[:, 3:9, 3:9] *= q_scale[:, None, None]
+            P = Phi @ P @ np.swapaxes(Phi, 1, 2) + Qk * dt_sum
             if gm_mode:
                 P[:, ID, ID] += cfg.cruise_gm_sigma ** 2 * (1.0 - phi_d ** 2)
             Fsum[:] = 0.0; dt_sum = 0.0
         x = np.zeros((B, NA))
         reclone = np.zeros(B, bool); gm_init = np.zeros(B, bool)
+        if cfg.baro_grad:
+            outage = imu_t[kk] - last_vel > cfg.cruise_no_gnss_s
+            new_out = outage & ~outage_prev
+            if new_out.any():
+                # a new tunnel: its gradient is unknown and independent of the last one
+                P[new_out, IG, :] = 0.0; P[new_out, :, IG] = 0.0
+                P[new_out, IG, IG] = cfg.baro_grad_sigma ** 2
+                g_hat = np.where(new_out, 0.0, g_hat)
+            outage_prev = outage
         # GNSS
         while gi < len(g_idx) and g_idx[gi] == kk:
             pz = gnss["pos"][:, gi]; vz = gnss["vel"][:, gi]
@@ -333,8 +389,10 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                         sidx = np.nonzero(sel)[0]
                         settle[sidx] = np.where(alpha < 1, 0, settle[sidx] + 1)
                     else:
-                        acc, _ = _update(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999)
+                        acc, nis = _update(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999)
                     P[sel], x[sel] = Psub, xs
+                    if not capped:
+                        _gate_monitor(sel, acc, nis, open_sky=(np.nan_to_num(sh, nan=1e9)[sel] <= cfg.gnss_max_reported_sigma_m))
                     ev["gnss_pos_acc"] += int(acc.sum()); ev["gnss_pos_rej"] += int((~acc).sum())
             okv = np.isfinite(vz[:, 0])
             last_vel = np.where(okv, g_t[gi], last_vel)
@@ -356,8 +414,10 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                         acc, alpha = _update_capped(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999, cfg.reacq_max_step_m)
                         ev["gnss_pos_capped"] += int((alpha < 1).sum())
                     else:
-                        acc, _ = _update(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999)
+                        acc, nis = _update(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999)
                     P[sel], x[sel] = Psub, xs
+                    if not capped:
+                        _gate_monitor(sel, acc, nis, open_sky=(np.nan_to_num(sh, nan=1e9)[sel] <= cfg.gnss_max_reported_sigma_m))
                     ev["gnss_vel_acc"] += int(acc.sum()); ev["gnss_vel_rej"] += int((~acc).sum())
             gi += 1
         # barometer (1 Hz average)
@@ -453,17 +513,18 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                 spd_ = np.linalg.norm(v, axis=1)
                 a_lat = np.abs(w_b[:, 2]) * spd_
                 R[:, 0, 0] += (cfg.nhc_turn_k * a_lat * spd_) ** 2
+            moving = np.linalg.norm(v, axis=1) > 1.0
+            turning = np.zeros(B, bool)
             if cfg.nhc_turn_gate > 0.0:
                 # the sideslip error is the same sign for the whole curve (correlated), so R
-                # inflation only slows it down; drop the lateral row while turning instead
-                spd_ = np.linalg.norm(v, axis=1)
-                a_lat = np.abs(w_b[:, 2]) * spd_
-                R[:, 0, 0] = np.where(a_lat > cfg.nhc_turn_gate, 1e6, R[:, 0, 0])
-            moving = np.linalg.norm(v, axis=1) > 1.0
-            Psub, xs = P[moving], x[moving]
-            if moving.any():
-                _update(xs, Psub, z[moving], H[moving], R[moving], None)
-                P[moving], x[moving] = Psub, xs
+                # inflation only slows it down; skip the lateral row while turning instead
+                a_lat = np.abs(w_b[:, 2]) * np.linalg.norm(v, axis=1)
+                turning = a_lat > cfg.nhc_turn_gate
+            for sel, rows in ((moving & ~turning, slice(0, 2)), (moving & turning, slice(1, 2))):
+                if sel.any():
+                    Psub, xs = P[sel], x[sel]
+                    _update(xs, Psub, z[sel][:, rows], H[sel][:, rows], R[sel][:, rows, rows], None)
+                    P[sel], x[sel] = Psub, xs
         # inject
         if np.any(x):
             p = p - x[:, 0:3]
@@ -474,6 +535,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             b_h = b_h - x[:, 15]
             s_clone = s_clone - x[:, NX]
             d_hat = d_hat - x[:, ID]
+            g_hat = g_hat - x[:, IG]
             fc = f[:, kk] - b_a
             a_k = np.einsum("bij,bj->bi", C, fc) + GRAVITY_N
         if reclone.any():
