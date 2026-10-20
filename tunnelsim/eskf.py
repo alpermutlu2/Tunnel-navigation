@@ -63,6 +63,16 @@ class EskfConfig:
     reacq_max_step_m: float = 2.0     # largest position correction per fix in the phase (gain scaled)
     gnss_max_reported_sigma_m: float = 10.0   # position fixes reporting more than this are not used
     reacq: bool = True                # switch for A/B comparison
+    # B. Cruise (speed-hold) mode (accepted 2026-10-20). Without GNSS velocity for > 5 s, moving
+    # and not stopped: if the 5 s mean of the filter's along-track acceleration is below the
+    # threshold for 5 s, hold the speed with a pseudo-measurement whose variance grows like an
+    # undetectable sub-threshold acceleration: R = σ0² + (a_th Δt)²/3.
+    cruise: bool = False             # B is experimental: consistency not solved (see decision note)
+    cruise_acc_th: float = 0.02       # m/s²
+    cruise_win_s: float = 5.0
+    cruise_sigma0: float = 0.05       # m/s
+    cruise_no_gnss_s: float = 5.0
+    cruise_min_speed: float = 3.0     # m/s
     p0_pos: float = 5.0
     p0_vel: float = 0.3
     p0_att_rp: float = np.deg2rad(1.0)
@@ -209,6 +219,12 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     ev = {"gnss_pos_acc": 0, "gnss_pos_rej": 0, "gnss_vel_acc": 0, "gnss_vel_rej": 0, "zupt": 0,
           "gnss_pos_skipped_reacq": 0, "gnss_pos_capped": 0}
     last_fix = np.full(B, t0)              # time of the last position fix used
+    last_vel = np.full(B, t0)              # time of the last GNSS velocity
+    n_win = max(1, int(round(cfg.cruise_win_s * cfg.cov_rate_hz)))
+    a_buf = np.zeros((B, n_win)); a_cnt = 0  # ring buffer of along-track accel at cov rate
+    cruise_on = np.zeros(B, bool); calm_since = np.full(B, t0); v_hold = np.zeros(B); t_hold = np.zeros(B)
+    n_upd = np.zeros(B)
+    ev["cruise_updates"] = 0
     reacq_start = np.full(B, -np.inf)       # start of the current re-acquisition phase
     reacq_on = np.zeros(B, bool)            # phase active (ends on convergence, not on a timer)
     settle = np.zeros(B, int)               # uncapped position updates in a row within the phase
@@ -292,6 +308,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     P[sel], x[sel] = Psub, xs
                     ev["gnss_pos_acc"] += int(acc.sum()); ev["gnss_pos_rej"] += int((~acc).sum())
             okv = np.isfinite(vz[:, 0])
+            last_vel = np.where(okv, g_t[gi], last_vel)
             if okv.any():
                 sv_ = cfg.gnss_vel_factor * np.nan_to_num(gnss["acc_vel"][:, gi], nan=1e3)
                 R = np.zeros((B, 3, 3))
@@ -335,6 +352,36 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             _update(xs, Psub, z[st], H[st], R[st], None)
             P[st], x[st] = Psub, xs
             ev["zupt"] += int(st.sum())
+        # B. cruise mode (decided at the covariance rate, pseudo-measurement at 1 Hz)
+        if cfg.cruise and do_cov:
+            spd = np.linalg.norm(v, axis=1)
+            u = v / np.maximum(spd, 1e-6)[:, None]
+            a_buf[:, a_cnt % n_win] = np.einsum("bi,bi->b", a_k - 0.0, u)
+            a_cnt += 1
+            a_mean = a_buf.mean(1) if a_cnt >= n_win else np.full(B, np.inf)
+            tk = imu_t[kk]
+            calm = np.abs(a_mean) < cfg.cruise_acc_th
+            eligible = (tk - last_vel > cfg.cruise_no_gnss_s) & (spd > cfg.cruise_min_speed) & ~st
+            calm_since = np.where(calm, calm_since, tk)
+            cruise_on = cruise_on & calm & eligible
+            start = ~cruise_on & calm & eligible & (tk - calm_since >= cfg.cruise_win_s)
+            v_hold = np.where(start, spd, v_hold); t_hold = np.where(start, tk, t_hold)
+            n_upd = np.where(start, 0, n_upd)
+            cruise_on = cruise_on | start
+            if cruise_on.any() and (kk - i0) % int(round(fs)) == 0:
+                H = np.zeros((B, 1, NX)); H[:, 0, 3:6] = u
+                z = (spd - v_hold)[:, None] - np.einsum("bij,bj->bi", H, x)
+                # the same v_hold is re-used every second: these pseudo-measurements are not
+                # independent, so the k-th one gets k times the variance (otherwise the hold's
+                # information accumulates and sigma collapses; found in the first B run)
+                n_upd = n_upd + cruise_on
+                R = ((cfg.cruise_sigma0 ** 2 + (cfg.cruise_acc_th * (tk - t_hold)) ** 2 / 3.0)
+                     * np.maximum(n_upd, 1))[:, None, None]
+                sel = cruise_on
+                Psub, xs = P[sel], x[sel]
+                _update(xs, Psub, z[sel], H[sel], R[sel], None)
+                P[sel], x[sel] = Psub, xs
+                ev["cruise_updates"] += int(sel.sum())
         # NHC (body y, z velocity at R = 0)
         if (kk - i0) % n_nhc == 0:
             C_bn = C_bp @ np.swapaxes(C, 1, 2)                       # body <- nav

@@ -22,6 +22,10 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   of ≤ 2 m incl. velocity updates, convergence-based end, reported-σ limit): exit step p95
   45–76 m → 4–6 m; slower settling after S4 (16/50 not within 10 m in 60 s). Recovery metric
   threshold 5 → 10 m (≈ 2× GNSS horizontal rms). Tests +2.
+- B, cruise (speed-hold) pseudo-measurement mode, behind `EskfConfig.cruise` (default False,
+  not accepted): exit rms improves on S1/S4/S5 but the filter becomes overconfident (mean
+  (e/σ)² 6–33). No metric change with the default. `reports/0.5.0.dev0/cruise_ab_50.json`.
+- Scenario S6 (S1 with ±2 km/h, 40 s speed ramps inside the tunnel): breaking case for B.
 
 ## v0.4.0 (2026-10-20): INS, error budget, calibration and reference algorithms
 

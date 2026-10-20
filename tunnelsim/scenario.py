@@ -347,4 +347,21 @@ def build_scenarios() -> dict[str, Scenario]:
             SpeedEvent(s_e + 1800.0, kmh(75), 40.0),
         ]),
     )
+    # S6: like S1, but the speed wanders slowly inside the tunnel: +-2 km/h with 40 s ramps
+    # (peak 0.026 m/s^2, mostly below the cruise-mode threshold). The breaking case for the
+    # speed-hold (cruise) mode: a real driver never holds speed exactly. [ASSUMED] magnitudes.
+    v0, L_t = kmh(80), 3000.0
+    s_e = _approach(v0)
+    out["S6"] = Scenario(
+        key="S6",
+        title="Straight, slow speed wander",
+        description="As S1, but inside the tunnel the speed wanders +-2 km/h with slow 40 s ramps.",
+        road=_straight_road(s_e + L_t + _lead_out(v0, L_t), s_e, L_t, 0.0,
+                            exits=[Exit(s_e + 2200, "Exit A")]),
+        speed=SpeedProfile(v0=v0, events=_approach_maneuvers(v0) + [
+            SpeedEvent(s_e + 100.0, v0 + kmh(2), 40.0),
+            SpeedEvent(s_e + 1200.0, v0 - kmh(2), 40.0),
+            SpeedEvent(s_e + 2000.0, v0, 40.0),
+        ]),
+    )
     return out
