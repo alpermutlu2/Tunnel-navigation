@@ -26,12 +26,15 @@ def map_s(road, p_xy, s_lo, s_hi, step=1.0):
 
 
 def branch_check(imu_t, w, out_t, out_C, out_p, out_v, road, thr_deg=CONFIRM_DEG, pre_m=PRE_M):
-    """Per seed: confirmation time of the branch (NaN if never) and ŝ at the window start.
-    w (B, N, 3) phone gyro; out_* filter output at its own rate."""
+    """Per seed: time of the first decision (NaN if none) and the decision (+1 branch, −1 main,
+    0 none). Branch: |r_main| > thr and |r_branch| < |r_main|; main: the mirror condition.
+    w (B, N, 3) phone gyro; out_* filter output at its own rate; road = the map (route with the
+    branch)."""
     ex = road.exits[0]
     B = out_p.shape[0]
     s_hat = np.stack([map_s(road, out_p[b, :, :2], ex.s - 3000.0, ex.s + 1500.0, 2.0) for b in range(B)])
     t_conf = np.full(B, np.nan)
+    choice = np.zeros(B, int)
     thr = np.deg2rad(thr_deg)
     psi0_map = road.heading(ex.s - pre_m)
     for b in range(B):
@@ -47,7 +50,11 @@ def branch_check(imu_t, w, out_t, out_C, out_p, out_v, road, thr_deg=CONFIRM_DEG
         dpsi_k = np.interp(out_t[k0:], imu_t[i0:], dpsi)
         r_branch = dpsi_k - (road.heading(sh) - psi0_map)
         r_main = dpsi_k - ex.dpsi_main * np.clip((sh - ex.s) / max(ex.curve_len, 1e-9), 0.0, 1.0)
-        hit = (np.abs(r_main) > thr) & (np.abs(r_branch) < np.abs(r_main))
-        if hit.any():
-            t_conf[b] = out_t[k0 + int(np.argmax(hit))]
-    return t_conf
+        hit_b = (np.abs(r_main) > thr) & (np.abs(r_branch) < np.abs(r_main))
+        hit_m = (np.abs(r_branch) > thr) & (np.abs(r_main) < np.abs(r_branch))
+        first = [int(np.argmax(h)) if h.any() else None for h in (hit_b, hit_m)]
+        if first[0] is not None and (first[1] is None or first[0] <= first[1]):
+            t_conf[b], choice[b] = out_t[k0 + first[0]], 1
+        elif first[1] is not None:
+            t_conf[b], choice[b] = out_t[k0 + first[1]], -1
+    return t_conf, choice

@@ -110,11 +110,15 @@ RECOVERY_M = 10.0           # recovered = horizontal error stays below this; ~2x
                             # does not count as "not recovered"
 
 
-def simulate_run(key, seeds, overrides=(), imu_switches=None):
+def simulate_run(key, seeds, overrides=(), imu_switches=None, branch=True, vehicle=None):
     """Sensor data for a batch of seeds: IMU (no gaps; jitter off so the batch shares a time
-    axis), GNSS and barometer at nominal settings plus overrides."""
+    axis), GNSS and barometer at nominal settings plus overrides. branch=False: the car goes
+    straight on at the diverge (v0.4 geometry); vehicle: replaces the scenario's Vehicle (e.g. no
+    sideslip)."""
     from .sensors import BaroTruthSource, simulate_baro
-    sc = build_scenarios()[key]
+    sc = build_scenarios(branch=branch)[key]
+    if vehicle is not None:
+        sc.vehicle = vehicle
     tr = generate_truth(sc)
     cfg = configure("no_gaps", *overrides)
     isrc, gsrc, bsrc = ImuTruthSource.from_truth(tr), GnssTruthSource.from_truth(tr, sc), BaroTruthSource.from_truth(tr, sc)
@@ -131,9 +135,13 @@ def simulate_run(key, seeds, overrides=(), imu_switches=None):
     return sc, tr, m.t, np.stack(F), np.stack(W), gnss, b.t, np.stack(H)
 
 
-def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=None, keep_tracks=False):
+def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=None, keep_tracks=False,
+                    branch=True, vehicle=None):
+    """branch=False: negative control, the car goes straight on at the diverge while the map (and
+    the branch check) still has the branch on the route (review 7)."""
     from .eskf import EskfConfig, run_eskf
-    sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, np.arange(seeds), overrides)
+    sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, np.arange(seeds), overrides, branch=branch, vehicle=vehicle)
+    map_road = build_scenarios(branch=True)[key].road
     zmask = (tr.v < 0.05) if zupt_oracle else None
     out = run_eskf(t, F, W, gnss, bt, bh, tr.C_bp, tr.lever_arm_b, eskf_cfg or EskfConfig(), zupt_mask=zmask)
     i_e = int(np.argmax(tr.in_tunnel))
@@ -177,17 +185,23 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
                           "within_2sigma_t": round(float(np.mean(np.abs(dt_call) < 2 * sig_t)), 3)}
     # exit branch: error at the true diverge (before/after the branch reported separately) and the
     # gyro branch confirmation (tunnelsim/branch.py; estimator side, no truth)
-    if sc.road.exits and sc.road.exits[0].on_route:
+    if map_road.exits and map_road.exits[0].on_route:
         from .branch import branch_check
-        ex = sc.road.exits[0]
+        ex = map_road.exits[0]
         k_div = int(np.argmax(s_true >= ex.s))
         t_div = out.t[k_div]
         res["at_diverge"] = stats(e_s[:, k_div])
-        t_conf = branch_check(t, W, out.t, out.C, out.p, out.v, sc.road)
+        t_conf, choice = branch_check(t, W, out.t, out.C, out.p, out.v, map_road)
         delay = t_conf - t_div
-        res["branch_confirm"] = {"confirmed_frac": round(float(np.mean(np.isfinite(delay))), 3),
-                                 "before_diverge_frac": round(float(np.mean(delay < 0)), 3),
-                                 "delay_s": stats(delay[np.isfinite(delay)]) if np.isfinite(delay).any() else None}
+        took = 1 if branch else -1                          # what the car really did
+        right = choice == took
+        res["branch_confirm"] = {"car": "branch" if branch else "main",
+                                 "branch_reported_frac": round(float(np.mean(choice == 1)), 3),
+                                 "main_reported_frac": round(float(np.mean(choice == -1)), 3),
+                                 "none_frac": round(float(np.mean(choice == 0)), 3),
+                                 "confirmed_frac": round(float(np.mean(right)), 3),
+                                 "before_diverge_frac": round(float(np.mean(delay[choice != 0] < 0)) if (choice != 0).any() else 0.0, 3),
+                                 "delay_s": stats(delay[right]) if right.any() else None}
     # recovery after the exit
     after = out.t >= t_x
     win = after & (out.t <= t_x + 60.0)

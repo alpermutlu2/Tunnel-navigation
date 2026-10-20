@@ -44,7 +44,7 @@ class EskfConfig:
     gnss_vel_factor: float = 3.2      # R_vel = (factor · reported σ)²: 0.10 -> 0.32 m/s eq. white (E3)
     nhc_sigma: float = 0.1            # m/s (E4)
     nhc_turn_k: float = 0.0           # rad/(m/s²); 0 = off. Lateral NHC inflation in turns (sideslip)
-    nhc_turn_gate: float = 0.0        # m/s²; 0 = off. Lateral NHC dropped while |ω_z|·v exceeds this
+    nhc_turn_gate: float = 0.3        # m/s² [ASSUMED, review 7]; 0 = off. Lateral NHC dropped while |ω_z|·v exceeds this
     nhc_rate_hz: float = 5.0
     baro_sigma: float = 0.15          # m, 1 Hz average (E4)
     zupt_sigma: float = 0.02          # m/s (E5)
