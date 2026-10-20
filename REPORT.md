@@ -84,8 +84,13 @@ information; "at portal" is where the car comes out. Each tunnel is 2.5–3.5 km
 ¹ With a 300 m lead the callout point of a 0.5 km tunnel is at the portal, still under GNSS, so the
 callout says nothing about the outage there; the error at the portal is the relevant number.
 
-The error grows faster than linearly with outage time (bias drift ~t²), and the cruise prior
-softens it. At 5 km, one callout in six is more than 1 s late, and 11 of 30 seeds take more than
+One 5 km run gives the whole curve (`reports/0.5.1.dev0/error_vs_distance.png`, 30 seeds): rms
+3 m at the portal, 5 m after 1 km, 9 m after 2 km, 15 m after 3 km and 28 m after 4.5 km. The
+error grows faster than linearly with outage time (bias drift ~t²), and the cruise prior softens
+it. The filter σ covers the error everywhere except in the first ~500 m: at the portal it is
+overconfident (σ 1.5 m vs 3.2 m rms), because GNSS degradation just before the portal is not in
+its error model. At the 5 km diverge the exit curve still adds a transient of about +7 m rms,
+which is not yet explained. At 5 km, one callout in six is more than 1 s late, and 11 of 30 seeds take more than
 60 s to settle after the exit.
 
 ## 4. Where it breaks, and why
