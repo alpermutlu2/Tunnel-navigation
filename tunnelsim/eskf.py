@@ -67,7 +67,7 @@ class EskfConfig:
     # and not stopped: if the 5 s mean of the filter's along-track acceleration is below the
     # threshold for 5 s, hold the speed with a pseudo-measurement whose variance grows like an
     # undetectable sub-threshold acceleration: R = σ0² + (a_th Δt)²/3.
-    cruise: bool = False             # B is experimental: consistency not solved (see decision note)
+    cruise: bool = True              # B accepted 2026-10-20 in the "increment" (cloned) form
     cruise_acc_th: float = 0.02       # m/s²
     cruise_win_s: float = 5.0
     cruise_sigma0: float = 0.05       # m/s
@@ -219,6 +219,10 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     baro_1hz_t = np.arange(np.ceil(t0), imu_t[-1], 1.0)
     baro_idx = np.searchsorted(imu_t, baro_1hz_t)
     baro_avg = np.stack([np.nanmean(baro_h[:, (baro_t > tt - 1.0) & (baro_t <= tt)], axis=1) for tt in baro_1hz_t], 1)
+    # the 1 s average represents the height at the window's mean sample time, ~0.5 s before the
+    # epoch: predicted h = p_z − lag·v_z + b_h (on a 5 % grade at 70 km/h the uncorrected lag is
+    # ~0.5 m and was read as a pitch error at every grade change; found on S3)
+    baro_lag = np.array([tt - baro_t[(baro_t > tt - 1.0) & (baro_t <= tt)].mean() for tt in baro_1hz_t])
     out_t, out_p, out_v, out_C, out_P, out_ba, out_z = [], [], [], [], [], [], []
     ev = {"gnss_pos_acc": 0, "gnss_pos_rej": 0, "gnss_vel_acc": 0, "gnss_vel_rej": 0, "zupt": 0,
           "gnss_pos_skipped_reacq": 0, "gnss_pos_capped": 0}
@@ -341,8 +345,9 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         while bi < len(baro_idx) and baro_idx[bi] == kk:
             hz = baro_avg[:, bi]
             ok = np.isfinite(hz)
-            H = np.zeros((B, 1, NA)); H[:, 0, 2] = 1.0; H[:, 0, 15] = 1.0
-            z = ((p[:, 2] + b_h) - hz)[:, None] - np.einsum("bij,bj->bi", H, x)
+            lag = baro_lag[bi]
+            H = np.zeros((B, 1, NA)); H[:, 0, 2] = 1.0; H[:, 0, 5] = -lag; H[:, 0, 15] = 1.0
+            z = ((p[:, 2] - lag * v[:, 2] + b_h) - hz)[:, None] - np.einsum("bij,bj->bi", H, x)
             R = np.full((B, 1, 1), cfg.baro_sigma ** 2)
             Psub, xs = P[ok], x[ok]
             _update(xs, Psub, z[ok], H[ok], R[ok], None)
