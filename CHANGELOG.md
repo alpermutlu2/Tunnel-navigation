@@ -7,7 +7,13 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
-## Unreleased (v0.4.0 in progress): INS, error budget, observability
+## v0.4.0 (2026-10-20): INS, error budget, calibration and reference algorithms
+
+Scope moved by the focus decision: the temperature stress scenario goes to the
+assumption-removal stage; the observability analysis is reduced to a structural rank check
+done with the ESKF (v0.5). Metric diff vs 0.3.0: truth metrics moved only through the scenario
+changes listed below (longer approach and lead-out, approach maneuvers); `ins`, `budget`
+sections are new.
 
 - Plan and decisions: `docs/decisions/2026-10-19-v0.4-plan.md` (review 3, V1 to V6);
   coordinate and measurement contracts `docs/contracts.md`. DESIGN 4 corrected: forward axis
