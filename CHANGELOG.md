@@ -47,9 +47,18 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
 - `tools/evaluate.py` (final Monte Carlo, `reports/0.5.0/evaluation_50.json`), ESKF section in the
   snapshot, `tools/plot_nhc_trace.py`, `tools/baro_model_check.py`.
 - `REPORT.md` (write-up incl. AI usage), README rewritten.
-- Metric diff vs 0.4.0: truth/sensor metrics move through the scenario changes (exit branch on the
-  route, S2 diverge 1800 → 2000 m, S6 variants); budget and observability use the v0.4 geometry
-  (`branch=False`) and should not move beyond seed noise; new `eskf` section.
+- Metric diff vs 0.4.0 (`python tools/snapshot.py --diff 0.4.0 0.5.0`), all explained by the exit
+  branch now being on the route (curves where S1/S3–S5 were straight):
+  - `budget.*`: unchanged (uses `branch=False`).
+  - `truth.*`: S1 sideslip 0 → 0.63°, lateral NHC velocity 0 → 0.14 m/s (the exit curve);
+    error-free strapdown floor up to 0.36 mm, S3 centreline discretisation 6e-6 → 1.6e-4 m
+    (clothoids); new S6/S6s/S6L entries.
+  - `ins.error_free.*`: attitude floor up to 1.2e-6 rad (test tolerance 1e-6 → 2e-6 rad).
+  - `sensors.imu.interpolation.*` pointwise errors and `timestamps.rate_offset_*` grow with the
+    yaw rate in the curve; integral errors stay at 3–4e-6 m/s.
+  - `sensors.gnss.exit.nominal.mean_along_track_m` −4.0 → −0.8 m: the portal is now on the
+    branch heading.
+  - New `eskf` section (20 seeds); 158 tests pass with `--runslow`.
 
 ## v0.4.0 (2026-10-20): INS, error budget, calibration and reference algorithms
 
