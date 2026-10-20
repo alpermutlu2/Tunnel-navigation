@@ -40,6 +40,11 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   421, S4 475 → 585, S5 242 → 463), strapdown residuals accumulate over the longer run (S2
   3.1e-5 → 5.3e-5 m, S3 4.8e-6 → 1.6e-5, S5 4.95e-4 → 8.8e-4, S1 5e-11 → 7e-9), centreline
   discretisation S2 5.1e-5 → 1.0e-4 m (longer road), time in tunnel −0.01 s (sample alignment).
+- Step 4 (short): `tunnelsim/reference.py` (estimator side: LS accel bias from GNSS velocity,
+  conditional GM shape incl. the constant part, GNSS entry state, INS from the entry with
+  hold / condgm / none); `ins.strapdown` gains a time-varying bias shape and a zero-velocity
+  mask; `tunnelsim/experiments.py` (harness). Results in DESIGN 4.4 and
+  `reports/0.4.0.dev0/step4_100.json`. Tests +5.
 - Focus decision (`docs/decisions/2026-10-20-focus.md`): estimable baseline first, then remove
   assumptions; observability reduced to a rank check; ESKF next.
 - Scenarios (truth change): approach maneuvers in every scenario (+15 / −15 km/h / back to v0

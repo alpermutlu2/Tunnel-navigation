@@ -43,6 +43,8 @@ class ImuCalibration:
     gyro_bias: np.ndarray | None = None
     accel_matrix: np.ndarray | None = None   # (3,3) or (B,3,3) = I + S + M
     gyro_matrix: np.ndarray | None = None
+    accel_bias_shape: np.ndarray | None = None   # (N,) or (N,3): bias(t_k) = accel_bias * shape_k
+                                                 # (e.g. GM decay of a bias known at the start)
 
 
 @dataclass
@@ -85,18 +87,26 @@ def _batch(a, nd):
 
 
 def strapdown(t, f, w, init: InsInit, cal: ImuCalibration = ImuCalibration(),
-              attitude=None) -> InsResult:
+              attitude=None, zero_velocity=None) -> InsResult:
     """Mechanise IMU samples.
 
     t: (N,) or (B,N) reported times; f, w: (N,3) or (B,N,3).
     attitude: optional (N,3,3) or (B,N,3,3) phone attitude sequence; if given it replaces the
     gyro integration (ideal-attitude experiments) and w is ignored.
+    zero_velocity: optional (N,) bool; where true the velocity is reset to zero (velocity
+    reset at stops; the caller decides where, e.g. a stop detector or an oracle).
     """
     t, f, w = _batch(t, 1), _batch(f, 2), _batch(w, 2)
     B, N = max(t.shape[0], f.shape[0]), t.shape[1]
     t = np.broadcast_to(t, (B, N))                 # a shared time axis is allowed
     w = np.broadcast_to(w, (B, N, 3))
-    f = _apply_cal(f, cal.accel_bias, cal.accel_matrix)
+    if cal.accel_bias is not None and cal.accel_bias_shape is not None:
+        shape = np.asarray(cal.accel_bias_shape, dtype=float)
+        shape = shape[:, None] if shape.ndim == 1 else shape
+        f = f - np.asarray(cal.accel_bias, dtype=float)[..., None, :] * shape[None]
+        f = _apply_cal(f, None, cal.accel_matrix)
+    else:
+        f = _apply_cal(f, cal.accel_bias, cal.accel_matrix)
     w = _apply_cal(w, cal.gyro_bias, cal.gyro_matrix)
     p = np.broadcast_to(_batch(init.p_n, 1), (B, 3)).copy()
     v = np.broadcast_to(_batch(init.v_n, 1), (B, 3)).copy()
@@ -116,6 +126,8 @@ def strapdown(t, f, w, init: InsInit, cal: ImuCalibration = ImuCalibration(),
             C_next = att[:, k + 1]
         a_next = np.einsum("bij,bj->bi", C_next, f[:, k + 1]) + GRAVITY_N
         v_next = v + 0.5 * (a_k + a_next) * dt[:, None]
+        if zero_velocity is not None and zero_velocity[k + 1]:
+            v_next = np.zeros_like(v_next)
         p = p + 0.5 * (v + v_next) * dt[:, None]
         v, C, a_k = v_next, C_next, a_next
         P[:, k + 1], V[:, k + 1], A[:, k + 1] = p, v, C

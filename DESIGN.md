@@ -167,6 +167,40 @@ Readings:
   attitude and entry bias known its rmse is 1025 m, so long stop-and-go tunnels need the speed
   cues, not the INS.
 
+### 4.4 Pre-tunnel calibration and reference algorithms (v0.4 step 4, 100 seeds, `reports/0.4.0.dev0/step4_100.json`)
+
+Everything from simulated measurements except the attitude (ideal attitude = oracle upper bound
+for accel-based speed). IMU with all IMU error terms; nominal GNSS. Entry state from GNSS: last
+fix 5.2 s before the portal (before the degradation window), velocity averaged over 10 s
+(entry speed error 0.062 m/s rms). Accel bias from GNSS velocity by least squares over the
+window before that fix (`reference.ls_accel_bias`); the approach maneuvers make it identifiable.
+Along-track rmse at R, metres:
+
+| Method | S1 | S2 | S3 | S4 | S5 |
+|---|---|---|---|---|---|
+| INS, LS 60 s, hold (180 s) | 48 | 44 | 47 | 45 | 52 |
+| INS, LS 120 s, hold (180 s) | 31 | 28 | 29 | 32 | 38 |
+| INS, LS 180 s, hold (180 s) | 30 | 27 | 28 | 31 | 33 |
+| INS, LS 180 s, hold (real exit) | 19 | 13 | 28 | 98 | 22 |
+| INS, no calibration (real exit) | 978 | 614 | 1706 | 5858 | 1101 |
+| CV from the GNSS entry state (real exit) | **9.5** | **8.2** | **12** | 2623 | 588 |
+| INS, LS 180 s, hold + oracle ZUPT at stops (real exit) | | | | **30** | |
+
+Readings:
+- GNSS calibration works and the window matters up to ~120 s (60 → 120 s: ~48 → 31 m); 180 s
+  adds little. The LS estimate (a window average) is better than the "entry bias known and
+  held" oracle of 4.3 (33 m), because it estimates the slowly varying part.
+- **Conditional GM propagation ≈ hold**: the bias the GNSS sees is dominated by constant parts
+  (turn-on, scale/misalignment through gravity), so the conditional mean
+  (σ_c² + Σσ²e^(−t/τ))/(σ_c² + Σσ²) barely decays. Review 5's form without σ_c² decays the whole
+  estimate and fails (865 m on S1, first trial). Hold is kept.
+- **CV vs INS**: at constant speed CV is 2–2.5× better (its error is the entry speed error × t);
+  with speed changes it fails (S5 588 m, S4 2.6 km). This is the case for the motion-mode
+  (IMM) design of 5.1.
+- **ZUPT** (oracle stop times) cuts S4 from 98 to 30 m at the exit.
+- Sensitivity on S1 (LS 180 s, 180 s): forward BI at the x/y level 30 → 20 m; single-GM model
+  23 m.
+
 **Conclusion:** sensor noise is not the limit. The limits are (a) calibration quality before the outage and (b) pitch/grade knowledge. Pitch must be held by NHC + barometer + map grade; gyro is used freely mainly for yaw.
 
 ### 4.2 Bias / mount-pitch observability
@@ -349,6 +383,7 @@ Barometer as along-track measurement: `z = h_map(s) + b_h + n`, `∂h/∂s = sin
 - 2026-10-17: Sensor profile parameters beyond Allan terms are marked [ASSUMED] in `tunnelsim/profiles.py`.
 - 2026-10-19: External review applied. Truth adds sideslip, lever arm, event-timing fix; 36 tests incl. independent geometry references and mutation checks. Grade profile no longer assumed in the map (A3). Estimator/truth separation policy (7.2). Observability analysis, reference algorithms incl. oracle, NEES/NIS added to the plan.
 - 2026-10-19: v0.3 sensor decisions K1 to K9 accepted (`docs/decisions/2026-10-19-v0.3-sensors.md`). Three tags [MEAS]/[SPEC]/[ASSUMED]; no real data collected, unsourced parameters swept; nominal vs named sensitivity overrides; per-term RNG streams; version scope v0.3 to v0.8 (section 5). From now on every decision and review is committed; the repository is the only sync channel between sessions.
+- 2026-10-20: v0.4 step 4 (4.4): GNSS LS calibration ~30 m at 180 s with ideal attitude (window useful to ~120 s); conditional GM ≈ hold (constant parts dominate), hold kept; CV 2–2.5× better at constant speed, fails with speed changes (IMM motivated); oracle ZUPT ×3 on S4.
 - 2026-10-20: Focus (`docs/decisions/2026-10-20-focus.md`): estimable baseline first; approach maneuvers for calibration excitation; observability reduced to a rank check; ESKF next; `imu_fwd_bi_xy` sensitivity.
 - 2026-10-20: v0.4 step 3 measured budget (4.3): free pitch unusable (~1.2–1.5 km at 180 s); ideal-attitude residual ~30 m from the accel bias change; held entry bias no better than none for the 3-GM model, GM prediction halves it; BI model shape changes the result 2.5×.
 - 2026-10-19: v0.4 plan accepted with review 3 (`docs/decisions/2026-10-19-v0.4-plan.md`): axis-mapping correction of section 4, independent oracle flags, LS-ideal vs LS-practical calibration, approach road lengthened to 200 s of GNSS, structural + practical observability, 200/1000 seeds, fixed-180 s and real-exit reports, coordinate contracts (`docs/contracts.md`).
