@@ -14,6 +14,12 @@ pip install numpy scipy matplotlib pytest
 python tools/simulate.py S1          # writes sim_S1_seed0.html; open it in a browser
 ```
 
+![Simulator, S5 after the exit diverge](docs/media/sim_S5_after_diverge.png)
+
+Recording: [`docs/media/sim_S5_seed0.mp4`](docs/media/sim_S5_seed0.mp4) (S5, seed 0, from 15 s
+before the portal to 45 s after the exit, 10× real time; frames stepped with
+`tools/record_frames.js` and Playwright, encoded with ffmpeg).
+
 The simulator page is self-contained (no server, no internet). It shows the road from above with
 the tunnel, the exit branch and the main tunnel continuation, the true car, the ESKF estimate with
 its along-track 2σ bar, a constant-velocity reference, GNSS fixes, the error and speed plots, and
