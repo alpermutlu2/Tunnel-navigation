@@ -129,7 +129,7 @@ class EskfConfig:
     # tilt and the lumped bias directly instead of through the integrated speed.
     level: bool = False
     level_sigma: float = 0.02          # m/s²: unmodelled acceleration in "steady" (the cruise threshold) [ASSUMED]
-    level_rate_gate: float = 0.3       # m/s²: skipped while |ω_y,z|·v exceeds this (curves, grade changes)
+    level_rate_gate: float = 0.3       # m/s²: skipped while the 1 s mean |ω_y,z|·v exceeds this (curves, grade changes)
     imu_class: str = "auto"
     imu_detect_s: float = 10.0
     imu_detect_th: float = 0.027      # rad/s per sample at 100 Hz ≈ ARW 2.7e-3 rad/√s: geometric mean of
@@ -693,7 +693,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         if cfg.level and (kk - i0) % int(round(fs)) == 0 and kk - i0 >= int(round(fs)):
             n1 = int(round(fs))
             w_win = np.einsum("ij,bkj->bki", C_bp, w[:, kk - n1 + 1:kk + 1] - b_g[:, None])
-            rate = np.max(np.hypot(w_win[..., 1], w_win[..., 2]), axis=1) * np.linalg.norm(v, axis=1)
+            wm = w_win.mean(axis=1)                    # 1 s mean: the per-sample max would be gyro noise
+            rate = np.hypot(wm[:, 1], wm[:, 2]) * np.linalg.norm(v, axis=1)
             stopped = still[:, kk - n1 + 1:kk + 1].all(axis=1)
             sel = (cruise_on | stopped) & (rate < cfg.level_rate_gate)
             if sel.any():
