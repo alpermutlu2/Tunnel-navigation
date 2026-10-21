@@ -24,7 +24,8 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   and at stops, gated on the 1 s mean |ω_y,z|·v. 10 seeds: S4 diverge 29 → 14 m at σ 0.02, but
   portal and (e/σ)² worse on S2/S3/S5/S6/5 km (grades and speed wander); stops only: no effect
   (30 seeds). Stays off; report §4.7.
-- No metric of the nominal (Note10) evaluation changes.
+- Snapshot `reports/0.5.5/metrics.json` vs 0.5.4: no metric changed; tests 178 → 180 (levelling
+  Jacobian, IMU class detection).
 
 ## v0.5.4 (2026-10-21): callout k = 1, single-page simulator
 
