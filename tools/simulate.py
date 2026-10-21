@@ -32,7 +32,7 @@ from tunnelsim.eskf import EskfConfig, run_eskf  # noqa: E402
 from tunnelsim.experiments import CALLOUT_K, CALLOUT_LEAD_M, simulate_run  # noqa: E402
 from tunnelsim.profiles import OVERRIDES  # noqa: E402
 from tunnelsim.reference import gnss_entry_state  # noqa: E402
-from tunnelsim.scenario import build_scenarios  # noqa: E402
+from tunnelsim.scenario import build_scenarios, get_scenario  # noqa: E402
 
 
 def _main_line(road, ex):
@@ -73,7 +73,7 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False):
         C_bp_f = mount_rotation(*mount_err) @ C_BP_NOMINAL.T @ tr.C_bp
     from tunnelsim.mapview import MapView
     out = run_eskf(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, _eskf_config(eskf), zupt_mask=zmask,
-                   road_map=MapView(build_scenarios()[key].road))
+                   road_map=MapView(get_scenario(key).road))
     idx = np.clip(np.round((out.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
     tn = _tangent(tr, idx)
     pR = out.p[0] - np.einsum("kij,j->ki", out.C[0] @ tr.C_bp.T, tr.lever_arm_b)
@@ -114,7 +114,7 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False):
             "baro": block_mean(bt, np.nan_to_num(bh[0]), out.t[sel]).round(2).tolist(),
             "gnss_kmh": [round(float(v), 2) if (ok and np.isfinite(v)) else None for v, ok in zip(g_spd[gi], near)]}
     data = {
-        "title": f"{sc.key}: {sc.title}",
+        "title": sc.title if sc.key.startswith("custom") else f"{sc.key}: {sc.title}",
         "description": sc.description,
         "seed": seed, "overrides": overrides, "zupt": zupt,
         "road": {"x": line[:, 0].round(1).tolist(), "y": line[:, 1].round(1).tolist(), "tunnel": tun.tolist()},

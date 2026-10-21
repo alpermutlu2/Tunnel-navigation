@@ -12,7 +12,7 @@ import numpy as np
 from .budget import IMU_TERMS, _tangent, stats
 from .profiles import NOMINAL, configure
 from .reference import gm_conditional_shape, gnss_entry_state, ins_from_entry, ls_accel_bias
-from .scenario import build_scenarios
+from .scenario import build_scenarios, get_scenario
 from .sensors import GnssTruthSource, ImuTruthSource, Switches, bi_components, simulate_gnss, simulate_imu
 from .truth import generate_truth
 
@@ -119,7 +119,7 @@ def simulate_run(key, seeds, overrides=(), imu_switches=None, branch=True, vehic
     straight on at the diverge (v0.4 geometry); vehicle: replaces the scenario's Vehicle (e.g. no
     sideslip)."""
     from .sensors import BaroTruthSource, simulate_baro
-    sc = build_scenarios(branch=branch)[key]
+    sc = get_scenario(key, branch=branch)
     if vehicle is not None:
         sc.vehicle = vehicle
     tr = generate_truth(sc)
@@ -146,7 +146,7 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
     seed_ids = np.arange(seeds) if np.isscalar(seeds) else np.asarray(seeds)
     seeds = len(seed_ids)
     sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, seed_ids, overrides, branch=branch, vehicle=vehicle)
-    map_road = build_scenarios(branch=True)[key].road
+    map_road = get_scenario(key, branch=True).road
     zmask = (tr.v < 0.05) if zupt_oracle else None
     C_bp_filter = tr.C_bp
     if mount_err_deg is not None:

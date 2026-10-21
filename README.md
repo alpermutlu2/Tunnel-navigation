@@ -23,7 +23,10 @@ the callout distance, all evaluated in the browser. Opened as a file or from Git
 vibration, tunnel pressure gradient, the filter's mount error, GNSS degradations, the cruise prior,
 the pressure-gradient state, sideslip and the stop detector. Each change re-runs truth → sensors →
 ESKF in Python for one seed (~7 s, standard library server, results cached) and loads the result in
-place. `http://localhost:8000/controls` has the remaining switches (cruise model, NHC turn gate,
+place. A **custom tunnel** row in the same bar builds a new scenario without code: tunnel length
+(0.5–5 km), grade inside the tunnel, speed, and one stop (duration and position); it appears as a
+"Custom" tab (`tunnelsim/scenario.py: get_scenario("custom:L=2000,g=3,v=70,stop=30,at=0.3")`, also
+accepted by `tools/simulate.py`). `http://localhost:8000/controls` has the remaining switches (cruise model, NHC turn gate,
 re-acquisition). Rebuild the page with `python tools/build_site.py`.
 
 **Driver's view.** Next to the map, a phone-shaped panel shows what the navigation app would show

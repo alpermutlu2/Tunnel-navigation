@@ -190,3 +190,21 @@ def test_imu_class_detection_separates_note10_and_mpu9250():
         _, _, t, F, W, gnss, _, _ = simulate_run("S4", [0, 1, 2], ov)
         cls, sig = detect_imu_class(t, W, cfg, int(np.searchsorted(t, gnss["t"][0])))
         assert (cls == want).all(), (ov, sig)
+
+
+def test_custom_tunnel_scenario():
+    """Review 12: a live-call scenario from parameters (length, grade, speed, one stop)."""
+    from tunnelsim.scenario import get_scenario
+    from tunnelsim.truth import generate_truth
+    sc = get_scenario("custom:L=2000,g=3,v=70,stop=20,at=0.3")
+    tr = generate_truth(sc)
+    s_e, s_x = sc.road.tunnel.s_entry, sc.road.tunnel.s_exit
+    assert abs((s_x - s_e) - 2000.0) < 1e-6
+    inside = (tr.s > s_e + 150) & (tr.s < s_x - 150)
+    ds = np.diff(tr.s[inside]); mv = ds > 1e-3
+    dz = np.diff(tr.pos_n[inside, 2])[mv] / ds[mv]
+    assert abs(np.median(dz) - 0.03) < 2e-3                      # 3 % grade inside
+    stopped = inside & (tr.v < 0.05)
+    assert 15.0 < stopped.sum() * tr.dt < 25.0                   # one ~20 s stop
+    with pytest.raises(ValueError):
+        get_scenario("custom:L=500,stop=30,at=0.5")              # no room before the diverge

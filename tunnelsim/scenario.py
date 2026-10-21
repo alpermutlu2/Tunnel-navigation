@@ -425,3 +425,65 @@ def build_scenarios(branch: bool = True) -> dict[str, Scenario]:
         for sc in out.values():
             sc.road = _add_branch(sc.road)
     return out
+
+
+# Custom tunnel for live sessions (review 12, owner 2026-10-21): S1-type geometry with the tunnel
+# length, grade inside the tunnel, speed and one stop as parameters, so a new scenario asked for in
+# a live call needs no code edit. Key format: "custom:L=3000,g=2,v=80,stop=30,at=0.3"
+#   L    tunnel length [m] (500 to 5000)       g   grade inside the tunnel [%] (100 m transitions)
+#   v    speed [km/h]                         stop  stop duration [s] (0 = none), at = its position
+#                                                   as a fraction of the tunnel length
+CUSTOM_DEFAULT = {"L": 3000.0, "g": 0.0, "v": 80.0, "stop": 0.0, "at": 0.3}
+
+
+def parse_custom(key: str) -> dict:
+    prm = dict(CUSTOM_DEFAULT)
+    body = key.split(":", 1)[1] if ":" in key else ""
+    for kv in filter(None, body.split(",")):
+        k, v = kv.split("=", 1)
+        if k not in prm:
+            raise ValueError(f"unknown custom parameter {k!r} (known: {', '.join(prm)})")
+        prm[k] = float(v)
+    if not 300.0 <= prm["L"] <= 10000.0:
+        raise ValueError("tunnel length must be 300-10000 m")
+    if not abs(prm["g"]) <= 8.0:
+        raise ValueError("grade must be within +-8 %")
+    if not 20.0 <= prm["v"] <= 130.0:
+        raise ValueError("speed must be 20-130 km/h")
+    return prm
+
+
+def custom_scenario(key: str, branch: bool = True) -> Scenario:
+    prm = parse_custom(key)
+    L_t, v0 = prm["L"], kmh(prm["v"])
+    s_e = _approach(v0)
+    s_div = s_e + min(0.73 * L_t, L_t - 200.0)
+    total = s_e + L_t + _lead_out(v0, L_t)
+    gp = [(0.0, 0.0)]
+    if prm["g"]:
+        tr_m = min(100.0, L_t / 4)
+        gp = [(0.0, 0.0), (s_e, 0.0), (s_e + tr_m, prm["g"]), (s_e + L_t - tr_m, prm["g"]), (s_e + L_t, 0.0), (total, 0.0)]
+    events = _approach_maneuvers(v0)
+    desc = f"{L_t / 1000:g} km straight tunnel, {prm['g']:g} % grade inside, {prm['v']:g} km/h"
+    if prm["stop"] > 0:
+        s_stop = s_e + float(np.clip(prm["at"], 0.05, 0.9)) * L_t
+        if s_stop > s_div - 300.0:
+            room = (s_div - 300.0 - s_e) / L_t
+            raise ValueError("the stop must be at least 300 m before the exit diverge: "
+                             + (f"at most {room:.2f} of the tunnel length" if room >= 0.05 else "no room in a tunnel this short"))
+        events += [SpeedEvent(s_stop, 0.0, 8.0, dwell=prm["stop"]), SpeedEvent(s_stop, v0, 15.0)]
+        desc += f", one {prm['stop']:g} s stop at {prm['at']:g} of the tunnel"
+    road = Road(hsegs=[HSeg(total)], grade_points=gp, tunnel=Tunnel(s_e, s_e + L_t),
+                exits=[Exit(s_div, "Exit A")])
+    sc = Scenario(key=key, title="Custom tunnel", description=desc + ".", road=road,
+                  speed=SpeedProfile(v0=v0, events=events))
+    if branch:
+        sc.road = _add_branch(sc.road)
+    return sc
+
+
+def get_scenario(key: str, branch: bool = True) -> Scenario:
+    """A catalogue scenario by key, or a custom tunnel ("custom:..." keys)."""
+    if key.startswith("custom"):
+        return custom_scenario(key, branch)
+    return build_scenarios(branch=branch)[key]
