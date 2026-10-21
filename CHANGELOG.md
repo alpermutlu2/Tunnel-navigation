@@ -17,7 +17,8 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   OBD); §4.7 adds the σ_s / curve-matching effect of levelling; one car noted as a limitation.
 - Recording `docs/media/sim_S5_seed0.mp4` and its still re-made with the current page (driver's
   view, k = 1, spoken distance); `tools/record_frames.js` takes a tab key.
-- No filter change.
+- No filter change. Snapshot `reports/0.5.6/metrics.json` vs 0.5.5: no metric changed; tests
+  180 → 181 (custom tunnel).
 
 ## v0.5.5 (2026-10-21): low-end IMU profile, levelling A/B (review 11)
 
