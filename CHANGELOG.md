@@ -15,6 +15,8 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
 - REPORT: §2.1 "What is simulated" (truth, sensors, drives, scenario table, metrics) and §2.2
   assumptions table with tags and the sensors left out (magnetometer, ambient light, camera, BLE,
   OBD); §4.7 adds the σ_s / curve-matching effect of levelling; one car noted as a limitation.
+- Recording `docs/media/sim_S5_seed0.mp4` and its still re-made with the current page (driver's
+  view, k = 1, spoken distance); `tools/record_frames.js` takes a tab key.
 - No filter change.
 
 ## v0.5.5 (2026-10-21): low-end IMU profile, levelling A/B (review 11)

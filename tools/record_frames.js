@@ -1,11 +1,11 @@
 // Frame-stepped recording of a simulator page (needs `npm i playwright`; set PW_CHROMIUM to use a
-// specific Chromium binary): node tools/record_frames.js <abs path to sim html> <frame dir>
+// specific Chromium binary): node tools/record_frames.js <abs path to sim html> <frame dir> [tab key, e.g. S5]
 // then: ffmpeg -framerate 20 -i <frame dir>/f%04d.png -c:v libx264 -pix_fmt yuv420p out.mp4
 const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
-  const p = await b.newPage({ viewport: { width: 1300, height: 860 } });
-  await p.goto('file://' + process.argv[2]);
+  const p = await b.newPage({ viewport: { width: 1600, height: 1060 } });
+  await p.goto('file://' + process.argv[2] + (process.argv[4] ? '#' + process.argv[4] : ''));
   await p.waitForTimeout(800);
   const [k0, k1, dk] = await p.evaluate(() => {
     const a = D.t.findIndex(t => t >= D.t_entry - 15), e = D.t.findIndex(t => t >= D.t_exit + 45);

@@ -46,8 +46,8 @@ rotated to their headings.
 
 ![Simulator, S5 after the exit diverge](docs/media/sim_S5_page.png)
 
-Recording: [`docs/media/sim_S5_seed0.mp4`](docs/media/sim_S5_seed0.mp4) (S5, seed 0, from 15 s
-before the portal to 45 s after the exit, 10× real time; frames stepped with
+Recording: [`docs/media/sim_S5_seed0.mp4`](docs/media/sim_S5_seed0.mp4) (S5, seed 0, map and
+driver's view, from 15 s before the portal to 45 s after the exit, 10× real time; frames stepped with
 `tools/record_frames.js` and Playwright, encoded with ffmpeg).
 
 The simulator page is self-contained (no server, no internet). It shows the road from above with
