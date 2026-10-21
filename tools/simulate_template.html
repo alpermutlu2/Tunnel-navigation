@@ -50,6 +50,18 @@ input[type=range] { flex: 1; min-width: 140px; }
 .ctl .sl { display: grid; gap: 2px; font-size: 12px; color: var(--muted); min-width: 200px; flex: 1 1 200px; max-width: 320px; }
 .ctl .sl b { color: var(--ink); font-variant-numeric: tabular-nums; }
 .ctl .tgl { font-size: 13px; }
+.live { display: none; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
+  gap: 8px 18px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+.live.on { display: flex; }
+.live .badge { font-weight: 700; color: var(--panel); background: var(--gnss); border-radius: 999px; padding: 2px 9px; font-size: 12px; }
+.live select { padding: 3px 6px; font-size: 13px; }
+.live .sl { display: inline-grid; gap: 1px; min-width: 150px; color: var(--muted); font-size: 12px; }
+#liveStat { color: var(--exit); font-weight: 600; min-width: 90px; }
+.navwrap { position: relative; width: 100%; max-width: 380px; margin: 0 auto; aspect-ratio: 9 / 16; border-radius: 26px;
+  border: 8px solid var(--ink); overflow: hidden; background: #0e1116; cursor: zoom-in; }
+.navwrap:fullscreen { max-width: none; width: 100vw; height: 100vh; border: 0; border-radius: 0; aspect-ratio: auto; cursor: zoom-out; }
+#nav { width: 100%; height: 100%; display: block; }
+.navopts { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -62,6 +74,20 @@ input[type=range] { flex: 1; min-width: 140px; }
     <label class="sl"><span>callout margin k·σ <b id="kv">1.0</b></span><input type="range" id="kSl" min="0" max="2.5" step="0.05" value="1"></label>
     <label class="sl"><span>callout distance <b id="lv">300 m</b></span><input type="range" id="lSl" min="100" max="600" step="25" value="300"></label>
     <span class="sub" id="callStat"></span>
+  </div>
+  <div id="live" class="live" aria-label="live run">
+    <span class="badge">LIVE</span>
+    <label>seed <select id="lv_seed"></select></label>
+    <label>IMU <select id="lv_imu"><option value="">Note10 (LSM6DSR)</option><option value="imu_fwd_bi_xy">forward bias at x/y level</option><option value="imu_bi_gm1">single-GM bias</option><option value="imu_lowend">low-end MPU9250</option></select></label>
+    <label>vibration <select id="lv_vib"><option value="">calm</option><option value="vib_noisy">noisy ×3</option></select></label>
+    <label>pressure gradient <select id="lv_baro"><option value="">none</option><option value="baro_tunnel_10pa">10 Pa/km</option><option value="baro_tunnel_30pa">30 Pa/km</option></select></label>
+    <label>GNSS <select id="lv_gnss"><option value="">nominal</option><option value="gnss_coasting">coasts into the tunnel</option><option value="gnss_lagging">lagging at the exit</option><option value="gnss_multipath_50">exit multipath 50 m</option><option value="gnss_optimistic">optimistic accuracy</option></select></label>
+    <label class="sl"><span>mount error <b id="lv_me_v">0°</b></span><input type="range" id="lv_me" min="0" max="5" step="0.5" value="0"></label>
+    <label><input type="checkbox" id="lv_cruise" checked> cruise prior</label>
+    <label><input type="checkbox" id="lv_grad"> pressure-gradient state</label>
+    <label><input type="checkbox" id="lv_slip"> no sideslip</label>
+    <label>stops <select id="lv_zupt"><option value="detector">IMU detector</option><option value="oracle">oracle</option></select></label>
+    <span id="liveStat"></span>
   </div>
 </header>
 <main>
@@ -105,6 +131,11 @@ input[type=range] { flex: 1; min-width: 140px; }
   </section>
   <section>
     <div class="card">
+      <h2>Driver's view (what the app shows) · double-click for full screen</h2>
+      <div class="navwrap" id="navwrap" title="double-click: full screen"><canvas id="nav"></canvas></div>
+      <div class="navopts"><label><input type="checkbox" id="ghost"> show the true car</label><span>heading-up, position snapped to the road</span></div>
+    </div>
+    <div class="card" style="margin-top:14px">
       <h2>Now</h2>
       <div class="stats">
         <div class="stat"><div class="k">along-track error (ESKF)</div><div class="v" id="s_err">–</div></div>
@@ -274,8 +305,70 @@ function plot(id, series, yfmt, band, lim) {
 }
 
 
+function roundDist(d) { return d >= 1000 ? `${(d / 1000).toFixed(1)} km` : `${Math.max(0, Math.round(d / 10) * 10)} m`; }
+function headingAt(s) { const [x0, y0] = sToXY(s - 5), [x1, y1] = sToXY(s + 5); return Math.atan2(y1 - y0, x1 - x0); }
+function drawNav() {
+  const cv = document.getElementById("nav"); const [g, W, H] = setup(cv);
+  const sh = D.s_hat[k], [ex, ey] = sToXY(sh), psi = headingAt(sh);
+  const scale = Math.min(W, H) / 380;                       // px per metre: ~380 m across the short side
+  const cx = W / 2, cy = H * 0.72;
+  const T = (x, y) => { const dx = x - ex, dy = y - ey, c = Math.cos(psi - Math.PI / 2), s_ = Math.sin(psi - Math.PI / 2);
+    return [cx + (dx * c + dy * s_) * scale, cy - (-dx * s_ + dy * c) * scale]; };   // heading-up
+  const inT = D.t[k] >= D.t_entry && D.t[k] <= D.t_exit;
+  g.fillStyle = inT ? "#1a1d22" : "#20262c"; g.fillRect(0, 0, W, H);
+  const stroke = (pts, w, col) => { g.strokeStyle = col; g.lineWidth = w; g.lineCap = "round"; g.lineJoin = "round"; g.beginPath();
+    pts.forEach(([x, y], i) => { const [u, v] = T(x, y); i ? g.lineTo(u, v) : g.moveTo(u, v); }); g.stroke(); };
+  const near = []; for (let i = 0; i < D.road.x.length; i++) if (Math.abs(i * 10 - sh) < 700) near.push([D.road.x[i], D.road.y[i], D.road.tunnel[i]]);
+  for (const e of D.exits) if (e.main) stroke(e.main.x.map((x, i) => [x, e.main.y[i]]).filter(([x, y]) => Math.hypot(x - ex, y - ey) < 700), 10 * scale, "#3a4049");
+  stroke(near, 11 * scale, "#4a5260");
+  const walls = sg => { stroke(sg, 15 * scale + 6, "#c98a2b"); stroke(sg, 15 * scale, "#2a2f37"); stroke(sg, 11 * scale, "#59606b"); };
+  let seg = []; for (const p of near) { if (p[2]) seg.push(p); else if (seg.length) { walls(seg); seg = []; } } if (seg.length) walls(seg);
+  // route line ahead of the car (the guidance line)
+  const ahead = []; for (let s = sh; s < Math.min(sh + 700, D.road.x.length * 10 - 20); s += 10) ahead.push(sToXY(s));
+  stroke(ahead, 4.2 * scale, "#4f8df5");
+  if (inT) { g.fillStyle = "#c98a2b"; g.font = `600 ${Math.round(Math.max(11, W * 0.03))}px system-ui`; g.textBaseline = "middle";
+    g.fillText("TUNNEL", 14, H * 0.2 + 30); }
+  if (document.getElementById("ghost").checked) {
+    const [tu, tv] = T(D.true_xy[k][0], D.true_xy[k][1]); g.globalAlpha = .55; g.fillStyle = "#ffffff";
+    g.beginPath(); g.arc(tu, tv, 7, 0, 7); g.fill(); g.globalAlpha = 1;
+  }
+  // car chevron
+  g.save(); g.translate(cx, cy); g.fillStyle = "#ffffff"; g.strokeStyle = "#4f8df5"; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(0, -16); g.lineTo(11, 12); g.lineTo(0, 6); g.lineTo(-11, 12); g.closePath(); g.fill(); g.stroke(); g.restore();
+  // top maneuver banner
+  const bh = Math.max(64, H * 0.13), ex0 = D.exits[0];
+  const called = callK >= 0 && k >= callK, branchK = D.exits.length ? D.s_hat.findIndex(s => s >= ex0.s + 40) : -1;
+  g.fillStyle = "#1f6f4a"; g.fillRect(0, 0, W, bh);
+  g.fillStyle = "#ffffff"; g.textBaseline = "middle";
+  if (ex0 && sh < ex0.s + 40) {
+    g.save(); g.translate(30, bh / 2); g.strokeStyle = "#fff"; g.lineWidth = 4; g.lineCap = "round"; g.beginPath();
+    g.moveTo(-6, 14); g.lineTo(-6, -2); g.quadraticCurveTo(-6, -10, 4, -14); g.stroke();
+    g.beginPath(); g.moveTo(-2, -16); g.lineTo(6, -14); g.lineTo(1, -7); g.stroke(); g.restore();
+    g.font = `700 ${Math.round(bh * 0.36)}px system-ui`; g.fillText(roundDist(ex0.s - sh), 58, bh * 0.38);
+    g.font = `500 ${Math.round(bh * 0.22)}px system-ui`; g.fillText(`${ex0.name} · keep right`, 58, bh * 0.72);
+  } else {
+    g.font = `600 ${Math.round(bh * 0.26)}px system-ui`; g.fillText(ex0 ? `Continue on ${ex0.name}` : "Continue", 18, bh / 2);
+  }
+  // spoken callout bubble (the moment the app announces)
+  if (called && k < callK + 10) {
+    const msg = `“In ${Math.round(ex0.s - ex0.call_s)} m, take ${ex0.name}”`;
+    g.font = `600 ${Math.round(Math.max(13, W * 0.04))}px system-ui`; const tw = g.measureText(msg).width + 28;
+    g.fillStyle = "rgba(255,196,0,.95)"; g.beginPath(); g.roundRect((W - tw) / 2, bh + 12, tw, 34, 17); g.fill();
+    g.fillStyle = "#1a1a1a"; g.fillText(msg, (W - tw) / 2 + 14, bh + 29);
+  }
+  // bottom bar: speed, GPS state
+  const fb = Math.max(56, H * 0.1); g.fillStyle = "rgba(14,17,22,.92)"; g.fillRect(0, H - fb, W, fb);
+  g.fillStyle = "#fff"; g.font = `700 ${Math.round(fb * 0.42)}px system-ui`; g.fillText(`${Math.round(D.v_est[k] * 3.6)}`, 18, H - fb / 2);
+  const sw = g.measureText(`${Math.round(D.v_est[k] * 3.6)}`).width; g.font = `500 ${Math.round(fb * 0.2)}px system-ui`; g.fillStyle = "#9aa4b2";
+  g.fillText("km/h", 24 + sw, H - fb / 2 + 2);
+  const gpsTxt = inT ? `No GPS · estimated ±${Math.round(2 * D.sig_s[k])} m` : "GPS";
+  g.font = `600 ${Math.round(fb * 0.22)}px system-ui`; const gw = g.measureText(gpsTxt).width + 20;
+  g.fillStyle = inT ? "#8a5a00" : "#1f6f4a"; g.beginPath(); g.roundRect(W - gw - 14, H - fb / 2 - 13, gw, 26, 13); g.fill();
+  g.fillStyle = "#fff"; g.fillText(gpsTxt, W - gw - 4, H - fb / 2 + 1);
+}
+
 function render() {
-  drawMap(); drawStrip();
+  drawMap(); drawStrip(); drawNav();
   plot("err", [{ y: D.e_s, c: css("--est") }, { y: cvErr, c: css("--cv") }], v => v.toFixed(0), errBand, errLim);
   const S = D.sensors, xyz = [css("--est"), css("--cv"), css("--gnss")];
   plot("acc", S.acc.map((y, j) => ({ y, c: xyz[j] })), v => v.toFixed(1));
@@ -311,6 +404,12 @@ function tick(ts) {
 document.getElementById("play").onclick = () => { playing = !playing; if (k >= N - 1) k = 0; document.getElementById("play").textContent = playing ? "Pause" : "Play"; };
 scrub.oninput = () => { k = +scrub.value; render(); };
 document.getElementById("zoom").oninput = render;
+document.getElementById("ghost").onchange = render;
+document.getElementById("navwrap").ondblclick = () => {
+  const el = document.getElementById("navwrap");
+  if (document.fullscreenElement) document.exitFullscreen?.(); else el.requestFullscreen?.().catch(() => {});
+};
+document.addEventListener("fullscreenchange", () => setTimeout(render, 50));
 window.addEventListener("resize", render);
 function load(key, keepTime) {
   const r = ALL.runs[key], v = document.getElementById("mapOn").checked && r.variants.map ? "map" : (r.variants.nomap ? "nomap" : "map");
@@ -321,14 +420,42 @@ function load(key, keepTime) {
   document.getElementById("mapOn").disabled = !(r.variants.map && r.variants.nomap);
   render();
 }
+let LIVE = false, liveSeq = 0;
+async function liveRun() {
+  const r = ALL.runs[curKey]; if (!r || !LIVE) return;
+  const ov = [...(r.overrides || [])];
+  for (const id of ["lv_imu", "lv_vib", "lv_baro", "lv_gnss"]) { const v = document.getElementById(id).value; if (v && !ov.includes(v)) ov.push(v); }
+  const me = +document.getElementById("lv_me").value;
+  const q = new URLSearchParams({ scenario: r.scen || curKey, seed: document.getElementById("lv_seed").value, overrides: ov.join(","),
+    zupt: document.getElementById("lv_zupt").value, mount_err: me, no_sideslip: document.getElementById("lv_slip").checked ? 1 : 0,
+    map_in_tunnel: document.getElementById("mapOn").checked ? 1 : 0, cruise: document.getElementById("lv_cruise").checked ? 1 : 0,
+    baro_grad: document.getElementById("lv_grad").checked ? 1 : 0 });
+  const seq = ++liveSeq, st = document.getElementById("liveStat"); st.textContent = "running…"; const t0 = performance.now();
+  try {
+    const res = await fetch("/api/run?" + q); if (!res.ok) throw new Error(await res.text());
+    const d = await res.json(); if (seq !== liveSeq) return;
+    const tRel = D.t[k] - D.t_entry; D = d; derive(); k = Math.max(0, D.t.findIndex(x => x >= D.t_entry + tRel)); render();
+    st.textContent = `done in ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+  } catch (e) { st.textContent = "run failed (see the server console)"; }
+}
+function liveDefault() {
+  return document.getElementById("lv_seed").value === "0" && !["lv_imu", "lv_vib", "lv_baro", "lv_gnss"].some(id => document.getElementById(id).value) &&
+    +document.getElementById("lv_me").value === 0 && document.getElementById("lv_cruise").checked && !document.getElementById("lv_grad").checked &&
+    !document.getElementById("lv_slip").checked && document.getElementById("lv_zupt").value === "detector";
+}
 if (ALL) {
   const tabs = document.getElementById("tabs"); tabs.hidden = false; document.getElementById("ctl").hidden = false;
   for (const key of ALL.order) {
     const b = document.createElement("button"); b.textContent = ALL.runs[key].label; b.dataset.key = key;
     if (ALL.runs[key].risk) b.className = "risk";
-    b.onclick = () => load(key, false); tabs.appendChild(b);
+    b.onclick = () => { load(key, false); if (LIVE && !liveDefault()) liveRun(); }; tabs.appendChild(b);
   }
-  document.getElementById("mapOn").onchange = () => load(curKey, true);
+  document.getElementById("mapOn").onchange = () => { if (LIVE && !liveDefault()) liveRun(); else load(curKey, true); };
+  const sel = document.getElementById("lv_seed"); for (let i = 0; i < 50; i++) sel.add(new Option(String(i), String(i)));
+  for (const el of document.querySelectorAll("#live select, #live input")) el.addEventListener("change", () => {
+    document.getElementById("lv_me_v").textContent = `${document.getElementById("lv_me").value}°`;
+    if (liveDefault()) load(curKey, true); else liveRun(); });
+  if (location.protocol.startsWith("http")) fetch("/api/ping").then(r => r.ok ? r.json() : null).then(j => { if (j && j.live) { LIVE = true; document.getElementById("live").classList.add("on"); } }).catch(() => {});
   const kS = document.getElementById("kSl"), lS = document.getElementById("lSl");
   kS.oninput = () => { callKs = +kS.value; document.getElementById("kv").textContent = callKs.toFixed(2); callout(); render(); };
   lS.oninput = () => { callLead = +lS.value; document.getElementById("lv").textContent = `${callLead} m`; callout(); render(); };

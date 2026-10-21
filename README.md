@@ -11,23 +11,31 @@ the right moment, and recover cleanly when the car comes out. Only the phone's o
 
 ```bash
 pip install -r requirements.txt      # Python >= 3.10
-python tools/serve.py                # interactive: open http://localhost:8000
+python tools/serve.py                # live simulator: open http://localhost:8000
 python tools/simulate.py S1          # or a single self-contained page: sim_S1_seed0.html
 ```
 
-**Without Python:** [`docs/sim/index.html`](docs/sim/index.html) is one self-contained page with
-every scenario as a tab (pre-run drives, seed 0), a map-layer on/off switch, and sliders for the
-callout margin k·σ and the callout distance, evaluated in the browser. With GitHub Pages serving
-`/docs` it opens at `https://alpermutlu2.github.io/Tunnel-navigation/sim/`. Rebuild it with
-`python tools/build_site.py`.
+**One page, two modes.** [`docs/sim/index.html`](docs/sim/index.html) holds every scenario as a
+tab (pre-run drives, seed 0), a map-layer on/off switch and sliders for the callout margin k·σ and
+the callout distance, all evaluated in the browser. Opened as a file or from GitHub Pages
+(`https://alpermutlu2.github.io/Tunnel-navigation/sim/`) it needs no Python. Served by
+`tools/serve.py`, the same page finds the server and shows a **LIVE** bar: seed, IMU profile,
+vibration, tunnel pressure gradient, the filter's mount error, GNSS degradations, the cruise prior,
+the pressure-gradient state, sideslip and the stop detector. Each change re-runs truth → sensors →
+ESKF in Python for one seed (~7 s, standard library server, results cached) and loads the result in
+place. `http://localhost:8000/controls` has the remaining switches (cruise model, NHC turn gate,
+re-acquisition). Rebuild the page with `python tools/build_site.py`.
 
-`tools/serve.py` opens the simulator with controls on the left (scenario, seed, IMU profile,
-vibration, tunnel pressure gradient, the filter's mount error, GNSS degradations, filter switches
-such as the map in the tunnel, the cruise prior, the NHC turn gate and the pressure-gradient
-state). Every change re-runs
-truth → sensors → ESKF for one seed (~7–10 s; standard library only, results cached). The map
-shows the true car (ground truth) and the estimated car side by side, drawn to scale and rotated
-to their headings.
+**Driver's view.** Next to the map, a phone-shaped panel shows what the navigation app would show
+from the estimate alone: heading-up, the car snapped to the road, the maneuver banner with the
+distance to the exit, the spoken callout at the moment the k·σ rule fires, speed, and "No GPS ·
+estimated ±2σ" in the tunnel. "Show the true car" adds the ground truth as a ghost. Double-click
+the panel for full screen.
+
+![Live mode and driver's view, S1 at the callout](docs/media/sim_live_driver_view.png)
+
+The map shows the true car (ground truth) and the estimated car side by side, drawn to scale and
+rotated to their headings.
 
 ![Simulator, S5 after the exit diverge](docs/media/sim_S5_page.png)
 

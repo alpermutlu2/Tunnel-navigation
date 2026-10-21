@@ -43,7 +43,7 @@ def main():
             jobs.append((scen, ov, on)); keys.append((key, v))
     with ProcessPoolExecutor() as ex:
         data = list(ex.map(_run, jobs))
-    runs = {key: {"label": label, "risk": risk, "variants": {}} for key, label, _, _, _, risk in TABS}
+    runs = {key: {"label": label, "risk": risk, "scen": scen, "overrides": ov, "variants": {}} for key, label, scen, ov, _, risk in TABS}
     for (key, v), d in zip(keys, data):
         runs[key]["variants"][v] = d
     allj = {"order": [t[0] for t in TABS], "runs": runs}

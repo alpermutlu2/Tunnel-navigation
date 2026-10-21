@@ -17,6 +17,12 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   "right moment" = never late, as early as the uncertainty requires.
 - `docs/sim/index.html` (`tools/build_site.py`): one self-contained page, a tab per scenario,
   map on/off, k and callout-distance sliders in the browser; replaces the per-scenario pages.
+- Same page, live mode: served by `tools/serve.py` (`/`, `/api/ping`, `/api/run`), it shows a LIVE
+  bar (seed, sensors, mount error, filter switches) and re-runs the chosen tab in Python (~7 s);
+  the old control panel moved to `/controls`.
+- Driver's view: a navigation-app panel (heading-up, maneuver banner with distance, the spoken
+  callout, speed, "No GPS · estimated ±2σ", optional true-car ghost); double-click for full screen.
+  Display only; no filter or metric change.
 
 ## v0.5.3 (2026-10-21): callout errs early, map scale term, report shortened
 

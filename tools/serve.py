@@ -1,9 +1,13 @@
-"""Interactive simulator: a local web page with controls (scenario, seed, sensor overrides, mount
-error, filter switches). Every change re-runs truth -> sensors -> ESKF for one seed (~10 s) and
-shows the result in the simulator page.
+"""Live simulator server.
 
     python tools/serve.py            # then open http://localhost:8000
     python tools/serve.py --port 8080
+
+/            the all-in-one simulator page (docs/sim/index.html, built by tools/build_site.py). Served
+             from here, it finds /api/ping and shows a LIVE bar: seed, sensors, mount error and filter
+             switches re-run truth -> sensors -> ESKF in Python (~7 s) and load the result in place.
+/controls    the older control panel with every switch (cruise model, NHC turn gate, re-acquisition).
+/api/run     JSON of tools/simulate.run for one parameter set.
 
 Standard library only (http.server); results are cached per parameter set.
 """
@@ -26,6 +30,7 @@ import simulate  # noqa: E402
 from tunnelsim.scenario import build_scenarios  # noqa: E402
 
 TEMPLATE = (ROOT / "tools" / "simulate_template.html").read_text()
+SITE = ROOT / "docs" / "sim" / "index.html"
 CACHE: dict[str, str] = {}
 LOCK = threading.Lock()
 
@@ -42,11 +47,12 @@ GNSS_FLAGS = [("gnss_coasting", "receiver coasts 5 s into the tunnel"), ("gnss_l
               ("baro_cabin", "cabin pressure disturbance")]
 
 
-def run_page(q: dict) -> str:
+def run_data(q: dict) -> dict:
     key = q.get("scenario", "S1")
     seed = int(q.get("seed", 0))
     overrides = [q[k] for k in ("imu", "vib", "baro_tunnel") if q.get(k, "nominal") != "nominal"]
     overrides += [name for name, _ in GNSS_FLAGS if q.get(name) == "1"]
+    overrides += [o for o in q.get("overrides", "").split(",") if o and o not in overrides]
     eskf = [f"cruise={q.get('cruise', '1') == '1'}",
             f"cruise_mode={q.get('cruise_mode', 'gm')!r}",
             f"nhc_turn_gate={float(q.get('nhc_turn_gate', 0.3))}",
@@ -57,8 +63,11 @@ def run_page(q: dict) -> str:
             f"map_in_tunnel={q.get('map_in_tunnel', '1') == '1'}"]
     me = float(q.get("mount_err", 0.0))
     mount = (0.0, me, me) if me else None
-    data = simulate.run(key, seed, overrides, q.get("zupt", "detector"), eskf, mount, q.get("no_sideslip") == "1")
-    return TEMPLATE.replace("/*DATA*/null", json.dumps(data))
+    return simulate.run(key, seed, overrides, q.get("zupt", "detector"), eskf, mount, q.get("no_sideslip") == "1")
+
+
+def run_page(q: dict) -> str:
+    return TEMPLATE.replace("/*DATA*/null", json.dumps(run_data(q)))
 
 
 def control_page() -> str:
@@ -135,19 +144,26 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         u = urlparse(self.path)
-        if u.path == "/":
+        if u.path in ("/", "/index.html"):
+            if SITE.exists():
+                return self._send(SITE.read_text())
+            return self._send("docs/sim/index.html is missing: run python tools/build_site.py, or open /controls", 404, "text/plain")
+        if u.path == "/controls":
             return self._send(control_page())
-        if u.path == "/run":
+        if u.path == "/api/ping":
+            return self._send(json.dumps({"live": True}), ctype="application/json")
+        if u.path in ("/run", "/api/run"):
             q = {k: v[-1] for k, v in parse_qs(u.query).items()}
-            key = json.dumps(q, sort_keys=True)
+            key = u.path + json.dumps(q, sort_keys=True)
             try:
                 with LOCK:
                     if key not in CACHE:
                         t = time.time()
-                        CACHE[key] = run_page(q)
-                        print(f"run {q.get('scenario')} seed {q.get('seed')}: {time.time() - t:.1f} s", flush=True)
-                return self._send(CACHE[key])
+                        CACHE[key] = run_page(q) if u.path == "/run" else json.dumps(run_data(q))
+                        print(f"run {q.get('scenario')} seed {q.get('seed')} {q.get('overrides', '')}: {time.time() - t:.1f} s", flush=True)
+                return self._send(CACHE[key], ctype="text/html; charset=utf-8" if u.path == "/run" else "application/json")
             except Exception:
+                print(traceback.format_exc(), flush=True)
                 return self._send(f"<pre>{html.escape(traceback.format_exc())}</pre>", 500)
         self._send("not found", 404, "text/plain")
 
