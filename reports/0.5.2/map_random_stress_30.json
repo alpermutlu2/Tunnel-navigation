@@ -1,0 +1,101 @@
+{
+ "note": "Per-seed random map errors (review 10), 30 seeds, single-seed runs. key:k:mode, k = multiple of the default prior (lateral offset N(0, 2k m), length scale 1 + N(0, 0.5k %)); base = v0.5.2 filter (turn-driven offset noise), jac = map_scale_lateral (scale term in the cross-track row). within_2sigma = fraction with (e/\u03c3)^2 < 4 at the portal.",
+ "runs": {
+  "S2:0:base": {
+   "portal_rms": 3.556492864466341,
+   "lateral_rms": 1.1902494853237002,
+   "mean_norm_sq": 0.3004333333333333,
+   "within_2sigma": 1.0,
+   "callout_rms": 0.13540064007726602,
+   "diverge_rms": 3.1823120238080573
+  },
+  "S2:1:base": {
+   "portal_rms": 8.339362482796872,
+   "lateral_rms": 6.8138636440715485,
+   "mean_norm_sq": 1.6618333333333335,
+   "within_2sigma": 0.8333333333333334,
+   "callout_rms": 0.34302575219167825,
+   "diverge_rms": 7.791234569480416
+  },
+  "S2:2:base": {
+   "portal_rms": 15.300286998473808,
+   "lateral_rms": 12.99993204675945,
+   "mean_norm_sq": 5.582299999999999,
+   "within_2sigma": 0.6333333333333333,
+   "callout_rms": 0.6088240030309798,
+   "diverge_rms": 14.265854730551197
+  },
+  "S2:1:jac": {
+   "portal_rms": 6.653930139092234,
+   "lateral_rms": 5.637089041843021,
+   "mean_norm_sq": 0.6117666666666667,
+   "within_2sigma": 0.9666666666666667,
+   "callout_rms": 0.2886751345948128,
+   "diverge_rms": 5.8496805461992
+  },
+  "S2:2:jac": {
+   "portal_rms": 11.04007040010766,
+   "lateral_rms": 9.434942035840319,
+   "mean_norm_sq": 1.689733333333333,
+   "within_2sigma": 0.9333333333333333,
+   "callout_rms": 0.4806245936279166,
+   "diverge_rms": 10.166806458159154
+  },
+  "S2:0:jac": {
+   "portal_rms": 4.053058484999939,
+   "lateral_rms": 3.229130458807758,
+   "mean_norm_sq": 0.22646666666666668,
+   "within_2sigma": 1.0,
+   "callout_rms": 0.17320508075688776,
+   "diverge_rms": 3.108391737495989
+  },
+  "S1-5km:0:base": {
+   "portal_rms": 9.933832861253169,
+   "lateral_rms": 1.3416516439622719,
+   "mean_norm_sq": 0.3239333333333334,
+   "within_2sigma": 1.0,
+   "callout_rms": 0.8121986620689957,
+   "diverge_rms": 21.07615933466848
+  },
+  "S1-5km:1:base": {
+   "portal_rms": 23.83239971599587,
+   "lateral_rms": 5.488254889827913,
+   "mean_norm_sq": 1.8488666666666667,
+   "within_2sigma": 0.8666666666666667,
+   "callout_rms": 0.8121986620689957,
+   "diverge_rms": 21.068695393252682
+  },
+  "S1-5km:2:base": {
+   "portal_rms": 44.05238471488235,
+   "lateral_rms": 10.9463607539066,
+   "mean_norm_sq": 7.139833333333334,
+   "within_2sigma": 0.6333333333333333,
+   "callout_rms": 0.8121986620689957,
+   "diverge_rms": 21.055112870979027
+  },
+  "S1-5km:1:jac": {
+   "portal_rms": 23.098017447391452,
+   "lateral_rms": 5.032838800617401,
+   "mean_norm_sq": 0.7093333333333334,
+   "within_2sigma": 0.9666666666666667,
+   "callout_rms": 0.8121986620689957,
+   "diverge_rms": 21.068695393252682
+  },
+  "S1-5km:2:jac": {
+   "portal_rms": 39.30413421722113,
+   "lateral_rms": 9.679451774868244,
+   "mean_norm_sq": 2.05,
+   "within_2sigma": 0.8,
+   "callout_rms": 0.8121986620689957,
+   "diverge_rms": 21.055112870979027
+  },
+  "S1-5km:0:jac": {
+   "portal_rms": 13.50818666007149,
+   "lateral_rms": 1.8466612993002625,
+   "mean_norm_sq": 0.24176666666666663,
+   "within_2sigma": 1.0,
+   "callout_rms": 0.8121986620689957,
+   "diverge_rms": 21.07615933466848
+  }
+ }
+}
