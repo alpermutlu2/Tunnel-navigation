@@ -15,6 +15,10 @@ python tools/serve.py                # interactive: open http://localhost:8000
 python tools/simulate.py S1          # or a single self-contained page: sim_S1_seed0.html
 ```
 
+**Without Python:** `docs/sim/` holds pre-run pages for every scenario and the failure cases
+(`docs/sim/index.html`; with GitHub Pages serving `/docs` they open at
+`https://alpermutlu2.github.io/Tunnel-navigation/sim/`). Rebuild them with `python tools/build_site.py`.
+
 `tools/serve.py` opens the simulator with controls on the left (scenario, seed, IMU profile,
 vibration, tunnel pressure gradient, the filter's mount error, GNSS degradations, filter switches
 such as the map in the tunnel, the cruise prior, the NHC turn gate and the pressure-gradient
