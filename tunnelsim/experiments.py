@@ -104,6 +104,7 @@ def calibration_experiment(key, seeds=100, imu_overrides=(), zupt_oracle=False) 
 # v0.5: ESKF experiments
 # ---------------------------------------------------------------------------------------------
 CALLOUT_LEAD_M = 300.0      # [ASSUMED] the app announces the exit 300 m before the ramp
+CALLOUT_K_SWEEP = (0.0, 1.0, 1.65, 2.0)
 CALLOUT_LATE_S = 1.0        # [ASSUMED] a callout more than 1 s late counts as a late warning (review 6)
 RECOVERY_M = 10.0           # recovered = horizontal error stays below this; ~2x the open-sky GNSS
                             # horizontal error (3 m per axis -> 4.2 m rms), so GNSS noise alone
@@ -202,6 +203,17 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
                           "late_gt_1s_frac": round(float(np.mean(dt_call > CALLOUT_LATE_S)), 3),
                           "sigma_t_mean_s": round(float(sig_t.mean()), 3),
                           "within_2sigma_t": round(float(np.mean(np.abs(dt_call) < 2 * sig_t)), 3)}
+        # uncertainty-aware callout (owner, 2026-10-21): announce when ŝ + k·σ_s reaches the
+        # callout point, so the callout errs early; k = 0 is the plain callout
+        res["callout_k"] = {}
+        for kk_ in CALLOUT_K_SWEEP:
+            k_h = np.argmax(s_hat + kk_ * sig_s >= s_call, axis=1)
+            dtk = out.t[k_h] - t_true
+            res["callout_k"][str(kk_)] = {"rmse_s": round(float(np.sqrt(np.mean(dtk ** 2))), 2),
+                                          "mean_s": round(float(dtk.mean()), 2),
+                                          "late_frac": round(float(np.mean(dtk > 0)), 3),
+                                          "late_gt_1s_frac": round(float(np.mean(dtk > CALLOUT_LATE_S)), 3),
+                                          "early_p95_s": round(float(np.percentile(-dtk, 95)), 2)}
     # exit branch: error at the true diverge (before/after the branch reported separately) and the
     # gyro branch confirmation (tunnelsim/branch.py; estimator side, no truth)
     if map_road.exits and map_road.exits[0].on_route:
