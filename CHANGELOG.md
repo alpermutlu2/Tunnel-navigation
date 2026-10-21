@@ -23,6 +23,11 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
 - Driver's view: a navigation-app panel (heading-up, maneuver banner with distance, the spoken
   callout, speed, "No GPS · estimated ±2σ", optional true-car ghost); double-click for full screen.
   Display only; no filter or metric change.
+- Snapshot `reports/0.5.4/metrics.json` vs 0.5.3: only callout metrics changed, all from k 1.65 → 1
+  (the filter is the same). Callouts come later and closer to the right moment: mean early bias
+  S5 −1.8 → −0.7 s, S6 −1.4 → −0.9 s, timing rmse S4 4.3 → 2.6 s. Late fraction
+  (snapshot seeds) rises to 5–15 %: S2, S3, S4 0 → 5 %, S5 0 → 15 %, 1 km 5 → 15 %. Within 2σ_t
+  went to 100 % everywhere. The cost was accepted with k = 1; the 50-seed rates are in the report.
 
 ## v0.5.3 (2026-10-21): callout errs early, map scale term, report shortened
 
