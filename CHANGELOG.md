@@ -7,6 +7,21 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.3 (2026-10-21): callout errs early, map scale term, report shortened
+
+- Callout announced when ŝ + 1.65·σ_s reaches s_exit − 300 m (owner): > 1 s late 30 % (S4) and
+  40 % (S5) → 0 % in every scenario; mean 0.3–4.4 s early. `callout_k` sweep (k = 0/1/1.65/2) in
+  the evaluation. The `within_2sigma_t` coverage of the callout is no longer meaningful (the rule
+  biases the callout by design).
+- `map_scale_lateral` on by default (review 10): per-seed random map errors at the prior gave
+  (e/σ)² 1.7–1.9 without it, 0.6–0.7 with it (`reports/0.5.2/map_random_stress_30.json`); cost
+  on an exact map: portal 2.0–10.0 → 2.5–13.7 m, cross-track up to 3 m.
+- Branch metric from the in-loop decision (offline `branch.py` kept as `branch_offline`):
+  500/500 branch, 500/500 main in the negative control.
+- `REPORT.md` rewritten to ~2300 words; random map stress table; σ of the map are [ASSUMED] and
+  to be measured.
+- 50 seeds, `reports/0.5.3/evaluation_50.json`.
+
 ## v0.5.2 (2026-10-21): map in the tunnel, interactive simulator
 
 - Map layer (review 9, owner's design): 1 Hz heading and cross-track pseudo-measurements against the
