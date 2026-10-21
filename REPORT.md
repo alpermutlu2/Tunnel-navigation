@@ -60,7 +60,8 @@ the result when the car comes out.
 | along-track at portal, rms / p95 [m] | 5.6 / 10 | 4.1 / 7 | 9.0 / 17 | 5.6 / 12 | 7.5 / 15 | 6.0 / 10 | 6.2 / 11 | 5.6 / 11 | 2.5 / 5 | 13.7 / 25 |
 | cross-track at portal, rms [m] | 1.5 | 3.2 | 2.0 | 1.3 | 1.9 | 1.5 | 1.5 | 1.5 | 1.4 | 2.1 |
 | mean (e/σ)² at portal | 0.13 | 0.23 | 0.18 | 0.11 | 0.27 | 0.15 | 0.16 | 0.13 | 0.22 | 0.25 |
-| callout: mean [s] (− early) / late | -1.3 / 0 % | -0.5 / 0 % | -1.5 / 0 % | -4.4 / 0 % | -1.9 / 0 % | -1.4 / 0 % | -1.4 / 0 % | -1.4 / 0 % | -0.3 / 2 % | -2.8 / 0 % |
+| callout timing, filter only (k = 0): mean / > 1 s late | +0.1 / 2 % | +0.1 / 0 % | +0.2 / 4 % | +0.2 / 30 % | +0.9 / 40 % | +0.1 / 2 % | +0.1 / 2 % | +0.0 / 2 % | -0.0 / 0 % | +0.4 / 24 % |
+| callout as announced (k = 1.65): mean [s] (− early) / late | -1.3 / 0 % | -0.5 / 0 % | -1.5 / 0 % | -4.4 / 0 % | -1.9 / 0 % | -1.4 / 0 % | -1.4 / 0 % | -1.4 / 0 % | -0.3 / 2 % | -2.8 / 0 % |
 | branch reported (car takes it) / main reported (car goes straight) | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % |
 | largest exit step, p95 [m] | 3.4 | 5.5 | 4.0 | 3.5 | 3.7 | 3.4 | 3.3 | 3.6 | 4.9 | 4.3 |
 | not < 10 m 60 s after the exit | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
@@ -73,7 +74,10 @@ the result when the car comes out.
     is not observable in a straight tunnel.
   - The exit curve brings the portal error down to 2.5–14 m.
   - The filter is consistent: mean (e/σ)² 0.11–0.27.
-- **Callout.** No callout is more than 1 s late in any of the 500 runs; only one is late at all
+- **Callout.** "The right moment" is read here as *never late, and only as early as the position
+  uncertainty requires*: a late callout can make the driver miss the exit, an early one costs
+  reaction time. The table gives both the filter's own timing (k = 0, how good the estimate is) and
+  the announced callout (the product rule ŝ + k·σ_s). No callout is more than 1 s late in any of the 500 runs; only one is late at all
   (S1-1km, under 1 s). On average, callouts come 0.3–4.4 s early, most on S4, where σ_s is
   largest. Before the k·σ rule, 30 % (S4) and 40 % (S5) of callouts were more than 1 s late.
 - **Branch.**
