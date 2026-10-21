@@ -25,6 +25,10 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   Display only; no filter or metric change.
 - Every panel goes full screen on double-click, with a playback bar (play/pause, ±1 s, ±10 s,
   scrub, speed); keyboard: Space, ← →, Shift+← →. Display only.
+- Review 4 (simulator) fixes, display only: the spoken callout says the estimated distance to the
+  exit rounded to 50 m ("In 350 m"), matching the banner, with the true distance next to it; the
+  callout timing label says early or late by its sign; the live status no longer sticks at
+  "running…" when the settings return to the pre-run drive; `roundRect` fallback for older browsers.
 - Snapshot `reports/0.5.4/metrics.json` vs 0.5.3: only callout metrics changed, all from k 1.65 → 1
   (the filter is the same). Callouts come later and closer to the right moment: mean early bias
   S5 −1.8 → −0.7 s, S6 −1.4 → −0.9 s, timing rmse S4 4.3 → 2.6 s. Late fraction

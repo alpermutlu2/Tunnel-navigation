@@ -184,6 +184,10 @@ input[type=range] { flex: 1; min-width: 140px; }
 </div>
 <script>
 let D = /*DATA*/null;
+// rounded rectangles on older browsers (CanvasRenderingContext2D.roundRect: Firefox 112+, Safari 16+)
+if (!CanvasRenderingContext2D.prototype.roundRect) CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+  r = Math.min(+r || 0, w / 2, h / 2); this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r);
+  this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r); this.closePath(); };
 const ALL = /*ALLDATA*/null;      // all-in-one page: {order, runs: {key: {label, risk, variants: {map, nomap}}}}
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 let N = 0, k = 0, playing = false, last = 0, curKey = null;
@@ -203,8 +207,12 @@ function callout() {             // ŝ + k·σ_s reaches the callout point: errs
   callK = D.exits.length ? D.s_hat.findIndex((s, i) => s + callKs * D.sig_s[i] >= D.exits[0].call_s) : -1;
   trueCallK = D.exits.length ? D.s_true.findIndex(s => s >= D.exits[0].call_s) : -1;
   const st = document.getElementById("callStat");
-  if (st) st.textContent = callK >= 0 && trueCallK >= 0 ? `this drive: callout ${(D.t[callK] - D.t[trueCallK]).toFixed(1)} s vs the right moment (− early)` : "";
+  if (st) { const dt = callK >= 0 && trueCallK >= 0 ? D.t[callK] - D.t[trueCallK] : null;
+    st.textContent = dt === null ? "" : `this drive: callout ${Math.abs(dt).toFixed(1)} s ${dt > 0 ? "late" : dt < 0 ? "early" : "on time"} vs the right moment`; }
 }
+// what the voice says at the callout: the distance to the exit from the estimate, rounded to 50 m
+// (as navigation apps do), so it matches the banner; the true distance is shown next to it
+function spokenDist() { return Math.max(50, Math.round((D.exits[0].s - D.s_hat[callK]) / 50) * 50); }
 function header() {
 document.getElementById("title").textContent = D.title;
 document.getElementById("desc").textContent = D.description;
@@ -377,7 +385,7 @@ function drawNav() {
   }
   // spoken callout bubble (the moment the app announces)
   if (called && k < callK + 10) {
-    const msg = `“In ${Math.round(ex0.s - ex0.call_s)} m, take ${ex0.name}”`;
+    const msg = `“In ${spokenDist()} m, take ${ex0.name}”`;
     g.font = `600 ${Math.round(Math.max(13, W * 0.04))}px system-ui`; const tw = g.measureText(msg).width + 28;
     g.fillStyle = "rgba(255,196,0,.95)"; g.beginPath(); g.roundRect((W - tw) / 2, bh + 12, tw, 34, 17); g.fill();
     g.fillStyle = "#1a1a1a"; g.fillText(msg, (W - tw) / 2 + 14, bh + 29);
@@ -411,7 +419,7 @@ function render() {
   let msg = "";
   if (callK >= 0 && k >= callK && k < callK + 12) {
     const dt = D.t[callK] - D.t[trueCallK];
-    msg = `Callout: "${D.exits[0].name} in ${Math.round(D.exits[0].s - D.exits[0].call_s)} m" (${dt >= 0 ? "+" : ""}${dt.toFixed(1)} s vs the right moment)`;
+    msg = `Callout: "In ${spokenDist()} m, take ${D.exits[0].name}" (${D.exits[0].s >= D.s_true[callK] ? `true distance ${Math.round(D.exits[0].s - D.s_true[callK])} m` : `the car passed the exit ${Math.round(D.s_true[callK] - D.exits[0].s)} m ago`}; ${Math.abs(dt).toFixed(1)} s ${dt > 0 ? "late" : "early"} vs the right moment)`;
   }
   if (D.zupt_on[k]) msg += (msg ? " · " : "") + "stopped: zero-velocity update";
   document.getElementById("banner").textContent = msg;
@@ -501,13 +509,13 @@ if (ALL) {
   for (const key of ALL.order) {
     const b = document.createElement("button"); b.textContent = ALL.runs[key].label; b.dataset.key = key;
     if (ALL.runs[key].risk) b.className = "risk";
-    b.onclick = () => { load(key, false); if (LIVE && !liveDefault()) liveRun(); }; tabs.appendChild(b);
+    b.onclick = () => { liveSeq++; load(key, false); if (LIVE) { if (!liveDefault()) liveRun(); else document.getElementById("liveStat").textContent = "pre-run drive"; } }; tabs.appendChild(b);
   }
-  document.getElementById("mapOn").onchange = () => { if (LIVE && !liveDefault()) liveRun(); else load(curKey, true); };
+  document.getElementById("mapOn").onchange = () => { if (LIVE && !liveDefault()) liveRun(); else { liveSeq++; if (LIVE) document.getElementById("liveStat").textContent = "pre-run drive"; load(curKey, true); } };
   const sel = document.getElementById("lv_seed"); for (let i = 0; i < 50; i++) sel.add(new Option(String(i), String(i)));
   for (const el of document.querySelectorAll("#live select, #live input")) el.addEventListener("change", () => {
     document.getElementById("lv_me_v").textContent = `${document.getElementById("lv_me").value}°`;
-    if (liveDefault()) load(curKey, true); else liveRun(); });
+    if (liveDefault()) { liveSeq++; document.getElementById("liveStat").textContent = "pre-run drive"; load(curKey, true); } else liveRun(); });
   if (location.protocol.startsWith("http")) fetch("/api/ping").then(r => r.ok ? r.json() : null).then(j => { if (j && j.live) { LIVE = true; document.getElementById("live").classList.add("on"); } }).catch(() => {});
   const kS = document.getElementById("kSl"), lS = document.getElementById("lSl");
   kS.oninput = () => { callKs = +kS.value; document.getElementById("kv").textContent = callKs.toFixed(2); callout(); render(); };
