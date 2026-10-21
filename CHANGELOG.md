@@ -23,6 +23,8 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
 - Driver's view: a navigation-app panel (heading-up, maneuver banner with distance, the spoken
   callout, speed, "No GPS · estimated ±2σ", optional true-car ghost); double-click for full screen.
   Display only; no filter or metric change.
+- Every panel goes full screen on double-click, with a playback bar (play/pause, ±1 s, ±10 s,
+  scrub, speed); keyboard: Space, ← →, Shift+← →. Display only.
 - Snapshot `reports/0.5.4/metrics.json` vs 0.5.3: only callout metrics changed, all from k 1.65 → 1
   (the filter is the same). Callouts come later and closer to the right moment: mean early bias
   S5 −1.8 → −0.7 s, S6 −1.4 → −0.9 s, timing rmse S4 4.3 → 2.6 s. Late fraction

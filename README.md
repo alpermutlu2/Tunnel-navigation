@@ -29,8 +29,12 @@ re-acquisition). Rebuild the page with `python tools/build_site.py`.
 **Driver's view.** Next to the map, a phone-shaped panel shows what the navigation app would show
 from the estimate alone: heading-up, the car snapped to the road, the maneuver banner with the
 distance to the exit, the spoken callout at the moment the k·σ rule fires, speed, and "No GPS ·
-estimated ±2σ" in the tunnel. "Show the true car" adds the ground truth as a ghost. Double-click
-the panel for full screen.
+estimated ±2σ" in the tunnel. "Show the true car" adds the ground truth as a ghost.
+
+**Full screen and playback.** Double-click any panel (map, road strip, sensors, driver's view, Now,
+error and speed plots) for full screen; a playback bar (play/pause, ±1 s, ±10 s, scrub, speed)
+comes with it. Space plays or pauses and ← → step 1 s (Shift: 10 s) everywhere. All panels share
+one time cursor, and changing a parameter keeps the time position.
 
 ![Live mode and driver's view, S1 at the callout](docs/media/sim_live_driver_view.png)
 

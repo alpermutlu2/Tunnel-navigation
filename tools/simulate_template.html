@@ -31,6 +31,22 @@ main > section { min-width: 0; }
 canvas { width: 100%; max-width: 100%; display: block; }
 #map { height: 420px; } #strip { height: 70px; } #err { height: 210px; } #spd { height: 150px; }
 #acc, #gyr { height: 120px; } #bar, #gsp { height: 90px; }
+.card { cursor: zoom-in; } .card :is(input, select, button, label) { cursor: auto; }
+.card:fullscreen { display: flex; flex-direction: column; border: 0; border-radius: 0; padding: 18px 22px 12px; cursor: zoom-out; overflow: hidden; }
+.card:fullscreen canvas { height: auto !important; flex: 1 1 0; min-height: 0; }
+.card:fullscreen h2 { font-size: 15px; }
+.card:fullscreen #strip { flex: 0 0 160px; }
+.card:fullscreen .controls { display: none; }
+.card:fullscreen .stats { font-size: 150%; flex: 1; align-content: center; }
+.navwrap:fullscreen { display: flex; flex-direction: column; }
+.navwrap:fullscreen #nav { flex: 1 1 0; min-height: 0; height: auto; }
+#fsbar { display: none; gap: 8px; align-items: center; padding: 8px 10px; margin-top: 8px; border-top: 1px solid var(--line);
+  background: var(--panel); color: var(--ink); font-size: 14px; flex: 0 0 auto; }
+:fullscreen > #fsbar { display: flex; }
+.navwrap > #fsbar { margin: 0; border-top: 1px solid #2c333d; background: #0e1116; color: #e8e6e1; }
+.navwrap > #fsbar :is(button, select) { background: #1a1f26; color: #e8e6e1; border-color: #2c333d; }
+#fsbar button { padding: 4px 10px; min-width: 44px; }
+.hint { font-size: 12px; color: var(--muted); }
 .sens-h { font-size: 12px; color: var(--muted); margin: 6px 0 2px; }
 .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
 button, select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
@@ -74,6 +90,7 @@ input[type=range] { flex: 1; min-width: 140px; }
     <label class="sl"><span>callout margin k·σ <b id="kv">1.0</b></span><input type="range" id="kSl" min="0" max="2.5" step="0.05" value="1"></label>
     <label class="sl"><span>callout distance <b id="lv">300 m</b></span><input type="range" id="lSl" min="100" max="600" step="25" value="300"></label>
     <span class="sub" id="callStat"></span>
+    <span class="hint">Double-click any panel for full screen · Space play/pause · ← → 1 s · Shift+← → 10 s</span>
   </div>
   <div id="live" class="live" aria-label="live run">
     <span class="badge">LIVE</span>
@@ -131,7 +148,7 @@ input[type=range] { flex: 1; min-width: 140px; }
   </section>
   <section>
     <div class="card">
-      <h2>Driver's view (what the app shows) · double-click for full screen</h2>
+      <h2>Driver's view (what the app shows)</h2>
       <div class="navwrap" id="navwrap" title="double-click: full screen"><canvas id="nav"></canvas></div>
       <div class="navopts"><label><input type="checkbox" id="ghost"> show the true car</label><span>heading-up, position snapped to the road</span></div>
     </div>
@@ -156,6 +173,15 @@ input[type=range] { flex: 1; min-width: 140px; }
     </div>
   </section>
 </main>
+<div id="fsbar" aria-label="playback">
+  <button id="fs_play">Play</button>
+  <button id="fs_b10" title="back 10 s (Shift+←)">−10 s</button><button id="fs_b1" title="back 1 s (←)">−1 s</button>
+  <input id="fs_scrub" type="range" min="0" max="1" step="1" value="0" aria-label="time">
+  <button id="fs_f1" title="forward 1 s (→)">+1 s</button><button id="fs_f10" title="forward 10 s (Shift+→)">+10 s</button>
+  <select id="fs_speed"><option value="1">1×</option><option value="5">5×</option><option value="10" selected>10×</option><option value="30">30×</option></select>
+  <span id="fs_clock" style="font-variant-numeric: tabular-nums; min-width: 70px"></span>
+  <button id="fs_exit" title="exit full screen (Esc or double-click)">✕</button>
+</div>
 <script>
 let D = /*DATA*/null;
 const ALL = /*ALLDATA*/null;      // all-in-one page: {order, runs: {key: {label, risk, variants: {map, nomap}}}}
@@ -326,7 +352,7 @@ function drawNav() {
   // route line ahead of the car (the guidance line)
   const ahead = []; for (let s = sh; s < Math.min(sh + 700, D.road.x.length * 10 - 20); s += 10) ahead.push(sToXY(s));
   stroke(ahead, 4.2 * scale, "#4f8df5");
-  if (inT) { g.fillStyle = "#c98a2b"; g.font = `600 ${Math.round(Math.max(11, W * 0.03))}px system-ui`; g.textBaseline = "middle";
+  if (inT) { g.fillStyle = "#c98a2b"; g.font = `600 ${Math.round(Math.max(11, Math.min(W, H) * 0.03))}px system-ui`; g.textBaseline = "middle";
     g.fillText("TUNNEL", 14, H * 0.2 + 30); }
   if (document.getElementById("ghost").checked) {
     const [tu, tv] = T(D.true_xy[k][0], D.true_xy[k][1]); g.globalAlpha = .55; g.fillStyle = "#ffffff";
@@ -390,26 +416,53 @@ function render() {
   if (D.zupt_on[k]) msg += (msg ? " · " : "") + "stopped: zero-velocity update";
   document.getElementById("banner").textContent = msg;
   scrub.value = k;
+  const fsS = document.getElementById("fs_scrub"); fsS.max = N - 1; fsS.value = k;
+  document.getElementById("fs_clock").textContent = document.getElementById("clock").textContent;
 }
 
 function tick(ts) {
   if (playing) {
-    const dt = (ts - last) / 1000 * +document.getElementById("speed").value;
+    const dt = (ts - last) / 1000 * +document.getElementById(document.fullscreenElement ? "fs_speed" : "speed").value;
     let target = D.t[k] + dt; while (k < N - 1 && D.t[k + 1] <= target) k++;
-    if (k >= N - 1) { playing = false; document.getElementById("play").textContent = "Play"; }
+    if (k >= N - 1) setPlay(false);
     render();
   }
   last = ts; requestAnimationFrame(tick);
 }
-document.getElementById("play").onclick = () => { playing = !playing; if (k >= N - 1) k = 0; document.getElementById("play").textContent = playing ? "Pause" : "Play"; };
+function setPlay(on) {
+  playing = on; if (on && k >= N - 1) k = 0;
+  for (const id of ["play", "fs_play"]) document.getElementById(id).textContent = on ? "Pause" : "Play";
+}
+function stepBy(sec) { const t = D.t[k] + sec; k = Math.max(0, Math.min(N - 1, D.t.findIndex(x => x >= t) < 0 ? N - 1 : D.t.findIndex(x => x >= t))); render(); }
+document.getElementById("play").onclick = () => setPlay(!playing);
+document.getElementById("fs_play").onclick = () => setPlay(!playing);
+for (const [id, sec] of [["fs_b10", -10], ["fs_b1", -1], ["fs_f1", 1], ["fs_f10", 10]]) document.getElementById(id).onclick = () => stepBy(sec);
+document.getElementById("fs_exit").onclick = () => document.exitFullscreen?.();
+document.getElementById("fs_speed").onchange = e => { document.getElementById("speed").value = e.target.value; };
+document.getElementById("speed").onchange = e => { document.getElementById("fs_speed").value = e.target.value; };
+document.getElementById("fs_scrub").oninput = e => { k = +e.target.value; render(); };
 scrub.oninput = () => { k = +scrub.value; render(); };
+document.addEventListener("keydown", e => {
+  if (e.target.matches?.("input:not([type=range]), select, textarea") || !D) return;
+  if (e.key === " ") { e.preventDefault(); setPlay(!playing); }
+  else if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); stepBy((e.key === "ArrowLeft" ? -1 : 1) * (e.shiftKey ? 10 : 1)); }
+});
 document.getElementById("zoom").oninput = render;
 document.getElementById("ghost").onchange = render;
-document.getElementById("navwrap").ondblclick = () => {
-  const el = document.getElementById("navwrap");
+// double-click any panel (map, road strip, sensors, driver's view, Now, plots) for full screen; the
+// playback bar moves into the full-screen panel, and Space / ← → / Shift+← → work everywhere
+function toggleFs(el, e) {
+  if (e.target.closest("input, select, button, label, #fsbar")) return;
+  e.stopPropagation(); window.getSelection()?.removeAllRanges();
   if (document.fullscreenElement) document.exitFullscreen?.(); else el.requestFullscreen?.().catch(() => {});
-};
-document.addEventListener("fullscreenchange", () => setTimeout(render, 50));
+}
+document.getElementById("navwrap").addEventListener("dblclick", e => toggleFs(document.getElementById("navwrap"), e));
+for (const c of document.querySelectorAll("main .card")) { c.title = "double-click: full screen"; c.addEventListener("dblclick", e => toggleFs(c, e)); }
+document.addEventListener("fullscreenchange", () => {
+  const bar = document.getElementById("fsbar"), fs = document.fullscreenElement;
+  if (fs) fs.appendChild(bar); else document.body.appendChild(bar);
+  setTimeout(render, 60);
+});
 window.addEventListener("resize", render);
 function load(key, keepTime) {
   const r = ALL.runs[key], v = document.getElementById("mapOn").checked && r.variants.map ? "map" : (r.variants.nomap ? "nomap" : "map");
