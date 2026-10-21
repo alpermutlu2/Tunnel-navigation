@@ -39,7 +39,7 @@ offset. Cruise mode adds 2 states and the map layer adds 2 more.
 | ZUPT from an IMU stop detector | Stop-and-go traffic |
 | Cruise prior: speed = v_ref + d, d Gauss–Markov (σ 0.5 m/s, τ 60 s) | A stated model of the driver, not a measurement (§4.2) |
 | Map in the tunnel: 1 Hz heading and cross-track against the route polyline; map lateral offset (σ 2 m) and length error (σ 0.5 %) as states; paused around the diverge until the in-loop branch decision | Heading and lateral position; along-track information where the road curves, bounded by the map's own uncertainty (§4.5) |
-| Callout when ŝ + 1.65·σ_s reaches s_exit − 300 m | Errs early: a late callout can make the driver miss the exit |
+| Callout when ŝ + 1·σ_s reaches s_exit − 300 m | Errs early: a late callout can make the driver miss the exit |
 | Re-acquisition: 3 s velocity only, decaying position R, ≤ 2 m per update | No jump at the exit, even with multipath |
 | Gate-lock recovery, adaptive noise | Safety net; never fires in the nominal scenarios (§4.6) |
 
@@ -61,7 +61,7 @@ the result when the car comes out.
 | cross-track at portal, rms [m] | 1.5 | 3.2 | 2.0 | 1.3 | 1.9 | 1.5 | 1.5 | 1.5 | 1.4 | 2.1 |
 | mean (e/σ)² at portal | 0.13 | 0.23 | 0.18 | 0.11 | 0.27 | 0.15 | 0.16 | 0.13 | 0.22 | 0.25 |
 | callout timing, filter only (k = 0): mean / > 1 s late | +0.1 / 2 % | +0.1 / 0 % | +0.2 / 4 % | +0.2 / 30 % | +0.9 / 40 % | +0.1 / 2 % | +0.1 / 2 % | +0.0 / 2 % | -0.0 / 0 % | +0.4 / 24 % |
-| callout as announced (k = 1.65): mean [s] (− early) / late | -1.3 / 0 % | -0.5 / 0 % | -1.5 / 0 % | -4.4 / 0 % | -1.9 / 0 % | -1.4 / 0 % | -1.4 / 0 % | -1.4 / 0 % | -0.3 / 2 % | -2.8 / 0 % |
+| callout as announced (k = 1): mean [s] (− early) / late / > 1 s late | -0.8 / 2 % / 0 % | -0.3 / 2 % / 0 % | -0.9 / 4 % / 0 % | -2.6 / 4 % / 0 % | -0.8 / 16 % / 2 % | -0.8 / 2 % / 0 % | -0.8 / 2 % / 0 % | -0.9 / 4 % / 0 % | -0.2 / 12 % / 0 % | -1.6 / 4 % / 0 % |
 | branch reported (car takes it) / main reported (car goes straight) | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % |
 | largest exit step, p95 [m] | 3.4 | 5.5 | 4.0 | 3.5 | 3.7 | 3.4 | 3.3 | 3.6 | 4.9 | 4.3 |
 | not < 10 m 60 s after the exit | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
@@ -77,9 +77,13 @@ the result when the car comes out.
 - **Callout.** "The right moment" is read here as *never late, and only as early as the position
   uncertainty requires*: a late callout can make the driver miss the exit, an early one costs
   reaction time. The table gives both the filter's own timing (k = 0, how good the estimate is) and
-  the announced callout (the product rule ŝ + k·σ_s). No callout is more than 1 s late in any of the 500 runs; only one is late at all
-  (S1-1km, under 1 s). On average, callouts come 0.3–4.4 s early, most on S4, where σ_s is
-  largest. Before the k·σ rule, 30 % (S4) and 40 % (S5) of callouts were more than 1 s late.
+  the announced callout (the product rule ŝ + k·σ_s, k = 1). With k = 1, one callout in 500 runs
+  is more than 1 s late (S5), and 0–16 % are late at all, mostly by a fraction of a second. On
+  average callouts come 0.2–2.6 s early, most on S4. Without the rule, 30 % (S4) and 40 % (S5) of
+  callouts were more than 1 s late. Why k = 1: the filter's σ_s is about twice the real error (mean
+  (e/σ)² 0.1–0.3), so k = 1 is in effect a ~2σ margin. k = 1.65 gives no late callout at all but
+  comes up to 4.4 s (S4) early; at 50 km/h that is ~60 m, and "Exit A in 300 m" would then really
+  mean 360 m. k has to be chosen again once σ is calibrated on real data.
 - **Branch.**
   - Car takes the branch: the in-loop decision reports the branch in 500 of 500 runs, 2–3.5 s
     after the diverge.
@@ -98,7 +102,7 @@ GNSS.
 
 **4.1 Stops and braking.** ZUPT resets speed at stops, but each stop and start is integrated, and
 the bias acts during long stops. S4 and S5 have the largest errors (25–31 m at the diverge). The
-k·σ callout turns that into early, not late, callouts: 4.4 s early on average.
+k·σ callout turns that into early rather than late callouts: 2.6 s early on average.
 
 **4.2 Driver behaviour is an assumption.** Without GNSS a small real acceleration and an
 accelerometer bias look the same (ã = a + b_a + n). Three speed-hold forms were tried:

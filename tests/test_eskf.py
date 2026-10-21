@@ -148,7 +148,7 @@ def test_interactive_server_page_builds():
     import serve
     page = serve.run_page({"scenario": "S1-0.5km", "seed": "1", "mount_err": "2", "cruise": "0",
                            "nhc_turn_gate": "0.5", "gnss_coasting": "1"})
-    assert "const D = {" in page and "est_heading" in page
+    assert "let D = {" in page and "est_heading" in page
 
 
 def test_mapview_matching_and_main_continuation():

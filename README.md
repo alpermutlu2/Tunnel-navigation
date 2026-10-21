@@ -15,9 +15,11 @@ python tools/serve.py                # interactive: open http://localhost:8000
 python tools/simulate.py S1          # or a single self-contained page: sim_S1_seed0.html
 ```
 
-**Without Python:** `docs/sim/` holds pre-run pages for every scenario and the failure cases
-(`docs/sim/index.html`; with GitHub Pages serving `/docs` they open at
-`https://alpermutlu2.github.io/Tunnel-navigation/sim/`). Rebuild them with `python tools/build_site.py`.
+**Without Python:** [`docs/sim/index.html`](docs/sim/index.html) is one self-contained page with
+every scenario as a tab (pre-run drives, seed 0), a map-layer on/off switch, and sliders for the
+callout margin k·σ and the callout distance, evaluated in the browser. With GitHub Pages serving
+`/docs` it opens at `https://alpermutlu2.github.io/Tunnel-navigation/sim/`. Rebuild it with
+`python tools/build_site.py`.
 
 `tools/serve.py` opens the simulator with controls on the left (scenario, seed, IMU profile,
 vibration, tunnel pressure gradient, the filter's mount error, GNSS degradations, filter switches

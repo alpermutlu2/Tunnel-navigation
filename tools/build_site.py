@@ -1,29 +1,62 @@
-"""Pre-run simulator pages for viewing without Python (GitHub Pages: serve /docs).
+"""One self-contained simulator page with every scenario as a tab (no Python needed to view).
 
-    python tools/build_site.py      -> docs/sim/*.html + docs/sim/index.html
+    python tools/build_site.py            -> docs/sim/index.html (GitHub Pages: serve /docs)
+
+Each tab is a pre-run drive (seed 0) with the map layer on and off; the callout margin k and the
+callout distance are sliders evaluated in the browser (ŝ and σ_s are in the page). Filter or sensor
+changes beyond these need the local server (tools/serve.py).
 """
-import subprocess
+import json
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "docs" / "sim"
-RUNS = [("S1", []), ("S2", []), ("S3", []), ("S4", []), ("S5", []), ("S6", []),
-        ("S1-1km", []), ("S1-5km", []),
-        ("S1-nomap", ["S1", "--eskf", "map_in_tunnel=False"]),
-        ("S3-pressure30", ["S3", "--override", "baro_tunnel_30pa"]),
-        ("S1-lowend", ["S1", "--override", "imu_lowend"])]
+sys.path.insert(0, str(ROOT / "tools"))
+sys.path.insert(0, str(ROOT))
+
+# key, tab label, scenario, overrides, both map variants?, failure case?
+TABS = [
+    ("S1", "S1 straight 3 km", "S1", [], True, False),
+    ("S2", "S2 S-bend", "S2", [], True, False),
+    ("S3", "S3 V-profile", "S3", [], True, False),
+    ("S4", "S4 stop-and-go", "S4", [], True, False),
+    ("S5", "S5 braking", "S5", [], True, False),
+    ("S6", "S6 speed wander", "S6", [], True, False),
+    ("S1-1km", "1 km", "S1-1km", [], True, False),
+    ("S1-5km", "5 km", "S1-5km", [], True, False),
+    ("S3-pressure30", "pressure gradient 30 Pa/km", "S3", ["baro_tunnel_30pa"], False, True),
+    ("S1-lowend", "low-end IMU", "S1", ["imu_lowend"], False, True),
+]
+
+
+def _run(args):
+    import simulate
+    scen, overrides, map_on = args
+    return simulate.run(scen, 0, overrides, "detector", [f"map_in_tunnel={map_on}"])
 
 
 def main():
-    OUT.mkdir(parents=True, exist_ok=True)
-    for name, args in RUNS:
-        subprocess.run([sys.executable, str(ROOT / "tools" / "simulate.py"), *(args or [name]),
-                        "--out", str(OUT / f"{name}.html")], check=True)
-    body = (ROOT / "tools" / "site_index.html").read_text()
-    (OUT / "index.html").write_text('<!doctype html><html lang="en"><head><meta charset="utf-8">'
-                                    '<meta name="viewport" content="width=device-width, initial-scale=1">' + body + "</html>")
-    print("wrote", OUT)
+    jobs, keys = [], []
+    for key, _, scen, ov, both, _ in TABS:
+        for v, on in (("map", True), ("nomap", False)) if both else (("map", True),):
+            jobs.append((scen, ov, on)); keys.append((key, v))
+    with ProcessPoolExecutor() as ex:
+        data = list(ex.map(_run, jobs))
+    runs = {key: {"label": label, "risk": risk, "variants": {}} for key, label, _, _, _, risk in TABS}
+    for (key, v), d in zip(keys, data):
+        runs[key]["variants"][v] = d
+    allj = {"order": [t[0] for t in TABS], "runs": runs}
+    tpl = (ROOT / "tools" / "simulate_template.html").read_text()
+    first = runs[TABS[0][0]]["variants"]["map"]
+    page = tpl.replace("/*DATA*/null", json.dumps(first)).replace("/*ALLDATA*/null", json.dumps(allj))
+    page = page.replace("<title>Through the Tunnel</title>", "<title>Tunnel Simulator</title>")
+    out = ROOT / "docs" / "sim"
+    out.mkdir(parents=True, exist_ok=True)
+    for old in out.glob("*.html"):
+        old.unlink()
+    (out / "index.html").write_text(page)
+    print(f"wrote {out / 'index.html'} ({len(page) / 1e6:.1f} MB)")
 
 
 if __name__ == "__main__":

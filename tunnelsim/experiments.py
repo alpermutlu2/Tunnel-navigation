@@ -105,7 +105,8 @@ def calibration_experiment(key, seeds=100, imu_overrides=(), zupt_oracle=False) 
 # ---------------------------------------------------------------------------------------------
 CALLOUT_LEAD_M = 300.0      # [ASSUMED] the app announces the exit 300 m before the ramp
 CALLOUT_K_SWEEP = (0.0, 1.0, 1.65, 2.0)
-CALLOUT_K = 1.65            # owner 2026-10-21: announce when ŝ + k·σ_s reaches the callout point (errs early)
+CALLOUT_K = 1.0             # owner 2026-10-21: announce when ŝ + k·σ_s reaches the callout point (errs early);
+                            # σ_s is ~2× conservative ((e/σ)² 0.1–0.3), so k = 1 is in effect ~2σ; re-select k on real data
 CALLOUT_LATE_S = 1.0        # [ASSUMED] a callout more than 1 s late counts as a late warning (review 6)
 RECOVERY_M = 10.0           # recovered = horizontal error stays below this; ~2x the open-sky GNSS
                             # horizontal error (3 m per axis -> 4.2 m rms), so GNSS noise alone

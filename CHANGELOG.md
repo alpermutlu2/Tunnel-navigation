@@ -7,6 +7,17 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.4 (2026-10-21): callout k = 1, single-page simulator
+
+- Callout margin k 1.65 → 1 (owner, review): σ_s is ~2× conservative, so k = 1 is in effect ~2σ;
+  > 1 s late 1/500 (S5), late at all 0–16 %, mean 0.2–2.6 s early (k = 1.65: 0 late, up to 4.4 s
+  early on S4). The filter is unchanged, so the 0.5.3 evaluation holds; the k = 1 numbers are its
+  `callout_k["1.0"]` entries (`reports/0.5.3/evaluation_50.json`). Re-select k on real data.
+- Report: filter-only callout timing (k = 0) and the announced callout (k = 1) as separate rows;
+  "right moment" = never late, as early as the uncertainty requires.
+- `docs/sim/index.html` (`tools/build_site.py`): one self-contained page, a tab per scenario,
+  map on/off, k and callout-distance sliders in the browser; replaces the per-scenario pages.
+
 ## v0.5.3 (2026-10-21): callout errs early, map scale term, report shortened
 
 - Callout announced when ŝ + 1.65·σ_s reaches s_exit − 300 m (owner): > 1 s late 30 % (S4) and
