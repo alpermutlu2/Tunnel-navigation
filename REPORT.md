@@ -6,8 +6,8 @@ right moment, and recover cleanly when the car comes out.
 
 All results come from simulation: 50-seed Monte Carlo runs (`tools/evaluate.py`,
 `reports/0.5.3/`) unless a section says otherwise. Every parameter is tagged [MEAS] (measured,
-cited), [SPEC] (datasheet) or [ASSUMED] (chosen here); see `tunnelsim/profiles.py` and
-`DESIGN.md` §2. The simulator runs interactively (`python tools/serve.py`) or one page per run
+cited), [SPEC] (datasheet) or [ASSUMED] (chosen here); §2.2 lists the assumptions and
+`tunnelsim/profiles.py` holds every value. The simulator runs interactively (`python tools/serve.py`) or one page per run
 (`tools/simulate.py`); the README has the commands.
 
 ## 1. Framing
@@ -44,7 +44,63 @@ offset. Cruise mode adds 2 states and the map layer adds 2 more.
 | Gate-lock recovery, adaptive noise | Safety net; never fires in the nominal scenarios |
 | IMU class from the gyro white noise at start-up; a filter profile per class | Low-end phones (§4.6) |
 
-The estimator never imports truth objects; a test enforces this (`docs/contracts.md`).
+### 2.1 What is simulated
+
+Three layers meet only through sensor streams. The estimator never imports truth objects, and a
+test enforces this (`docs/contracts.md`).
+
+- **Truth** (`tunnelsim/truth.py`).
+  - Road: curvature and grade with clothoid and minimum-jerk transitions.
+  - Car: drives the lane centre with smooth (quintic) speed changes, suspension pitch and sideslip.
+  - Phone: on a dashboard mount (12° pitch, 1.6 m lever arm); specific force and angular rate are
+    computed at the phone at 100 Hz.
+  - Check: strapdown of the ideal IMU reproduces the path within 0.13 cm.
+- **Sensors** (`tunnelsim/sensors.py`). Every error term can be switched off alone and has its
+  own random stream.
+  - IMU: white noise, bias instability as three Gauss–Markov terms (5/50/500 s), turn-on bias,
+    scale and misalignment, road and engine vibration.
+  - Barometer: 25 Hz, white noise plus a drifting offset.
+  - GNSS: 1 Hz position and Doppler velocity, with correlated errors and reported accuracy. It
+    fades over the 4 s before the portal and gives no fixes inside. At the exit, velocity
+    returns after 1 s and position after 2 s, with a 30 m multipath bias that decays.
+- **Drives.** Each drive starts with 200 s under GNSS, including ±15 km/h speed changes so the
+  biases can be calibrated. The route leaves through a 20° branch inside the tunnel.
+
+| Scenario | Tunnel | Driving inside |
+|---|---|---|
+| S1 | 3 km, straight, flat | 80 km/h constant |
+| S2 | 2.5 km, S-bend (R 400 m) | 80 km/h |
+| S3 | 3.5 km, V-profile ±5 % | 70 km/h |
+| S4 | 3 km, straight | 60 km/h, two full stops (20 s, 45 s) and a crawl |
+| S5 | 3 km, straight | 90 → 82 km/h drift, brake to 50 km/h |
+| S6s / S6 / S6L | 3 km, straight | speed wander ±1 / ±2 / ±4 km/h |
+| S1-0.5km / 1km / 5km | as S1 | as S1 |
+| custom (live) | 0.5–5 km, any grade | any speed, one stop |
+
+Each scenario runs 50 noise realisations (seeds). The metrics are rms and 95th percentile errors,
+and consistency: the mean of (e/σ)², which is 1 for an honest filter and > 1 when it is
+overconfident.
+
+### 2.2 Assumptions
+
+| Area | Assumption | Tag |
+|---|---|---|
+| Tunnel | Single lane, 0.5–5 km | given |
+| Phone | Rigid mount, angles known to the filter (1–3° error tested, §4.8) | [ASSUMED] |
+| IMU | Galaxy Note10 (LSM6DSR) Allan terms; turn-on bias 10 mg | [MEAS]; [SPEC] |
+| IMU | Shape of the bias drift (three Gauss–Markov terms), vibration levels | [ASSUMED] |
+| GNSS | 3 m horizontal, 0.1 m/s, correlated (30 s / 10 s); fade before the portal; 30 m exit multipath | [ASSUMED] |
+| Barometer | 0.1 m white + 0.1 m offset drift (60 s); closed cabin; no tunnel pressure gradient (30 Pa/km tested, §4.4) | [ASSUMED] |
+| Map | Route polyline with the diverge; lateral offset σ 2 m and length error σ 0.5 % (§4.5); no grade profile | [ASSUMED] |
+| Vehicle | Sideslip 0.4°/(m/s²) with a 0.2 s lag; suspension pitch 1.5°/g | [ASSUMED] |
+| Driver | In cruise the speed wanders like a Gauss–Markov process, σ 0.5 m/s, τ 60 s (the filter's model) | [ASSUMED] |
+| Exit | 20° branch over 150 m at about 0.73 of the tunnel; callout 300 m before it, k = 1 | [ASSUMED] |
+
+Sensors left out:
+- **Magnetometer:** the tunnel's steel and the car body distort it.
+- **Ambient light:** it could mark the portal, but GNSS loss already does, and tunnel lighting
+  levels are unknown.
+- **Camera, BLE beacons, OBD and wheel speed:** an average navigation user does not have them.
 
 ## 3. Results
 
@@ -75,16 +131,14 @@ the result when the car comes out.
     is not observable in a straight tunnel.
   - The exit curve brings the portal error down to 2.5–14 m.
   - The filter is consistent: mean (e/σ)² 0.11–0.27.
-- **Callout.** "The right moment" is read here as *never late, and only as early as the position
-  uncertainty requires*: a late callout can make the driver miss the exit, an early one costs
-  reaction time. The table gives both the filter's own timing (k = 0, how good the estimate is) and
-  the announced callout (the product rule ŝ + k·σ_s, k = 1). With k = 1, one callout in 500 runs
-  is more than 1 s late (S5), and 0–16 % are late at all, mostly by a fraction of a second. On
-  average callouts come 0.2–2.6 s early, most on S4. Without the rule, 30 % (S4) and 40 % (S5) of
-  callouts were more than 1 s late. Why k = 1: the filter's σ_s is about twice the real error (mean
-  (e/σ)² 0.1–0.3), so k = 1 is in effect a ~2σ margin. k = 1.65 gives no late callout at all but
-  comes up to 4.4 s (S4) early; at 50 km/h that is ~60 m, and "Exit A in 300 m" would then really
-  mean 360 m. k has to be chosen again once σ is calibrated on real data.
+- **Callout.** "The right moment" is read as *never late, and only as early as the uncertainty
+  requires*: a late callout can make the driver miss the exit. The table gives the filter's own
+  timing (k = 0) and the announced callout (ŝ + k·σ_s, k = 1). With k = 1, one callout in 500 is
+  more than 1 s late (S5) and 0–16 % are late at all; on average they come 0.2–2.6 s early.
+  Without the rule, 30 % (S4) and 40 % (S5) were more than 1 s late. Why k = 1: σ_s is about twice
+  the real error ((e/σ)² 0.1–0.3), so k = 1 is in effect ~2σ; k = 1.65 is never late but up to
+  4.4 s early (S4). The voice says the estimated distance rounded to 50 m. k has to be chosen
+  again once σ is calibrated on real data.
 - **Branch.**
   - Car takes the branch: the in-loop decision reports the branch in 500 of 500 runs, 2–3.5 s
     after the diverge.
@@ -156,15 +210,11 @@ may be pessimistic; a real low-end phone must be measured.
 With the Note10 tuning the filter is overconfident, the χ² gate locks GNSS out before the tunnel,
 and the error at the portal is 0.3–3.6 km. Two fixes (review 11, `reports/0.5.5/`):
 
-- **IMU class at start-up.** The gyro white noise over the first 10 s, σ̂ = std(Δω)/√2 (the
-  difference removes real rotation), is 0.007–0.013 rad/s per sample for the Note10 (calm or noisy
-  vibration) and ≥ 0.059 for the MPU9250. A threshold at their geometric mean (0.027) classified
-  every run correctly, and Note10 results are bit-identical. On a real phone the OS may low-pass the
-  gyro, so the sensor name is the safer key.
-- **A filter profile per class.** The Note10 tuning rules are applied to the MPU9250 Allan terms
-  (gyro noise from ARW, gyro bias random walk scaled by the measured bias-instability ratio,
-  initial bias σ by the Note10 margin over turn-on). Halving or doubling the gyro bias random walk
-  changes little, so one parameter does not fix this.
+- **IMU class at start-up** from the gyro white noise over the first 10 s, σ̂ = std(Δω)/√2: Note10
+  ≤ 0.013 rad/s per sample, MPU9250 ≥ 0.059, threshold 0.027. Every run was classed correctly and
+  Note10 results are bit-identical. A real OS may low-pass the gyro, so the sensor name is safer.
+- **A filter profile per class:** the Note10 tuning rules applied to the MPU9250 Allan terms.
+  Halving or doubling the gyro bias random walk changes little; one parameter does not fix this.
 
 | MPU9250 + profile, 30 seeds | S1 | S2 | S5 | S4 | 5 km |
 |---|---|---|---|---|---|
@@ -182,11 +232,12 @@ callout margin or fall back to CV and map cues (`DESIGN.md` §5.1) in long and s
 
 **4.7 Levelling does not help** (review 11 option 3, `EskfConfig.level`, off). At 1 Hz in cruise
 mode and at stops, the 1 s mean specific force is modelled as gravity plus the accelerometer bias,
-f̄ = −Cᵀg + b_a (H = [−Cᵀ[g×] | I] on attitude and bias). Over 10 seeds, σ = 0.02 m/s² halves the
-diverge error on S4 (29 → 14 m) but makes the portal worse on S2, S3, S5, S6 and 5 km, with (e/σ)²
-up to 13. Grade changes and the driver's speed wander are real accelerations that the turn gate
-does not see, and their error is correlated. At σ = 0.05 the harm is small and so is the gain.
-At stops only it changes nothing (30 seeds), because the ZUPT already holds there. It stays off.
+f̄ = −Cᵀg + b_a. With σ = 0.02 m/s² (10 seeds) it halves the S4 diverge error (29 → 14 m) but
+worsens the portal on S2, S3, S5, S6 and 5 km, with (e/σ)² up to 13: grade changes and speed
+wander are real, correlated accelerations, and the smaller σ_s makes the map's curve matching
+correct less at the exit branch (S1 portal 4.4 → 14 m). σ = 0.05 gives little harm and little
+gain; at stops only it changes nothing (30 seeds), since the ZUPT already holds there. It stays off.
+
 **4.8 Assumptions that did not matter** (S1, 30 seeds): GNSS coasting into the tunnel; optimistic
 reported accuracy; a 1–3° mount error (absorbed by the lumped accelerometer bias while the mount
 stays rigid); the shape of the bias model.
@@ -200,7 +251,8 @@ stays rigid); the shape of the bias model.
   centre.
 - **The ZUPT detector is offline** (forward-backward filtering). A causal version is similar at
   the exit and worse for the callout.
-- **Narrow setting.** Two IMU classes, a rigid phone mount, a single lane.
+- **Narrow setting.** Two IMU classes, a rigid phone mount, a single lane, one car. A second car
+  would only be another noise realisation of the same sensors; the 50 seeds cover that.
 - **Next, with real devices:**
   - static Allan runs to check §3 of `DESIGN.md`;
   - recordings in Istanbul tunnels, with the portals as checkpoints;

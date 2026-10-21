@@ -7,6 +7,16 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.6 (2026-10-21): live custom tunnel, report completeness (review 12)
+
+- Live custom tunnel: the LIVE bar builds a scenario from tunnel length, grade inside the tunnel,
+  speed and one stop (`scenario.get_scenario("custom:L=..,g=..,v=..,stop=..,at=..")`), shown as a
+  "Custom" tab; invalid settings return the reason (e.g. no room for a stop before the diverge).
+- REPORT: §2.1 "What is simulated" (truth, sensors, drives, scenario table, metrics) and §2.2
+  assumptions table with tags and the sensors left out (magnetometer, ambient light, camera, BLE,
+  OBD); §4.7 adds the σ_s / curve-matching effect of levelling; one car noted as a limitation.
+- No filter change.
+
 ## v0.5.5 (2026-10-21): low-end IMU profile, levelling A/B (review 11)
 
 - IMU class at start-up (`EskfConfig.imu_class = "auto"`, `detect_imu_class`): gyro white noise over

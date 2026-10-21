@@ -1,5 +1,5 @@
 """Through the Tunnel: phone-based position estimation through a GNSS outage."""
-__version__ = "0.5.5"
+__version__ = "0.5.6"
 
 from .scenario import build_scenarios
 from .truth import generate_truth
