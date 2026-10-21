@@ -1,5 +1,7 @@
 # Through the Tunnel: write-up
 
+A two-page version is in [`SUMMARY.md`](SUMMARY.md).
+
 Pointr case study. A phone in a car estimates its position through a GNSS outage in a road
 tunnel. The navigation app has to keep showing the car, call out an exit inside the tunnel at the
 right moment, and recover cleanly when the car comes out.

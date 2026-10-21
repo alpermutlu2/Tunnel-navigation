@@ -5,7 +5,8 @@ Phone-based position estimation through a GNSS outage in a road tunnel (single l
 the right moment, and recover cleanly when the car comes out. Only the phone's own sensors
 (accelerometer, gyroscope, barometer, GNSS) and the navigation map are used.
 
-**Write-up:** [`REPORT.md`](REPORT.md): approach, results, where it breaks and why, AI usage.
+**Write-up:** [`SUMMARY.md`](SUMMARY.md) (about two pages) and the full [`REPORT.md`](REPORT.md):
+approach, what is simulated, assumptions, results, where it breaks and why, AI usage.
 
 ## Quick start
 
