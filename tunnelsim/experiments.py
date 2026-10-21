@@ -105,6 +105,7 @@ def calibration_experiment(key, seeds=100, imu_overrides=(), zupt_oracle=False) 
 # ---------------------------------------------------------------------------------------------
 CALLOUT_LEAD_M = 300.0      # [ASSUMED] the app announces the exit 300 m before the ramp
 CALLOUT_K_SWEEP = (0.0, 1.0, 1.65, 2.0)
+CALLOUT_K = 1.65            # owner 2026-10-21: announce when ŝ + k·σ_s reaches the callout point (errs early)
 CALLOUT_LATE_S = 1.0        # [ASSUMED] a callout more than 1 s late counts as a late warning (review 6)
 RECOVERY_M = 10.0           # recovered = horizontal error stays below this; ~2x the open-sky GNSS
                             # horizontal error (3 m per axis -> 4.2 m rms), so GNSS noise alone
@@ -194,11 +195,11 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
         s_call = sc.road.exits[0].s - CALLOUT_LEAD_M
         k_true = int(np.argmax(s_true >= s_call))
         t_true = out.t[k_true]
-        k_hat = np.argmax(s_hat >= s_call, axis=1)
+        k_hat = np.argmax(s_hat + CALLOUT_K * sig_s >= s_call, axis=1)
         dt_call = out.t[k_hat] - t_true                      # > 0: the callout comes late
         v_call = float(np.linalg.norm(tr.vel_n[int(round((t_true - tr.t[0]) / tr.dt))]))
         sig_t = sig_s[:, k_true] / v_call                    # timing uncertainty the filter claims
-        res["callout"] = {"lead_m": CALLOUT_LEAD_M, "timing_error_s": stats(dt_call),
+        res["callout"] = {"lead_m": CALLOUT_LEAD_M, "k_sigma": CALLOUT_K, "timing_error_s": stats(dt_call),
                           "late_frac": round(float(np.mean(dt_call > 0)), 3),
                           "late_gt_1s_frac": round(float(np.mean(dt_call > CALLOUT_LATE_S)), 3),
                           "sigma_t_mean_s": round(float(sig_t.mean()), 3),

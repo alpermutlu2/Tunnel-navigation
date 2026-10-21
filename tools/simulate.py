@@ -29,7 +29,7 @@ sys.path.insert(0, str(ROOT))
 
 from tunnelsim.budget import _tangent  # noqa: E402
 from tunnelsim.eskf import EskfConfig, run_eskf  # noqa: E402
-from tunnelsim.experiments import CALLOUT_LEAD_M, simulate_run  # noqa: E402
+from tunnelsim.experiments import CALLOUT_K, CALLOUT_LEAD_M, simulate_run  # noqa: E402
 from tunnelsim.profiles import OVERRIDES  # noqa: E402
 from tunnelsim.reference import gnss_entry_state  # noqa: E402
 from tunnelsim.scenario import build_scenarios  # noqa: E402
@@ -134,6 +134,7 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False):
         "e_s": e_s[sel].round(2).tolist(),
         "e_lat": e_lat[sel].round(2).tolist(),
         "sig_s": sig_s[sel].round(2).tolist(),
+        "callout_k": CALLOUT_K,
         "v_true": tr.v[idx[sel]].round(3).tolist(),
         "v_est": np.linalg.norm(out.v[0, sel], axis=1).round(3).tolist(),
         "zupt_on": out.zupt[0, sel].tolist(),

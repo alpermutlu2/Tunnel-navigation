@@ -73,7 +73,7 @@ class EskfConfig:
     map_scale_sigma: float = 0.005               # 0.5 % [ASSUMED]
     # review 10 (optional): deterministic lateral effect of the scale error in the cross-track row,
     # δz += nᵀ(c − c_entry)·δε, instead of the turn-driven offset process noise
-    map_scale_lateral: bool = False
+    map_scale_lateral: bool = True               # default since v0.5.3 (random map-error stress)
     nhc_turn_gate: float = 0.3        # m/s² [ASSUMED, review 7]; 0 = off. Lateral NHC dropped while |ω_z|·v exceeds this
     nhc_rate_hz: float = 5.0
     baro_sigma: float = 0.15          # m, 1 Hz average (E4)

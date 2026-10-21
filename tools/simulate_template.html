@@ -243,7 +243,7 @@ const cvErr = D.t.map((_, i) => { const c = cvS(i); return c === null ? null : c
 const errBand = { lo: D.e_s.map((e, i) => -2 * D.sig_s[i]), hi: D.e_s.map((e, i) => 2 * D.sig_s[i]) };
 // error plot range from the ESKF (error and 2σ band); the CV reference is clipped to it
 const errLim = (() => { let m = 5; for (let i = 0; i < N; i++) m = Math.max(m, Math.abs(D.e_s[i]), 2 * D.sig_s[i]); m *= 1.15; return [-m, m]; })();
-const callK = D.exits.length ? D.s_hat.findIndex(s => s >= D.exits[0].call_s) : -1;
+const callK = D.exits.length ? D.s_hat.findIndex((s, i) => s + (D.callout_k || 0) * D.sig_s[i] >= D.exits[0].call_s) : -1;   // ŝ + k·σ_s: errs early
 const trueCallK = D.exits.length ? D.s_true.findIndex(s => s >= D.exits[0].call_s) : -1;
 
 function render() {
