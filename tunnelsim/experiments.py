@@ -261,6 +261,9 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
                        "threshold_m": RECOVERY_M,
                        "time_to_threshold_s_median": float(np.nanmedian(conv)) if np.isfinite(conv).any() else None,
                        "not_converged_in_60s": int(np.isnan(conv).sum())}
+    if out.aux.get("imu_class") is not None:
+        cls, cnt = np.unique(out.aux["imu_class"], return_counts=True)
+        res["imu_class_detected"] = {str(c): int(n) for c, n in zip(cls, cnt)}
     if keep_tracks:
         res["_tracks"] = {"t": out.t, "e_s": e_s, "e_lat": e_lat, "e_psi": e_psi, "sig_s": sig_s, "s_true": s_true, "t_entry": t_e, "t_exit": t_x}
     return res

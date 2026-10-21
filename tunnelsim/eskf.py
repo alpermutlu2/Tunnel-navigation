@@ -19,7 +19,7 @@ Mount C_bp and lever arm r_b are inputs (assumed known in the baseline, E2).
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 from scipy.signal import butter, sosfiltfilt, sosfilt
@@ -121,6 +121,45 @@ class EskfConfig:
     p0_ba: float = 0.15               # turn-on 10 mg ≈ 0.1 m/s² plus scale/misalignment through g
     p0_bg: float = np.deg2rad(0.1)
     p0_bh: float = 10.0
+    # IMU class (review 11, owner 2026-10-21): "auto" detects the class from the gyro white noise in
+    # the first IMU window and applies FILTER_PROFILES[class]; "note10" keeps the values above.
+    # Levelling (gravity-direction) pseudo-measurement (review 11 option 3, owner 2026-10-21; A/B,
+    # off by default): at 1 Hz while the car is in cruise mode or stopped and not turning or pitching,
+    # the 1 s mean specific force is gravity plus the accelerometer bias, f̄ = −Cᵀg + b_a; it ties
+    # tilt and the lumped bias directly instead of through the integrated speed.
+    level: bool = False
+    level_sigma: float = 0.02          # m/s²: unmodelled acceleration in "steady" (the cruise threshold) [ASSUMED]
+    level_rate_gate: float = 0.3       # m/s²: skipped while |ω_y,z|·v exceeds this (curves, grade changes)
+    imu_class: str = "auto"
+    imu_detect_s: float = 10.0
+    imu_detect_th: float = 0.027      # rad/s per sample at 100 Hz ≈ ARW 2.7e-3 rad/√s: geometric mean of
+                                      # Note10 (≤ 0.013 with noisy vibration) and MPU9250 (≥ 0.059), 10 seeds
+
+
+# Filter-side tuning per IMU class (review 11, owner 2026-10-21). "note10" is the EskfConfig default.
+# "mpu9250": the Note10 tuning rules applied to the MPU9250 Allan terms [MEAS, Suvorkin 2024 Table 5]:
+#   gyro_noise    √(ARW_max² + vibration²), vibration 7.1e-4 from the Note10 value (√(1e-3² − 7e-4²))
+#   gyro_bias_rw  Note10 × mean-gyro-BI ratio (4.79e-3 / 1.56e-4 = 30.7)
+#   accel_bias_rw Note10 × mean-accel-BI ratio (1.07e-3 / 0.99e-3 = 1.08)
+#   p0_bg         2 × turn-on (0.2° [ASSUMED]), the Note10 ratio
+#   p0_ba         1.44 × rss(turn-on 30 mg, scale 1 %·g, misalignment 0.5°·g) = 1.44 × 0.32, the Note10 ratio
+FILTER_PROFILES = {
+    "note10": {},
+    "mpu9250": {"gyro_noise": 6.3e-3, "gyro_bias_rw": 3.07e-3 / np.sqrt(180.0),
+                "accel_bias_rw": 5.4e-4 / np.sqrt(180.0), "p0_bg": np.deg2rad(0.4), "p0_ba": 0.45},
+}
+
+
+def detect_imu_class(imu_t, w, cfg: EskfConfig, i0: int):
+    """IMU class from the gyro white noise: σ̂ = std(Δω)/√2 per axis (differencing removes the real
+    rotation), median over axes, over the imu_detect_s window ending at the filter start (or the
+    first window if the run starts earlier). Returns (class per batch member, σ̂)."""
+    fs = 1.0 / np.median(np.diff(imu_t))
+    n = int(round(cfg.imu_detect_s * fs))
+    a = max(0, i0 - n)
+    sig = np.median(np.diff(w[:, a:a + n], axis=1).std(axis=1) / np.sqrt(2.0), axis=1)
+    sig_100 = sig * np.sqrt(fs / 100.0)          # threshold is stated at 100 Hz
+    return np.where(sig_100 > cfg.imu_detect_th, "mpu9250", "note10"), sig
 
 
 @dataclass
@@ -228,6 +267,15 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     road_map: optional `MapView` of the route (estimator-side map) for the map-in-tunnel layer.
     """
     B, N = f.shape[0], imu_t.size
+    imu_classes, imu_sig = None, None
+    if cfg.imu_class == "auto":
+        g0 = np.nonzero(np.all(np.isfinite(gnss["pos"][:, :, 0]), axis=0) & np.all(np.isfinite(gnss["vel"][:, :, 0]), axis=0))[0][0]
+        i_det = int(np.searchsorted(imu_t, gnss["t"][g0] if t_start is None else t_start))
+        imu_classes, imu_sig = detect_imu_class(imu_t, w, cfg, i_det)
+        vals, cnt = np.unique(imu_classes, return_counts=True)   # one batch = one phone model
+        cfg = replace(cfg, **FILTER_PROFILES[str(vals[np.argmax(cnt)])])
+    elif cfg.imu_class != "note10":
+        cfg = replace(cfg, **FILTER_PROFILES[cfg.imu_class])
     NA = NX + 5          # + speed clone / v_ref (NX), driver wander d (NX + 1), baro gradient g_h (NX + 2),
     ID = NX + 1          #   map lateral offset (NX + 3), map scale error (NX + 4)
     IG = NX + 2
@@ -641,6 +689,25 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     Psub, xs = P[sel], x[sel]
                     _update(xs, Psub, z[sel][:, rows], H[sel][:, rows], R[sel][:, rows, rows], None)
                     P[sel], x[sel] = Psub, xs
+        # levelling: f̄ = −Ĉᵀg + b̂_a; δz = −Ĉᵀ[g×]δθ + δb_a  (Ĉ = Exp(δθ)C, δ = estimate − truth)
+        if cfg.level and (kk - i0) % int(round(fs)) == 0 and kk - i0 >= int(round(fs)):
+            n1 = int(round(fs))
+            w_win = np.einsum("ij,bkj->bki", C_bp, w[:, kk - n1 + 1:kk + 1] - b_g[:, None])
+            rate = np.max(np.hypot(w_win[..., 1], w_win[..., 2]), axis=1) * np.linalg.norm(v, axis=1)
+            stopped = still[:, kk - n1 + 1:kk + 1].all(axis=1)
+            sel = (cruise_on | stopped) & (rate < cfg.level_rate_gate)
+            if sel.any():
+                fbar = f[:, kk - n1 + 1:kk + 1].mean(axis=1)
+                Ct = np.swapaxes(C, 1, 2)
+                H = np.zeros((B, 3, NA))
+                H[:, :, 6:9] = -Ct @ skew_b(np.broadcast_to(GRAVITY_N, (B, 3)))
+                H[:, :, 9:12] = np.eye(3)
+                z = (-np.einsum("bij,j->bi", Ct, GRAVITY_N) + b_a - fbar) - np.einsum("bij,bj->bi", H, x)
+                R = np.broadcast_to(np.eye(3) * cfg.level_sigma ** 2, (B, 3, 3)).copy()
+                Psub, xs = P[sel], x[sel]
+                _update(xs, Psub, z[sel], H[sel], R[sel], None)
+                P[sel], x[sel] = Psub, xs
+                ev["level_updates"] = ev.get("level_updates", 0) + int(sel.sum())
         # inject
         if np.any(x):
             p = p - x[:, 0:3]
@@ -695,4 +762,5 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     return EskfOutput(t=np.array(out_t), p=np.stack(out_p, 1), v=np.stack(out_v, 1), C=np.stack(out_C, 1),
                       P_pos=np.stack(out_P, 1), b_a=np.stack(out_ba, 1), zupt=np.stack(out_z, 1), events=ev,
                       aux={**dict(zip(("b_h", "g_h", "cruise", "sigma_g"), np.moveaxis(np.stack(out_aux, 1), -1, 0))),
-                           "branch_decision": br_dec.copy(), "branch_time": br_time.copy()})
+                           "branch_decision": br_dec.copy(), "branch_time": br_time.copy(),
+                           "imu_class": imu_classes, "imu_sigma": imu_sig})

@@ -168,3 +168,25 @@ def test_mapview_matching_and_main_continuation():
     np.testing.assert_allclose(np.einsum("bi,bi->b", c2 - c, n), 2.0, atol=0.05)
     cm, psim, _ = mv.at(s0, main=np.array([False, True]))
     assert abs(psim[1] - mv.main_psi) < 1e-12 and abs(psi[1] - mv.main_psi) > np.deg2rad(5)
+
+
+def test_levelling_jacobian_finite_difference():
+    """h(C, b_a) = −Cᵀg + b_a with Ĉ = Exp(δθ)C: ∂h/∂δθ = −Cᵀ[g×], ∂h/∂δb_a = I."""
+    from tunnelsim.frames import GRAVITY_N
+    C = rot_z(0.4) @ mount_rotation(2, 10, 4)
+    h = lambda C_: -C_.T @ GRAVITY_N
+    H_th = -C.T @ skew_b(GRAVITY_N[None])[0]
+    for i in range(3):
+        d = np.zeros(3); d[i] = 1e-6
+        np.testing.assert_allclose((h(so3_exp(d) @ C) - h(C)) / 1e-6, H_th[:, i], atol=1e-4)
+
+
+def test_imu_class_detection_separates_note10_and_mpu9250():
+    """Review 11: gyro white noise in the first 10 s picks the filter profile (noisy vibration
+    included); a Note10 batch keeps the default tuning."""
+    from tunnelsim.eskf import detect_imu_class
+    cfg = EskfConfig()
+    for ov, want in (([], "note10"), (["vib_noisy"], "note10"), (["imu_lowend"], "mpu9250"), (["imu_lowend", "vib_noisy"], "mpu9250")):
+        _, _, t, F, W, gnss, _, _ = simulate_run("S4", [0, 1, 2], ov)
+        cls, sig = detect_imu_class(t, W, cfg, int(np.searchsorted(t, gnss["t"][0])))
+        assert (cls == want).all(), (ov, sig)
