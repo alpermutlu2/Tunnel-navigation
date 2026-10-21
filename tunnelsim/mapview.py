@@ -25,6 +25,7 @@ class MapView:
         self.psi = np.unwrap(psi)
         self.kappa = np.gradient(self.psi, self.s)          # map curvature [1/m]
         self.s_entry = self.s[k_e]
+        self.xy_entry = self.xy[k_e].copy()
         self.step = step
         self.length = self.s[-1]
         ex = road.exits[0] if road.exits else None

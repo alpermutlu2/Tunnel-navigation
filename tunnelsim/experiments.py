@@ -140,7 +140,9 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
     """branch=False: negative control, the car goes straight on at the diverge while the map (and
     the branch check) still has the branch on the route (review 7)."""
     from .eskf import EskfConfig, run_eskf
-    sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, np.arange(seeds), overrides, branch=branch, vehicle=vehicle)
+    seed_ids = np.arange(seeds) if np.isscalar(seeds) else np.asarray(seeds)
+    seeds = len(seed_ids)
+    sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, seed_ids, overrides, branch=branch, vehicle=vehicle)
     map_road = build_scenarios(branch=True)[key].road
     zmask = (tr.v < 0.05) if zupt_oracle else None
     C_bp_filter = tr.C_bp
@@ -209,23 +211,33 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
         t_div = out.t[k_div]
         res["at_diverge"] = stats(e_s[:, k_div])
         res["at_diverge_lateral"] = stats(e_lat[:, k_div])
-        t_conf, choice = branch_check(t, W, out.t, out.C, out.p, out.v, map_road, out_P_pos=out.P_pos)
-        delay = t_conf - t_div
         took = 1 if branch else -1                          # what the car really did
-        right = choice == took
-        res["branch_confirm"] = {"car": "branch" if branch else "main",
-                                 "branch_reported_frac": round(float(np.mean(choice == 1)), 3),
-                                 "main_reported_frac": round(float(np.mean(choice == -1)), 3),
-                                 "none_frac": round(float(np.mean(choice == 0)), 3),
-                                 "confirmed_frac": round(float(np.mean(right)), 3),
-                                 "before_diverge_frac": round(float(np.mean(delay[choice != 0] < 0)) if (choice != 0).any() else 0.0, 3),
-                                 "delay_s": stats(delay[right]) if right.any() else None}
+
+        def summary(t_conf, choice):
+            delay = t_conf - t_div
+            right = choice == took
+            return {"car": "branch" if branch else "main",
+                    "branch_reported_frac": round(float(np.mean(choice == 1)), 3),
+                    "main_reported_frac": round(float(np.mean(choice == -1)), 3),
+                    "none_frac": round(float(np.mean(choice == 0)), 3),
+                    "confirmed_frac": round(float(np.mean(right)), 3),
+                    "before_diverge_frac": round(float(np.mean(delay[choice != 0] < 0)) if (choice != 0).any() else 0.0, 3),
+                    "delay_s": stats(delay[right]) if right.any() else None}
+        # offline check (branch.py, run after the fact on the filter output; independent reference)
+        res["branch_offline"] = summary(*branch_check(t, W, out.t, out.C, out.p, out.v, map_road, out_P_pos=out.P_pos))
+        # in-loop decision of the map layer (the one the app acts on); offline when the layer is off
+        dec = out.aux.get("branch_decision")
+        if dec is not None and (dec != 0).any():
+            res["branch_confirm"] = summary(out.aux["branch_time"], dec)
+            res["branch_confirm"]["source"] = "in-loop (map layer)"
+        else:
+            res["branch_confirm"] = dict(res["branch_offline"], source="offline (branch.py)")
     # recovery after the exit
     after = out.t >= t_x
     win = after & (out.t <= t_x + 60.0)
     jumps = np.abs(np.diff(s_hat[:, win], axis=1) - np.diff(s_true[win])[None])
     conv = []
-    for b in range(seeds):
+    for b in range(len(seed_ids)):
         kk = np.nonzero(win)[0]
         good = e_h[b, kk] < RECOVERY_M
         idx_ok = next((i for i in range(len(kk)) if good[i:].all()), None)

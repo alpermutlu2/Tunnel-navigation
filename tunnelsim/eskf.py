@@ -71,6 +71,9 @@ class EskfConfig:
     # by the map's own uncertainty instead of being taken as exact
     map_offset_sigma: float = 2.0                # m [ASSUMED]
     map_scale_sigma: float = 0.005               # 0.5 % [ASSUMED]
+    # review 10 (optional): deterministic lateral effect of the scale error in the cross-track row,
+    # δz += nᵀ(c − c_entry)·δε, instead of the turn-driven offset process noise
+    map_scale_lateral: bool = False
     nhc_turn_gate: float = 0.3        # m/s² [ASSUMED, review 7]; 0 = off. Lateral NHC dropped while |ω_z|·v exceeds this
     nhc_rate_hz: float = 5.0
     baro_sigma: float = 0.15          # m, 1 Hz average (E4)
@@ -271,6 +274,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     br_dec = np.zeros(B, int)               # branch decision: 0 none, +1 route (branch), -1 main
     psi_start = np.full(B, np.nan); s_start = np.full(B, np.nan); map_prev_out = np.zeros(B, bool)
     m_hat = np.zeros(B); e_hat = np.zeros(B)  # map lateral offset [m], map scale error [-]
+    br_time = np.full(B, np.nan)              # time of the in-loop branch decision
     if use_map and road_map.s_div is not None:
         sg = np.arange(road_map.s_div, road_map.s_div + road_map.curve_len + 1.0, 0.5)
         _, psg, _ = road_map.at(sg)
@@ -573,6 +577,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                         go_b = inwin & (np.abs(r_m) > thr) & (np.abs(r_b_) < np.abs(r_m))
                         go_m = inwin & ~go_b & (np.abs(r_b_) > thr) & (np.abs(r_m) < np.abs(r_b_)) & (s_map - 2 * sig_s >= s_thr5)
                         br_dec = np.where(go_b, 1, np.where(go_m, -1, br_dec))
+                        br_time = np.where(go_b | go_m, tk, br_time)
                         ev["map_branch"] += int(go_b.sum()); ev["map_main"] += int(go_m.sum())
                     paused = (br_dec == 0) & (s_map >= road_map.s_div - cfg.map_pre_m)
                 sel = out_m & ~paused
@@ -581,7 +586,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     # a length error also moves the polyline sideways after every turn (the map is a
                     # scaled copy): the offset state may change by σ_ε·d·|Δψ| over a curve
                     dpsi_step = np.abs(kap) * np.linalg.norm(v, axis=1) * 1.0
-                    P[:, IM, IM] += np.where(out_m, (cfg.map_scale_sigma * np.maximum(np.nan_to_num(s_map) - road_map.s_entry, 0.0) * dpsi_step) ** 2, 0.0)
+                    if not cfg.map_scale_lateral:
+                        P[:, IM, IM] += np.where(out_m, (cfg.map_scale_sigma * np.maximum(np.nan_to_num(s_map) - road_map.s_entry, 0.0) * dpsi_step) ** 2, 0.0)
                     t2 = np.stack([np.cos(psi_m), np.sin(psi_m)], 1)
                     dist = np.nan_to_num(s_map) - road_map.s_entry                    # lever of the scale error
                     H = np.zeros((B, 2, NA))
@@ -593,8 +599,10 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     H[:, 1, 0:2] = n
                     H[:, 1, 6:9] = np.einsum("bi,bij->bj", np.c_[n, np.zeros(B)], skew_b(l_n))
                     H[:, 1, IM] = 1.0
+                    lever = np.einsum("bi,bi->b", n, c - road_map.xy_entry) if cfg.map_scale_lateral else np.zeros(B)
+                    H[:, 1, IE] = lever
                     z = np.stack([np.angle(np.exp(1j * (psi_hat - psi_m - kap * dist * e_hat))),
-                                  np.einsum("bi,bi->b", n, pR[:, :2] - c) + m_hat], 1) - np.einsum("bij,bj->bi", H, x)
+                                  np.einsum("bi,bi->b", n, pR[:, :2] - c) + m_hat + lever * e_hat], 1) - np.einsum("bij,bj->bi", H, x)
                     R = np.zeros((B, 2, 2)); R[:, 0, 0] = cfg.map_heading_sigma ** 2; R[:, 1, 1] = cfg.map_lateral_sigma ** 2
                     w_b = np.einsum("ij,bj->bi", C_bp, w[:, kk] - b_g)
                     turning = np.abs(w_b[:, 2]) * np.linalg.norm(v, axis=1) > cfg.nhc_turn_gate if cfg.nhc_turn_gate > 0 else np.zeros(B, bool)
@@ -686,4 +694,5 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             out_aux.append(np.stack([b_h, g_hat, cruise_on.astype(float), np.sqrt(P[:, IG, IG])], 1))
     return EskfOutput(t=np.array(out_t), p=np.stack(out_p, 1), v=np.stack(out_v, 1), C=np.stack(out_C, 1),
                       P_pos=np.stack(out_P, 1), b_a=np.stack(out_ba, 1), zupt=np.stack(out_z, 1), events=ev,
-                      aux=dict(zip(("b_h", "g_h", "cruise", "sigma_g"), np.moveaxis(np.stack(out_aux, 1), -1, 0))))
+                      aux={**dict(zip(("b_h", "g_h", "cruise", "sigma_g"), np.moveaxis(np.stack(out_aux, 1), -1, 0))),
+                           "branch_decision": br_dec.copy(), "branch_time": br_time.copy()})
