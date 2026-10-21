@@ -41,7 +41,8 @@ offset. Cruise mode adds 2 states and the map layer adds 2 more.
 | Map in the tunnel: 1 Hz heading and cross-track against the route polyline; map lateral offset (σ 2 m) and length error (σ 0.5 %) as states; paused around the diverge until the in-loop branch decision | Heading and lateral position; along-track information where the road curves, bounded by the map's own uncertainty (§4.5) |
 | Callout when ŝ + 1·σ_s reaches s_exit − 300 m | Errs early: a late callout can make the driver miss the exit |
 | Re-acquisition: 3 s velocity only, decaying position R, ≤ 2 m per update | No jump at the exit, even with multipath |
-| Gate-lock recovery, adaptive noise | Safety net; never fires in the nominal scenarios (§4.6) |
+| Gate-lock recovery, adaptive noise | Safety net; never fires in the nominal scenarios |
+| IMU class from the gyro white noise at start-up; a filter profile per class | Low-end phones (§4.6) |
 
 The estimator never imports truth objects; a test enforces this (`docs/contracts.md`).
 
@@ -147,12 +148,46 @@ the filter is still somewhat optimistic, and at 5 km the map then does worse tha
 values are [ASSUMED]: OSM tunnel geometry is traced from imagery, so a 1 % error over 5 km is
 plausible. They must be measured on real maps.
 
-**4.6 Low-end IMU.** An MPU9250-class IMU [MEAS] has 30–80× the Note10's gyro bias instability.
-The filter becomes overconfident and the χ² gate locks out GNSS before the tunnel (3.5 km at the
-exit). Gate-lock recovery brings this to 1.3 km, but (e/σ)² ≈ 2000. The design does not cover
-low-end phones: they need an IMU-class check at start-up and a fallback to CV and map cues.
+**4.6 Low-end IMU.** An MPU9250-class IMU [MEAS, Suvorkin et al. 2024 Table 5] has about the
+Note10's accelerometer but 9× its gyro white noise and ~30× its gyro bias instability. That table
+comes from one development board and is ~100× the datasheet's typical gyro bias, so this profile
+may be pessimistic; a real low-end phone must be measured.
 
-**4.7 Assumptions that did not matter** (S1, 30 seeds): GNSS coasting into the tunnel; optimistic
+With the Note10 tuning the filter is overconfident, the χ² gate locks GNSS out before the tunnel,
+and the error at the portal is 0.3–3.6 km. Two fixes (review 11, `reports/0.5.5/`):
+
+- **IMU class at start-up.** The gyro white noise over the first 10 s, σ̂ = std(Δω)/√2 (the
+  difference removes real rotation), is 0.007–0.013 rad/s per sample for the Note10 (calm or noisy
+  vibration) and ≥ 0.059 for the MPU9250. A threshold at their geometric mean (0.027) classified
+  every run correctly, and Note10 results are bit-identical. On a real phone the OS may low-pass the
+  gyro, so the sensor name is the safer key.
+- **A filter profile per class.** The Note10 tuning rules are applied to the MPU9250 Allan terms
+  (gyro noise from ARW, gyro bias random walk scaled by the measured bias-instability ratio,
+  initial bias σ by the Note10 margin over turn-on). Halving or doubling the gyro bias random walk
+  changes little, so one parameter does not fix this.
+
+| MPU9250 + profile, 30 seeds | S1 | S2 | S5 | S4 | 5 km |
+|---|---|---|---|---|---|
+| Note10 tuning, portal rms (10 seeds) | 1.6 km | 340 m | 1.4 km | 1.5 km | 3.6 km |
+| profile: diverge / portal rms | 45 / 37 m | 14 / 16 m | 78 / 85 m | 740 / 1080 m | 206 / 614 m |
+| (e/σ)² at the portal | 4.8 | 2.0 | 34 | 700 | 146 |
+| callout k = 0 rms; k = 1 > 1 s late | 1.5 s; 17 % | 0.5 s; 0 % | 3.4 s; 57 % | 163 s; 90 % | 8.5 s; 93 % |
+
+A low-end phone therefore works in short or straight tunnels at steady speed (tens of metres,
+since the map holds the heading). It breaks in stop-and-go and in long tunnels, where the gyro's
+fast bias drift tilts pitch between updates. It is also overconfident everywhere ((e/σ)² 2–700):
+the driver's view then shows "±40 m" while the car is a kilometre away, and the k·σ callout no
+longer protects. On a phone classed as low-end, the app should not trust σ: it should widen the
+callout margin or fall back to CV and map cues (`DESIGN.md` §5.1) in long and stop-and-go tunnels.
+
+**4.7 Levelling does not help** (review 11 option 3, `EskfConfig.level`, off). At 1 Hz in cruise
+mode and at stops, the 1 s mean specific force is modelled as gravity plus the accelerometer bias,
+f̄ = −Cᵀg + b_a (H = [−Cᵀ[g×] | I] on attitude and bias). Over 10 seeds, σ = 0.02 m/s² halves the
+diverge error on S4 (29 → 14 m) but makes the portal worse on S2, S3, S5, S6 and 5 km, with (e/σ)²
+up to 13. Grade changes and the driver's speed wander are real accelerations that the turn gate
+does not see, and their error is correlated. At σ = 0.05 the harm is small and so is the gain.
+At stops only it changes nothing (30 seeds), because the ZUPT already holds there. It stays off.
+**4.8 Assumptions that did not matter** (S1, 30 seeds): GNSS coasting into the tunnel; optimistic
 reported accuracy; a 1–3° mount error (absorbed by the lumped accelerometer bias while the mount
 stays rigid); the shape of the bias model.
 
@@ -165,13 +200,21 @@ stays rigid); the shape of the bias model.
   centre.
 - **The ZUPT detector is offline** (forward-backward filtering). A causal version is similar at
   the exit and worse for the callout.
-- **Narrow setting.** One IMU class, a rigid phone mount, a single lane.
+- **Narrow setting.** Two IMU classes, a rigid phone mount, a single lane.
 - **Next, with real devices:**
   - static Allan runs to check §3 of `DESIGN.md`;
   - recordings in Istanbul tunnels, with the portals as checkpoints;
   - measuring the map's polyline error and the tunnels' pressure gradient;
   - a causal stop detector;
-  - an IMU-class check at start-up.
+  - the IMU class from the sensor name, and a low-end profile from a real phone's Allan run.
+- **Next, in the filter, for low-end IMUs** (not measured):
+  - the barometer at 25 Hz with its own correlation model instead of the 1 s mean, to hold pitch
+    more often;
+  - the gyro bias as a sum of Gauss–Markov terms (τ 5/50/500 s, as in the truth model) instead of
+    a random walk;
+  - the CV + map fallback of `DESIGN.md` §5.1 for stop-and-go and long tunnels;
+  - Android's calibrated gyro stream, which removes the turn-on bias at stops but not the drift in
+    the tunnel.
 
 ## 6. AI usage
 

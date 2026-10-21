@@ -7,6 +7,25 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.5 (2026-10-21): low-end IMU profile, levelling A/B (review 11)
+
+- IMU class at start-up (`EskfConfig.imu_class = "auto"`, `detect_imu_class`): gyro white noise over
+  the first 10 s, σ̂ = std(Δω)/√2, threshold 0.027 rad/s per sample at 100 Hz (geometric mean of
+  Note10 ≤ 0.013 with noisy vibration and MPU9250 ≥ 0.059). Every low-end run (200) and every
+  Note10 run checked is classed correctly; Note10 results are bit-identical (S1, S3, S4).
+- `FILTER_PROFILES["mpu9250"]`: the Note10 tuning rules applied to the MPU9250 Allan terms
+  (gyro noise 6.3e-3, gyro bias RW × 30.7, accel bias RW × 1.08, p0_bg 0.4°, p0_ba 0.45). The
+  gyro bias RW × 0.5 / × 2 sweep barely changes accuracy (`reports/0.5.5/lowend_gyro_rw_sweep_10.json`).
+- Low-end, 30 seeds (`reports/0.5.5/lowend_profile_30.json`): portal 1.6 km → 37 m (S1),
+  340 → 16 m (S2), 1.4 km → 85 m (S5); S4 1.1 km and 5 km 614 m still broken; (e/σ)² 2–700. Report
+  §4.6 rewritten: works in short/straight tunnels, breaks in stop-and-go and long tunnels, and
+  overconfident throughout. The low-end tab in the simulator changes accordingly.
+- Levelling pseudo-measurement (`EskfConfig.level`, off): f̄ = −Cᵀg + b_a at 1 Hz in cruise mode
+  and at stops, gated on the 1 s mean |ω_y,z|·v. 10 seeds: S4 diverge 29 → 14 m at σ 0.02, but
+  portal and (e/σ)² worse on S2/S3/S5/S6/5 km (grades and speed wander); stops only: no effect
+  (30 seeds). Stays off; report §4.7.
+- No metric of the nominal (Note10) evaluation changes.
+
 ## v0.5.4 (2026-10-21): callout k = 1, single-page simulator
 
 - Callout margin k 1.65 → 1 (owner, review): σ_s is ~2× conservative, so k = 1 is in effect ~2σ;
