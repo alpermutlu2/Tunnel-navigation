@@ -120,17 +120,21 @@ sees truth.
 
 ## AI usage
 
-Code, tests, experiments and drafts were written by an AI coding agent (Claude, Anthropic).
-- **Decisions:** the author made every decision on framing, assumptions, filter design, error
-  budget and acceptance criteria. Options were proposed with formulas and approved, changed or
-  rejected (`docs/decisions/`).
-- **Reviews:** other AI models reviewed the repository, and the author filtered their findings
-  (`docs/reviews/`).
-- **Controls:**
-  - parameter tags;
-  - an enforced truth/estimator split;
-  - consistency as an acceptance test;
-  - a metrics snapshot and CHANGELOG entry per version.
-- **What these controls caught:** sign errors, an overconfident speed model, a barometer timestamp
-  lag, map errors treated as white noise, and a stress test that tested nothing. All were found
-  and fixed before the results above.
+- **How AI was used:**
+  - **Builder:** an AI coding agent (Claude, Anthropic) wrote the code, tests, experiments and
+    document drafts.
+  - **Reviewers:** other AI models, Claude Fable 5.1 among them. Their reviews are the Markdown
+    files in `docs/reviews/`; the author filtered each before passing it on.
+  - **Workflow:** before each piece, the agent proposed options with formulas, and the author
+    approved, changed or rejected them (`docs/decisions/`).
+- **Where the author corrected or overruled the AI:**
+  - **Focus:** start where the bias can be estimated, then remove assumptions.
+  - **Driver model:** rejected the agent's observability claim and proposed the Gauss–Markov
+    wander model, judged by consistency.
+  - **Exit branch and NHC turn gate:** required both, with the checks behind them.
+  - **Map layer:** its design, with map errors as states.
+  - **Callout:** overruled the agent's k = 1.65 in favour of k = 1.
+  - **Simulator:** set its requirements and found its playback bug.
+- **Detail:** REPORT §6 lists every intervention and the choices the agent made. It also lists
+  the AI-side errors and what caught them: the author, AI reviews, the agent's own tests, or the
+  consistency metric.

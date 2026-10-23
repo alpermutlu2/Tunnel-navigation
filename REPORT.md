@@ -272,30 +272,69 @@ stays rigid); the shape of the bias model.
 
 ## 6. AI usage
 
-The code, tests, experiments and document drafts were written by an AI coding agent: Claude
-(Anthropic), working in a cloud workspace on this repository.
+**How AI was used.**
+- **The builder.** An AI coding agent, Claude (Anthropic), worked in a cloud workspace on this
+  repository. It wrote the code, the tests, the experiments and the drafts of every document.
+- **The reviewers.** The author had the repository reviewed by other AI models, Claude Fable 5.1
+  among them. Their reviews are the Markdown files in `docs/reviews/`: reviews 2–5 and 8–12.
+  The author read each review and passed on only what he accepted. Reviews 6 and 7 are the
+  author's own.
+- **The workflow.** Before each piece of code, the agent proposed options with formulas and the
+  expected effect. The author approved, changed or rejected them before anything was written
+  (`docs/decisions/`). Results came back as versioned metrics snapshots, which the author
+  reviewed.
 
-- **Decisions and reviews.** The author (Alper Mutlu) made the decisions: problem framing,
-  assumptions, every filter-design and error-budget choice, scenarios and acceptance criteria.
-  Before each piece of code, the agent proposed options with formulas, and the author approved,
-  changed or rejected them (`docs/decisions/`). The author also had the repository reviewed by
-  other AI assistants and models; the last reviews came from Claude Fable 5.1. He filtered those
-  reviews and passed on what he accepted (`docs/reviews/`). The cross-track finding, the map
-  layer's design and the random map stress came out of that loop.
-- **Process controls**, used because generated code can be confidently wrong:
-  - parameter tags;
-  - truth/estimator separation enforced by a test;
-  - consistency (e/σ)² as an acceptance criterion, not only accuracy;
-  - a CHANGELOG entry and a metrics snapshot for each version, with every changed metric
-    explained;
-  - decisions and reviews kept as commits;
-  - release tags set by the author.
-- **Errors on the AI side that this process caught:**
-  - In reviews: an attitude-error sign; an oracle bound presented as achievable; an
-    observability claim stronger than the model supports; a cross-track error that no metric
-    measured.
-  - By consistency metrics: the overconfident absolute speed hold; a 0.5 s barometer timestamp
-    lag; the sideslip/NHC transient; map errors treated as white noise; a map stress test that
-    only relabelled s and so tested nothing.
-  - By tests and Monte Carlo: an innovation sign; a barometer index that never advanced; a stop
-    detector that fired at launch.
+### 6.1 Where the author decided, corrected or overruled
+
+| Area | What the author did | Record |
+|---|---|---|
+| Scope and rules | Set the assumptions: fixed mount; no magnetometer, BLE, OBD or camera; map available; Suvorkin IMU profiles. Set the working rules: tags, truth/estimator split, consistency as acceptance, robust over optimal, a snapshot per version | DESIGN §2, §12 |
+| Sensors and plan | Approved sensor decisions K1–K9 and plan V1–V6, including the independent oracle flags and two separate callout metrics | `docs/decisions/` |
+| Focus (review 5) | Redirected the work: first a setup where the bias can be estimated (approach manoeuvres), then remove assumptions one at a time | `2026-10-20-focus.md` |
+| Filter | Approved design E1–E6. Decided re-acquisition as "robust over fast". Had both speed-hold variants tested, then chose which to switch on | v0.5 decision note |
+| Cruise model (review 6) | Proposed the Gauss–Markov driver-wander model. **Rejected the agent's claim** that wander and bias separate in ~50 s. Required (e/σ)², not only rms, as the acceptance test | review 6 |
+| Exit branch (review 6) | A diverge in every scenario, the callout before it, and results reported before and after it so the curve does not flatter the straight tunnel | review 6 |
+| NHC in curves (review 7) | Chose the turn gate over R inflation. Required the mechanism on a trace, a gate-sensitivity check, a no-sideslip check and a negative branch test. Put deliverables before extra metres | review 7 |
+| Pressure gradient | Accepted the gradient state for testing; proposed the pitch–gradient mechanism behind its cost, confirmed on a trace; kept it off | v0.5 decision note |
+| Map in the tunnel | Designed the layer after review 9. Chose map errors as states, not as white noise. Set the acceptance criteria | v0.5 decision note |
+| Callout | Asked for callouts that err early, not late. **Overruled k = 1.65** (proposed by the agent): σ_s is already about twice the real error, so k = 1. Added the k = 0 row and the definition of "the right moment" | CHANGELOG v0.5.4 |
+| Low-end IMU (review 11) | Chose which options to build: IMU class, profile, levelling A/B | CHANGELOG v0.5.5 |
+| Simulator | Set the requirements: one page with tabs, live re-runs, the driver's view, full screen, the results table, the sliders. Found the playback bug at 1–10× on GitHub Pages | CHANGELOG v0.5.4–0.5.6 |
+
+### 6.2 Choices the agent made
+
+These are implementation details marked [ASSUMED], proposed by the agent and accepted without
+change. The author is ready to explain or change any of them:
+- **Noise and gating:** effective process noise including vibration; GNSS R factors 2 and 3.2;
+  the χ² gate level; the gate-lock recovery and adaptive-noise thresholds.
+- **Detectors:** the stop-detector bands and thresholds; the cruise-mode entry test
+  (0.02 m/s² over 5 s).
+- **Exit and map:** the re-acquisition timings (3 s velocity only, ×10 R decaying over 8 s,
+  ≤ 2 m per step); the map windowing and pause distances.
+- **Low-end and levelling:** the IMU-class threshold; the MPU9250 profile rules; the levelling
+  gate.
+- **Scenario details:** speeds, stop durations, exit positions, branch geometry.
+
+### 6.3 Errors on the AI side, and what caught them
+
+| Error | Caught by |
+|---|---|
+| Attitude-error sign; an oracle bound presented as achievable | AI reviews 2–5 |
+| Observability claim stronger than the model (wander vs bias) | the author (review 6) |
+| Innovation sign; a barometer index that never advanced; a stop detector that fired at launch | the agent's own tests and Monte Carlo runs |
+| Absolute speed hold overconfident; 0.5 s barometer timestamp lag; map errors as white noise | consistency (e/σ)² as an acceptance metric |
+| Sideslip/NHC −20 m transient; its mechanism | Monte Carlo traces; mechanism shown at the author's request (review 7) |
+| Cross-track error that no metric measured | AI review 9 |
+| A map stress test that only relabelled s and so tested nothing | found before its results were used; redone with a stretched polyline |
+| k = 1.65 without a justified magnitude | the author |
+| Voice said a fixed "300 m"; early/late label fixed to "early" | AI review 11 |
+| Levelling gate on the per-sample gyro maximum (noise) | the agent's sweep (the update never fired in cruise) |
+| Playback did not advance at 1–10× | the author, on GitHub Pages |
+
+**Process controls,** used because generated code can be confidently wrong:
+- parameter tags;
+- a test that enforces the truth/estimator split;
+- (e/σ)² as an acceptance criterion;
+- a CHANGELOG entry and a metrics snapshot per version, with every changed metric explained;
+- decisions and reviews kept as commits;
+- release tags set by the author.

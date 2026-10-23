@@ -17,6 +17,9 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   OBD); §4.7 adds the σ_s / curve-matching effect of levelling; one car noted as a limitation.
 - Recording `docs/media/sim_S5_seed0.mp4` and its still re-made with the current page (driver's
   view, k = 1, spoken distance); `tools/record_frames.js` takes a tab key.
+- REPORT §6 rewritten (owner): how AI was used, a table of where the author decided, corrected
+  or overruled, the choices the agent made, and the AI-side errors with what caught them;
+  SUMMARY's AI paragraph to match.
 - Model sliders in the LIVE bar (owner, review 12 list): speed ×, exit multipath, pressure
   gradient, vibration, accel bias instability ×, map lateral offset and length error, driver
   model σ_d/τ_d, NHC turn gate. Sensor values via `set:`/`scale:` overrides tagged [ASSUMED,
