@@ -437,10 +437,15 @@ function render() {
   document.getElementById("fs_clock").textContent = document.getElementById("clock").textContent;
 }
 
+let tPlay = null, kPlay = -1;
 function tick(ts) {
   if (playing) {
     const dt = (ts - last) / 1000 * +document.getElementById(document.fullscreenElement ? "fs_speed" : "speed").value;
-    let target = D.t[k] + dt; while (k < N - 1 && D.t[k + 1] <= target) k++;
+    // continuous play clock: the page data is on a 0.5 s grid, so at 1-10x one frame moves less than
+    // one sample; the remainder must be kept, not dropped (resynced when k is moved by scrub/step/tab)
+    if (k !== kPlay || tPlay === null) tPlay = D.t[k];
+    tPlay += dt; while (k < N - 1 && D.t[k + 1] <= tPlay) k++;
+    kPlay = k;
     if (k >= N - 1) setPlay(false);
     render();
   }
