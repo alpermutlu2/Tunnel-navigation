@@ -131,6 +131,7 @@ class EskfConfig:
     level_sigma: float = 0.02          # m/s²: unmodelled acceleration in "steady" (the cruise threshold) [ASSUMED]
     level_mode: str = "cruise"         # "cruise": in cruise mode and at stops (review 11 form); "stops": at stops only
                                        # (30 seeds: no effect, the ZUPT already holds there; reports/0.5.5)
+    level_vmax: float = 0.0            # m/s; > 0: levelling only below this speed (crawl), 0 = any speed
     level_rate_gate: float = 0.3       # m/s²: skipped while the 1 s mean |ω_y,z|·v exceeds this (curves, grade changes)
     imu_class: str = "auto"
     imu_detect_s: float = 10.0
@@ -699,6 +700,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             rate = np.hypot(wm[:, 1], wm[:, 2]) * np.linalg.norm(v, axis=1)
             stopped = still[:, kk - n1 + 1:kk + 1].all(axis=1)
             sel = (stopped | (cruise_on if cfg.level_mode == "cruise" else False)) & (rate < cfg.level_rate_gate)
+            if cfg.level_vmax > 0:
+                sel = sel & (np.linalg.norm(v, axis=1) < cfg.level_vmax)
             if sel.any():
                 fbar = f[:, kk - n1 + 1:kk + 1].mean(axis=1)
                 Ct = np.swapaxes(C, 1, 2)
