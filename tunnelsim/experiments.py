@@ -113,7 +113,8 @@ RECOVERY_M = 10.0           # recovered = horizontal error stays below this; ~2x
                             # does not count as "not recovered"
 
 
-def simulate_run(key, seeds, overrides=(), imu_switches=None, branch=True, vehicle=None, speed_scale=1.0):
+def simulate_run(key, seeds, overrides=(), imu_switches=None, branch=True, vehicle=None, speed_scale=1.0,
+                 speed_change=None):
     """Sensor data for a batch of seeds: IMU (no gaps; jitter off so the batch shares a time
     axis), GNSS and barometer at nominal settings plus overrides. branch=False: the car goes
     straight on at the diverge (v0.4 geometry); vehicle: replaces the scenario's Vehicle (e.g. no
@@ -125,6 +126,18 @@ def simulate_run(key, seeds, overrides=(), imu_switches=None, branch=True, vehic
         from dataclasses import replace as _rp
         sc.speed = type(sc.speed)(v0=sc.speed.v0 * speed_scale,
                                   events=[_rp(e, v_target=e.v_target * speed_scale) for e in sc.speed.events])
+    if speed_change and speed_change[0]:
+        # live slider (owner 2026-10-23): inside the tunnel at fraction `at` of its length, change
+        # speed by dv km/h from the scenario's cruise speed over 8 s, hold 20 s, return over 8 s
+        from dataclasses import replace as _rp
+        from .scenario import SpeedEvent, kmh
+        dv, at = float(speed_change[0]), float(speed_change[1])
+        s_at = sc.road.tunnel.s_entry + at * (sc.road.tunnel.s_exit - sc.road.tunnel.s_entry)
+        v_c = sc.speed.v0
+        evs = list(sc.speed.events) + [SpeedEvent(s_at, max(v_c + kmh(dv), kmh(10)), 8.0, dwell=20.0),
+                                       SpeedEvent(s_at, v_c, 8.0)]
+        evs.sort(key=lambda e: e.at_s)     # stable: the change and its return keep their order
+        sc.speed = type(sc.speed)(v0=sc.speed.v0, events=evs)
     if vehicle is not None:
         sc.vehicle = vehicle
     tr = generate_truth(sc)

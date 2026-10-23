@@ -81,6 +81,8 @@ input[type=range] { flex: 1; min-width: 140px; }
 .live { display: none; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
   gap: 8px 18px; flex-wrap: wrap; align-items: center; font-size: 13px; }
 .live.on { display: flex; }
+.live.static { opacity: .75; } .live.static .badge { background: var(--muted); }
+.live.static #liveStat { flex-basis: 100%; color: var(--ink); font-weight: 600; }
 .live .badge { font-weight: 700; color: var(--panel); background: var(--gnss); border-radius: 999px; padding: 2px 9px; font-size: 12px; }
 .live select { padding: 3px 6px; font-size: 13px; }
 .live .sl { display: inline-grid; gap: 1px; min-width: 150px; color: var(--muted); font-size: 12px; }
@@ -119,6 +121,8 @@ input[type=range] { flex: 1; min-width: 140px; }
     <div class="cubreak"></div>
     <b title="values set here are tagged [ASSUMED, live slider]">Model sliders</b>
     <label class="sl"><span>speed × <b data-v="sl_spd">1.0</b></span><input type="range" id="sl_spd" min="0.5" max="1.5" step="0.1" value="1" data-d="1"></label>
+    <label class="sl"><span>speed change in the tunnel <b data-v="sl_dv">0</b> km/h</span><input type="range" id="sl_dv" min="-30" max="30" step="5" value="0" data-d="0"></label>
+    <label class="sl"><span>… at <b data-v="sl_dva">0.40</b> of the tunnel (hold 20 s)</span><input type="range" id="sl_dva" min="0.1" max="0.6" step="0.05" value="0.4" data-d="0.4"></label>
     <label class="sl"><span>exit multipath <b data-v="sl_mp">30</b> m</span><input type="range" id="sl_mp" min="0" max="60" step="5" value="30" data-d="30"></label>
     <label class="sl"><span>pressure gradient <b data-v="sl_pg">0</b> Pa/km</span><input type="range" id="sl_pg" min="0" max="40" step="5" value="0" data-d="0"></label>
     <label class="sl"><span>vibration × <b data-v="sl_vib">1.0</b></span><input type="range" id="sl_vib" min="1" max="5" step="0.5" value="1" data-d="1"></label>
@@ -270,6 +274,7 @@ document.getElementById("meta").textContent =
   (D.settings.mount_err_deg ? ` · mount error ${D.settings.mount_err_deg.join("/")}°` : "") +
   (D.settings.no_sideslip ? " · no sideslip" : "") +
   (D.settings.speed_scale && D.settings.speed_scale !== 1 ? ` · speed ×${D.settings.speed_scale}` : "") +
+  (D.settings.speed_change ? ` · speed change ${D.settings.speed_change[0] > 0 ? "+" : ""}${D.settings.speed_change[0]} km/h at ${D.settings.speed_change[1]} of the tunnel` : "") +
   (D.settings.map_err && (D.settings.map_err[0] || D.settings.map_err[1] !== 1) ? ` · map error ${D.settings.map_err[0]} m, ${((D.settings.map_err[1] - 1) * 100).toFixed(1)} %` : "") +
   " · CV clipped to the error axis";
 }
@@ -547,7 +552,7 @@ function liveQuery(key) {
   const ov = [...(r.overrides || [])];
   for (const id of ["lv_imu", "lv_gnss"]) { const v = document.getElementById(id).value; if (v && !ov.includes(v)) ov.push(v); }
   const me = +document.getElementById("lv_me").value, sv = id => document.getElementById(id).value;
-  return new URLSearchParams({ spd: sv("sl_spd"), mp: sv("sl_mp"), pgrad: sv("sl_pg"), viblvl: sv("sl_vib"), abi: sv("sl_abi"),
+  return new URLSearchParams({ spdchg: sv("sl_dv"), spdat: sv("sl_dva"), spd: sv("sl_spd"), mp: sv("sl_mp"), pgrad: sv("sl_pg"), viblvl: sv("sl_vib"), abi: sv("sl_abi"),
     map_lat: sv("sl_mlat"), map_len: sv("sl_mlen"), gm_sigma: sv("sl_gs"), gm_tau: sv("sl_gt"), nhc_turn_gate: sv("sl_nhc"), scenario: key === "custom" ? CUSTOM : (r.scen || key), seed: document.getElementById("lv_seed").value, overrides: ov.join(","),
     zupt: document.getElementById("lv_zupt").value, mount_err: me, no_sideslip: document.getElementById("lv_slip").checked ? 1 : 0,
     map_in_tunnel: document.getElementById("mapOn").checked ? 1 : 0, cruise: document.getElementById("lv_cruise").checked ? 1 : 0,
@@ -675,7 +680,7 @@ if (ALL) {
     document.getElementById("cu_at_v").textContent = (+document.getElementById("cu_at").value).toFixed(2);
   });
   for (const el of document.querySelectorAll("#live input[data-d]")) el.addEventListener("input", () => {
-    const b = document.querySelector(`[data-v="${el.id}"]`); b.textContent = (+el.value).toFixed(+el.step < 1 ? 1 : 0);
+    const b = document.querySelector(`[data-v="${el.id}"]`); b.textContent = (+el.value).toFixed(+el.step < 0.1 ? 2 : +el.step < 1 ? 1 : 0);
     b.parentElement.style.color = +el.value === +el.dataset.d ? "" : "var(--exit)"; });
   document.getElementById("sl_reset").onclick = () => {
     for (const el of document.querySelectorAll("#live input[data-d]")) { el.value = el.dataset.d; el.dispatchEvent(new Event("input")); }
@@ -698,7 +703,16 @@ if (ALL) {
     document.getElementById("lv_me_v").textContent = `${document.getElementById("lv_me").value}°`;
     if (!document.getElementById("results").hidden) { renderResults(); return; }
     if (curKey === "custom") liveRun(); else if (liveDefault()) { liveSeq++; document.getElementById("liveStat").textContent = "pre-run drive"; load(curKey, true); } else liveRun(); });
-  if (location.protocol.startsWith("http")) fetch("/api/ping").then(r => r.ok ? r.json() : null).then(j => { if (j && j.live) { LIVE = true; document.getElementById("live").classList.add("on"); } }).catch(() => {});
+  const staticLive = () => {           // no server: show what live mode offers, disabled
+    if (LIVE) return;
+    const bar = document.getElementById("live"); bar.classList.add("on", "static");
+    for (const el of bar.querySelectorAll("input, select, button")) el.disabled = true;
+    bar.querySelector(".badge").textContent = "LIVE OFF";
+    document.getElementById("liveStat").textContent = "These controls re-run the simulation in Python: run  python tools/serve.py  and open http://localhost:8000";
+  };
+  if (location.protocol.startsWith("http")) fetch("/api/ping").then(r => r.ok ? r.json() : null)
+    .then(j => { if (j && j.live) { LIVE = true; document.getElementById("live").classList.add("on"); } else staticLive(); }).catch(staticLive);
+  else staticLive();
   const kS = document.getElementById("kSl"), lS = document.getElementById("lSl");
   kS.oninput = () => { callKs = +kS.value; document.getElementById("kv").textContent = callKs.toFixed(2); callout(); render(); renderResults(); };
   lS.oninput = () => { callLead = +lS.value; document.getElementById("lv").textContent = `${callLead} m`; callout(); render(); renderResults(); };

@@ -62,10 +62,12 @@ def _eskf_config(pairs):
     return dataclasses.replace(EskfConfig(), **kw)
 
 
-def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, speed_scale=1.0, map_err=None):
+def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, speed_scale=1.0, map_err=None,
+        speed_change=None):
     from tunnelsim.scenario import Vehicle
     vehicle = Vehicle(sideslip_gain_rad_per_mps2=0.0) if no_sideslip else None
-    sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, [seed], tuple(overrides), vehicle=vehicle, speed_scale=speed_scale)
+    sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, [seed], tuple(overrides), vehicle=vehicle, speed_scale=speed_scale,
+                                                 speed_change=speed_change)
     zmask = (tr.v < 0.05) if zupt == "oracle" else None
     C_bp_f = tr.C_bp
     if mount_err is not None:
@@ -144,7 +146,8 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
         "events": out.events,
         "sensors": sens,
         "settings": {"eskf": list(eskf), "mount_err_deg": mount_err, "no_sideslip": no_sideslip,
-                     "speed_scale": speed_scale, "map_err": list(map_err) if map_err else None},
+                     "speed_scale": speed_scale, "map_err": list(map_err) if map_err else None,
+                     "speed_change": list(speed_change) if speed_change and speed_change[0] else None},
     }
     return data
 

@@ -74,7 +74,8 @@ def run_data(q: dict) -> dict:
     mount = (0.0, me, me) if me else None
     map_err = (float(q.get("map_lat", 0.0)), 1.0 + float(q.get("map_len", 0.0)) / 100.0)
     return simulate.run(key, seed, overrides, q.get("zupt", "detector"), eskf, mount, q.get("no_sideslip") == "1",
-                        float(q.get("spd", 1.0)), map_err)
+                        float(q.get("spd", 1.0)), map_err,
+                        (float(q.get("spdchg", 0.0)), float(q.get("spdat", 0.4))))
 
 
 def run_page(q: dict) -> str:
