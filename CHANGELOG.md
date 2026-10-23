@@ -17,6 +17,10 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   OBD); §4.7 adds the σ_s / curve-matching effect of levelling; one car noted as a limitation.
 - Recording `docs/media/sim_S5_seed0.mp4` and its still re-made with the current page (driver's
   view, k = 1, spoken distance); `tools/record_frames.js` takes a tab key.
+- Experimental in-browser live mode (owner): `docs/sim/browser.html` answers /api/ping and /api/run
+  from a Web Worker running the same package under Pyodide 0.26.4 (`tools/browser/`, zip built by
+  `build_site.py`); `index.html` unchanged. Packaging tested by running the zipped package alone;
+  the page wiring tested with a mock worker; Pyodide itself not testable here (CDN blocked).
 - Live speed-change sliders (owner): ±30 km/h from the cruise speed at a chosen fraction of the
   tunnel, held 20 s (`simulate_run(speed_change=)`). Without the server, the LIVE bar now shows
   disabled with the command to start it, instead of being hidden.

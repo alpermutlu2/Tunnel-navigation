@@ -30,6 +30,13 @@ place. A **custom tunnel** row in the same bar builds a new scenario without cod
 accepted by `tools/simulate.py`). `http://localhost:8000/controls` has the remaining switches (cruise model, NHC turn gate,
 re-acquisition). Rebuild the page with `python tools/build_site.py`.
 
+**In-browser live mode (experimental).** `docs/sim/browser.html`
+(`https://alpermutlu2.github.io/Tunnel-navigation/sim/browser.html`) is the same page with the LIVE
+controls answered in the browser: the same Python package runs in a Web Worker under Pyodide
+(CPython in WebAssembly), so no server is needed. The first load downloads ~30 MB and each run is
+slower than with `serve.py`; if Pyodide cannot load, the page falls back to the pre-run drives.
+`index.html` is unchanged.
+
 **Model sliders** (live mode; on GitHub Pages they show disabled, with the command to start the
 server): speed × factor for the whole scenario, a speed change inside the tunnel (±30 km/h at a
 chosen fraction of its length, held 20 s, then back), GNSS exit multipath, tunnel

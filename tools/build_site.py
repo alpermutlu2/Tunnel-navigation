@@ -54,9 +54,25 @@ def main():
     out = ROOT / "docs" / "sim"
     out.mkdir(parents=True, exist_ok=True)
     for old in out.glob("*.html"):
-        old.unlink()
+        old.unlink()   # browser.html is rewritten below
     (out / "index.html").write_text(page)
     print(f"wrote {out / 'index.html'} ({len(page) / 1e6:.1f} MB)")
+    # experimental in-browser live mode (owner 2026-10-24): same page, the LIVE controls answered by
+    # Pyodide in a Web Worker; index.html is unchanged
+    import zipfile
+    shim = (ROOT / "tools" / "browser" / "shim.html").read_text()
+    bpage = page.replace("<title>Tunnel Simulator</title>", "<title>Tunnel Simulator (in-browser)</title>")
+    i = bpage.index("<body") ; i = bpage.index(">", i) + 1
+    bpage = bpage[:i] + "\n" + shim + bpage[i:]
+    (out / "browser.html").write_text(bpage)
+    (out / "py").mkdir(exist_ok=True)
+    (out / "py" / "worker.js").write_text((ROOT / "tools" / "browser" / "worker.js").read_text())
+    with zipfile.ZipFile(out / "py" / "tunnelsim.zip", "w", zipfile.ZIP_DEFLATED) as z:
+        for f in sorted((ROOT / "tunnelsim").glob("*.py")):
+            z.write(f, f"tunnelsim/{f.name}")
+        for f in ("simulate.py", "serve.py", "simulate_template.html"):
+            z.write(ROOT / "tools" / f, f"tools/{f}")
+    print(f"wrote {out / 'browser.html'} + py/ (experimental Pyodide live mode)")
 
 
 if __name__ == "__main__":
