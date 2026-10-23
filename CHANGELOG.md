@@ -18,6 +18,8 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
 - Levelling restricted to crawling speed (`level_vmax`, off): S4 30.3 → 29.1–29.6 m, no effect
   elsewhere (`level_crawl_30.json`); stays off.
 - REPORT §4.6–4.7, SUMMARY, the low-end tab of the simulator updated.
+- Snapshot `reports/0.5.7/metrics.json` vs 0.5.6: no metric changed (the snapshot covers the Note10
+  scenarios); tests 181 → 182 (live-slider overrides).
 
 ## v0.5.6 (2026-10-21): live custom tunnel, report completeness (review 12)
 
