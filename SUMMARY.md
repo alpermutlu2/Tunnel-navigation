@@ -96,11 +96,12 @@ sees truth.
    tell the gradient from a pitch error. It should be measured in a real tunnel.
 4. **The map's own error limits what the map adds.** At twice the assumed map error the filter
    becomes optimistic, and on 5 km the map then does worse than no map.
-5. **A low-end IMU** (MPU9250 class [MEAS]):
-   - With its own tuning it works in short and straight tunnels: 16–37 m at the portal.
-   - It fails in stop-and-go and long tunnels (0.6–1.1 km).
-   - It is overconfident everywhere: the app would show "±40 m" while the car is a kilometre away.
-     On such phones the app should not trust σ.
+5. **A low-end IMU** (MPU9250 class [MEAS]) works with its own tuning, with the fast gyro bias
+   terms treated as white noise:
+   - 14–43 m at the portal in steady and long tunnels;
+   - consistent ((e/σ)² 0.2–1.0) and no late callouts;
+   - stop-and-go still fails (~1 km): attitude drifts during long stops, so the app should not
+     trust σ there and should fall back to a different model.
 6. **Levelling from gravity** (an extra update) was tried and left off: it helps one scenario and
    hurts five.
 

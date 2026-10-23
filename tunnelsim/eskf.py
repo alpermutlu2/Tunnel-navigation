@@ -141,14 +141,18 @@ class EskfConfig:
 
 # Filter-side tuning per IMU class (review 11, owner 2026-10-21). "note10" is the EskfConfig default.
 # "mpu9250": the Note10 tuning rules applied to the MPU9250 Allan terms [MEAS, Suvorkin 2024 Table 5]:
-#   gyro_noise    √(ARW_max² + vibration²), vibration 7.1e-4 from the Note10 value (√(1e-3² − 7e-4²))
+#   gyro_noise    √(ARW_max² + vibration²), vibration 7.1e-4 from the Note10 value (√(1e-3² − 7e-4²)); v0.5.7: plus
+#                 the τ ≤ 50 s bias-instability terms as white noise (see below)
 #   gyro_bias_rw  Note10 × mean-gyro-BI ratio (4.79e-3 / 1.56e-4 = 30.7)
 #   accel_bias_rw Note10 × mean-accel-BI ratio (1.07e-3 / 0.99e-3 = 1.08)
 #   p0_bg         2 × turn-on (0.2° [ASSUMED]), the Note10 ratio
 #   p0_ba         1.44 × rss(turn-on 30 mg, scale 1 %·g, misalignment 0.5°·g) = 1.44 × 0.32, the Note10 ratio
 FILTER_PROFILES = {
     "note10": {},
-    "mpu9250": {"gyro_noise": 6.3e-3, "gyro_bias_rw": 3.07e-3 / np.sqrt(180.0),
+    # v0.5.7 (owner 2026-10-24): gyro_noise also folds the bias-instability GM terms with τ ≤ 50 s into
+    # white noise, √(ARW² + vib² + Σ_{τ≤50 s} 2τσᵢ²) on the worst axis = 0.063 rad/√s: those terms decorrelate
+    # within the filter's update intervals and a random walk cannot follow them (A/B: reports/0.5.7/)
+    "mpu9250": {"gyro_noise": 0.0634, "gyro_bias_rw": 3.07e-3 / np.sqrt(180.0),
                 "accel_bias_rw": 5.4e-4 / np.sqrt(180.0), "p0_bg": np.deg2rad(0.4), "p0_ba": 0.45},
 }
 

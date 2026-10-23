@@ -210,27 +210,36 @@ comes from one development board and is ~100× the datasheet's typical gyro bias
 may be pessimistic; a real low-end phone must be measured.
 
 With the Note10 tuning the filter is overconfident, the χ² gate locks GNSS out before the tunnel,
-and the error at the portal is 0.3–3.6 km. Two fixes (review 11, `reports/0.5.5/`):
+and the error at the portal is 0.3–3.6 km. Three fixes (review 11, `reports/0.5.5/`,
+`reports/0.5.7/`):
 
 - **IMU class at start-up** from the gyro white noise over the first 10 s, σ̂ = std(Δω)/√2: Note10
   ≤ 0.013 rad/s per sample, MPU9250 ≥ 0.059, threshold 0.027. Every run was classed correctly and
   Note10 results are bit-identical. A real OS may low-pass the gyro, so the sensor name is safer.
 - **A filter profile per class:** the Note10 tuning rules applied to the MPU9250 Allan terms.
   Halving or doubling the gyro bias random walk changes little; one parameter does not fix this.
+- **Fast bias terms as white noise (v0.5.7).** The MPU9250's bias instability is three
+  Gauss–Markov terms (τ 5, 50, 500 s). The two fast ones decorrelate between the filter's updates,
+  so a random walk cannot follow them. Their white-noise equivalent, √(2τ)·σᵢ, is added to the gyro
+  noise: √(ARW² + vibration² + Σ_{τ ≤ 50 s} 2τσᵢ²) = 0.063 rad/√s on the worst axis. In a sweep from
+  ×1 to ×15 of the ARW-only value, this one brings (e/σ)² near 1 across scenarios. Larger values
+  make the filter over-cautious.
 
-| MPU9250 + profile, 30 seeds | S1 | S2 | S5 | S4 | 5 km |
+| MPU9250, 30 seeds | S1 | S2 | S5 | 5 km | S4 |
 |---|---|---|---|---|---|
-| Note10 tuning, portal rms (10 seeds) | 1.6 km | 340 m | 1.4 km | 1.5 km | 3.6 km |
-| profile: diverge / portal rms | 45 / 37 m | 14 / 16 m | 78 / 85 m | 740 / 1080 m | 206 / 614 m |
-| (e/σ)² at the portal | 4.8 | 2.0 | 34 | 700 | 146 |
-| callout k = 0 rms; k = 1 > 1 s late | 1.5 s; 17 % | 0.5 s; 0 % | 3.4 s; 57 % | 163 s; 90 % | 8.5 s; 93 % |
+| Note10 tuning, portal rms (10 seeds) | 1.6 km | 340 m | 1.4 km | 3.6 km | 1.5 km |
+| profile (v0.5.5): diverge / portal rms | 45 / 37 m | 14 / 16 m | 78 / 85 m | 206 / 614 m | 740 / 1080 m |
+| + fast terms as white noise: diverge / portal rms | 21 / 14 m | 17 / 16 m | 35 / 22 m | 40 / 43 m | 756 / 1099 m |
+| (e/σ)² at the portal, v0.5.5 → v0.5.7 | 4.8 → 0.19 | 2.0 → 0.66 | 34 → 1.0 | 146 → 0.79 | 700 → 340 |
+| k = 1 callouts > 1 s late, v0.5.7 | 0 % | 0 % | 0 % | 0 % | 80 % |
 
-A low-end phone therefore works in short or straight tunnels at steady speed (tens of metres,
-since the map holds the heading). It breaks in stop-and-go and in long tunnels, where the gyro's
-fast bias drift tilts pitch between updates. It is also overconfident everywhere ((e/σ)² 2–700):
-the driver's view then shows "±40 m" while the car is a kilometre away, and the k·σ callout no
-longer protects. On a phone classed as low-end, the app should not trust σ: it should widen the
-callout margin or fall back to CV and map cues (`DESIGN.md` §5.1) in long and stop-and-go tunnels.
+With these fixes a low-end phone works, and is honest about its uncertainty, in every scenario
+except stop-and-go: within 14–43 m at the portal and with no late callouts. S4 stays broken
+(~1 km), and neither a perfect stop detector nor levelling at stops helps
+(`reports/0.5.7/lowend_s4_level_10.json`). The likely cause is attitude drift, yaw above all,
+during the 20–45 s stops, which turns into position error when the car moves off. On a phone
+classed as low-end, the app should not trust σ in stop-and-go traffic. There it needs a different
+model: motion modes, or the CV and map fallback of `DESIGN.md` §5.1.
 
 **4.7 Levelling does not help** (review 11 option 3, `EskfConfig.level`, off). At 1 Hz in cruise
 mode and at stops, the 1 s mean specific force is modelled as gravity plus the accelerometer bias,
@@ -238,7 +247,7 @@ f̄ = −Cᵀg + b_a. With σ = 0.02 m/s² (10 seeds) it halves the S4 diverge e
 worsens the portal on S2, S3, S5, S6 and 5 km, with (e/σ)² up to 13: grade changes and speed
 wander are real, correlated accelerations, and the smaller σ_s makes the map's curve matching
 correct less at the exit branch (S1 portal 4.4 → 14 m). σ = 0.05 gives little harm and little
-gain; at stops only it changes nothing (30 seeds), since the ZUPT already holds there. It stays off.
+gain; at stops only it changes nothing (30 seeds), since the ZUPT already holds there. Restricted to crawling speed (< 30 km/h) it changes S4 by under 1 m (30 seeds, `reports/0.5.7/level_crawl_30.json`). It stays off.
 
 **4.8 Assumptions that did not matter** (S1, 30 seeds): GNSS coasting into the tunnel; optimistic
 reported accuracy; a 1–3° mount error (absorbed by the lumped accelerometer bias while the mount

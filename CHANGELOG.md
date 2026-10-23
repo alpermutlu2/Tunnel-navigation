@@ -7,6 +7,18 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.7 (2026-10-24): low-end gyro profile, crawl levelling A/B
+
+- `FILTER_PROFILES["mpu9250"]["gyro_noise"]` 6.3e-3 → 0.0634 rad/√s (owner): the bias-instability
+  GM terms with τ ≤ 50 s folded into white noise, √(ARW² + vib² + Σ 2τσᵢ²), worst axis. Low-end,
+  30 seeds (`reports/0.5.7/lowend_fold50_30.json`): portal S1 37 → 14 m, S5 85 → 22 m, 5 km 614 →
+  43 m, S2 16 m; (e/σ)² 0.19–1.0 instead of 2–146; no late callout. S4 unchanged (~1.1 km,
+  (e/σ)² 340); oracle stops and levelling at stops do not help (`lowend_s4_level_10.json`).
+  Sweep ×1–×15: `lowend_q_sweep_{a,b,c}_10.json`. Note10 untouched.
+- Levelling restricted to crawling speed (`level_vmax`, off): S4 30.3 → 29.1–29.6 m, no effect
+  elsewhere (`level_crawl_30.json`); stays off.
+- REPORT §4.6–4.7, SUMMARY, the low-end tab of the simulator updated.
+
 ## v0.5.6 (2026-10-21): live custom tunnel, report completeness (review 12)
 
 - Live custom tunnel: the LIVE bar builds a scenario from tunnel length, grade inside the tunnel,
