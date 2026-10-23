@@ -30,6 +30,12 @@ place. A **custom tunnel** row in the same bar builds a new scenario without cod
 accepted by `tools/simulate.py`). `http://localhost:8000/controls` has the remaining switches (cruise model, NHC turn gate,
 re-acquisition). Rebuild the page with `python tools/build_site.py`.
 
+**Model sliders** (live mode): speed × factor for the whole scenario, GNSS exit multipath, tunnel
+pressure gradient, vibration level, accelerometer bias instability × factor, the filter's map
+error (lateral offset, length error), the filter's driver model (σ_d, τ_d) and the NHC turn gate.
+Sensor and world values set this way are tagged [ASSUMED, "live slider"]; changed sliders turn
+orange, and "reset sliders" returns to the nominal values. Playback speeds: 1×, 2×, 5×, 10×, 30×, 60×.
+
 **Results table.** The last tab puts every scenario side by side, one drive each, under the
 current settings: along-track error and 2σ at the exit diverge, the largest error in the tunnel,
 along- and cross-track error and (e/σ)² at the portal, callout timing (with the k·σ and distance

@@ -53,6 +53,13 @@ def run_data(q: dict) -> dict:
     overrides = [q[k] for k in ("imu", "vib", "baro_tunnel") if q.get(k, "nominal") != "nominal"]
     overrides += [name for name, _ in GNSS_FLAGS if q.get(name) == "1"]
     overrides += [o for o in q.get("overrides", "").split(",") if o and o not in overrides]
+    # live sliders (owner 2026-10-23): world and sensor values as tagged overrides, filter values as
+    # EskfConfig fields, speed as a factor on the scenario, map errors on the filter's map
+    sliders = {"mp": ("set:gnss.exit_multipath_m", 30.0), "pgrad": ("set:baro.tunnel_grad_pa_per_km", 0.0),
+               "viblvl": ("set:vib.level", 1.0), "abi": ("scale:imu.accel_bias_instab", 1.0)}
+    for k_, (path, dflt) in sliders.items():
+        if k_ in q and float(q[k_]) != dflt:
+            overrides.append(f"{path}={float(q[k_]):g}")
     eskf = [f"cruise={q.get('cruise', '1') == '1'}",
             f"cruise_mode={q.get('cruise_mode', 'gm')!r}",
             f"nhc_turn_gate={float(q.get('nhc_turn_gate', 0.3))}",
@@ -60,10 +67,14 @@ def run_data(q: dict) -> dict:
             f"gate_recover={q.get('gate_recover', '1') == '1'}",
             f"adaptive_q={q.get('gate_recover', '1') == '1'}",
             f"reacq={q.get('reacq', '1') == '1'}",
-            f"map_in_tunnel={q.get('map_in_tunnel', '1') == '1'}"]
+            f"map_in_tunnel={q.get('map_in_tunnel', '1') == '1'}",
+            f"cruise_gm_sigma={float(q.get('gm_sigma', 0.5))}",
+            f"cruise_gm_tau={float(q.get('gm_tau', 60.0))}"]
     me = float(q.get("mount_err", 0.0))
     mount = (0.0, me, me) if me else None
-    return simulate.run(key, seed, overrides, q.get("zupt", "detector"), eskf, mount, q.get("no_sideslip") == "1")
+    map_err = (float(q.get("map_lat", 0.0)), 1.0 + float(q.get("map_len", 0.0)) / 100.0)
+    return simulate.run(key, seed, overrides, q.get("zupt", "detector"), eskf, mount, q.get("no_sideslip") == "1",
+                        float(q.get("spd", 1.0)), map_err)
 
 
 def run_page(q: dict) -> str:

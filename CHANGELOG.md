@@ -17,6 +17,11 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   OBD); §4.7 adds the σ_s / curve-matching effect of levelling; one car noted as a limitation.
 - Recording `docs/media/sim_S5_seed0.mp4` and its still re-made with the current page (driver's
   view, k = 1, spoken distance); `tools/record_frames.js` takes a tab key.
+- Model sliders in the LIVE bar (owner, review 12 list): speed ×, exit multipath, pressure
+  gradient, vibration, accel bias instability ×, map lateral offset and length error, driver
+  model σ_d/τ_d, NHC turn gate. Sensor values via `set:`/`scale:` overrides tagged [ASSUMED,
+  "live slider"] (test); `simulate_run(speed_scale=)`, `simulate.run(map_err=)`. The vibration and
+  pressure-gradient selects became sliders. Playback 2× and 60× added.
 - Results table tab (owner): every tab side by side, one drive each, with the current settings;
   pre-run drives without the server, live re-run of all tabs with the LIVE settings.
 - Fix (owner, on GitHub Pages): playback at 1×/5×/10× did not move. The page data is on a 0.5 s

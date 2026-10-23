@@ -208,3 +208,12 @@ def test_custom_tunnel_scenario():
     assert 15.0 < stopped.sum() * tr.dt < 25.0                   # one ~20 s stop
     with pytest.raises(ValueError):
         get_scenario("custom:L=500,stop=30,at=0.5")              # no room before the diverge
+
+
+def test_live_slider_overrides_keep_tags():
+    """Owner 2026-10-23: slider values arrive as "set:path=v" / "scale:path=f" and stay tagged."""
+    from tunnelsim.profiles import configure, NOMINAL
+    cfg = configure("set:gnss.exit_multipath_m=45", "scale:imu.accel_bias_instab=2")
+    assert cfg.gnss.exit_multipath_m.v == 45.0 and cfg.gnss.exit_multipath_m.tag == "ASSUMED"
+    assert cfg.imu.accel_bias_instab.v == tuple(2 * x for x in NOMINAL.imu.accel_bias_instab.v)
+    assert cfg.imu.accel_bias_instab.src == "live slider"

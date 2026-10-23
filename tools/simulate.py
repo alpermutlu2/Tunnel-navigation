@@ -62,10 +62,10 @@ def _eskf_config(pairs):
     return dataclasses.replace(EskfConfig(), **kw)
 
 
-def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False):
+def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, speed_scale=1.0, map_err=None):
     from tunnelsim.scenario import Vehicle
     vehicle = Vehicle(sideslip_gain_rad_per_mps2=0.0) if no_sideslip else None
-    sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, [seed], tuple(overrides), vehicle=vehicle)
+    sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, [seed], tuple(overrides), vehicle=vehicle, speed_scale=speed_scale)
     zmask = (tr.v < 0.05) if zupt == "oracle" else None
     C_bp_f = tr.C_bp
     if mount_err is not None:
@@ -73,7 +73,7 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False):
         C_bp_f = mount_rotation(*mount_err) @ C_BP_NOMINAL.T @ tr.C_bp
     from tunnelsim.mapview import MapView
     out = run_eskf(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, _eskf_config(eskf), zupt_mask=zmask,
-                   road_map=MapView(get_scenario(key).road))
+                   road_map=MapView(get_scenario(key).road, *(map_err or (0.0, 1.0))))
     idx = np.clip(np.round((out.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
     tn = _tangent(tr, idx)
     pR = out.p[0] - np.einsum("kij,j->ki", out.C[0] @ tr.C_bp.T, tr.lever_arm_b)
@@ -143,7 +143,8 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False):
                  for tt, (x, y) in zip(gnss["t"], gnss["pos"][0][:, :2]) if np.isfinite(x)],
         "events": out.events,
         "sensors": sens,
-        "settings": {"eskf": list(eskf), "mount_err_deg": mount_err, "no_sideslip": no_sideslip},
+        "settings": {"eskf": list(eskf), "mount_err_deg": mount_err, "no_sideslip": no_sideslip,
+                     "speed_scale": speed_scale, "map_err": list(map_err) if map_err else None},
     }
     return data
 

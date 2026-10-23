@@ -113,13 +113,18 @@ RECOVERY_M = 10.0           # recovered = horizontal error stays below this; ~2x
                             # does not count as "not recovered"
 
 
-def simulate_run(key, seeds, overrides=(), imu_switches=None, branch=True, vehicle=None):
+def simulate_run(key, seeds, overrides=(), imu_switches=None, branch=True, vehicle=None, speed_scale=1.0):
     """Sensor data for a batch of seeds: IMU (no gaps; jitter off so the batch shares a time
     axis), GNSS and barometer at nominal settings plus overrides. branch=False: the car goes
     straight on at the diverge (v0.4 geometry); vehicle: replaces the scenario's Vehicle (e.g. no
     sideslip)."""
     from .sensors import BaroTruthSource, simulate_baro
     sc = get_scenario(key, branch=branch)
+    if speed_scale != 1.0:
+        # live slider (owner 2026-10-23): every speed of the scenario × factor; positions unchanged
+        from dataclasses import replace as _rp
+        sc.speed = type(sc.speed)(v0=sc.speed.v0 * speed_scale,
+                                  events=[_rp(e, v_target=e.v_target * speed_scale) for e in sc.speed.events])
     if vehicle is not None:
         sc.vehicle = vehicle
     tr = generate_truth(sc)

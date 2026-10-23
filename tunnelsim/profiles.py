@@ -326,6 +326,19 @@ def configure(*names: str, base: SensorConfig = NOMINAL) -> SensorConfig:
     """Apply named overrides, in order, to a copy of `base`."""
     cfg = base
     for name in names:
+        if name.startswith(("set:", "scale:")):
+            # live-slider value (review 12, owner 2026-10-23): "set:path=value" or "scale:path=factor";
+            # the result is tagged [ASSUMED, "live slider"] so no value loses its tag
+            kind, rest = name.split(":", 1)
+            path, val = rest.split("=", 1)
+            obj = cfg
+            for part in path.split("."):
+                obj = getattr(obj, part)
+            base_v = obj.v if isinstance(obj, Param) else obj
+            f = float(val)
+            new = (tuple(f * x for x in base_v) if isinstance(base_v, tuple) else f * base_v) if kind == "scale" else f
+            cfg = _set(cfg, path.split("."), ASSUMED(new, "live slider"))
+            continue
         if name not in OVERRIDES:
             raise KeyError(f"unknown override {name!r}; known: {sorted(OVERRIDES)}")
         for path, value in OVERRIDES[name].items():

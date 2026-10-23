@@ -109,15 +109,26 @@ input[type=range] { flex: 1; min-width: 140px; }
     <span class="badge">LIVE</span>
     <label>seed <select id="lv_seed"></select></label>
     <label>IMU <select id="lv_imu"><option value="">Note10 (LSM6DSR)</option><option value="imu_fwd_bi_xy">forward bias at x/y level</option><option value="imu_bi_gm1">single-GM bias</option><option value="imu_lowend">low-end MPU9250</option></select></label>
-    <label>vibration <select id="lv_vib"><option value="">calm</option><option value="vib_noisy">noisy ×3</option></select></label>
-    <label>pressure gradient <select id="lv_baro"><option value="">none</option><option value="baro_tunnel_10pa">10 Pa/km</option><option value="baro_tunnel_30pa">30 Pa/km</option></select></label>
-    <label>GNSS <select id="lv_gnss"><option value="">nominal</option><option value="gnss_coasting">coasts into the tunnel</option><option value="gnss_lagging">lagging at the exit</option><option value="gnss_multipath_50">exit multipath 50 m</option><option value="gnss_optimistic">optimistic accuracy</option></select></label>
+    <label>GNSS <select id="lv_gnss"><option value="">nominal</option><option value="gnss_coasting">coasts into the tunnel</option><option value="gnss_lagging">lagging at the exit</option><option value="gnss_optimistic">optimistic accuracy</option></select></label>
     <label class="sl"><span>mount error <b id="lv_me_v">0°</b></span><input type="range" id="lv_me" min="0" max="5" step="0.5" value="0"></label>
     <label><input type="checkbox" id="lv_cruise" checked> cruise prior</label>
     <label><input type="checkbox" id="lv_grad"> pressure-gradient state</label>
     <label><input type="checkbox" id="lv_slip"> no sideslip</label>
     <label>stops <select id="lv_zupt"><option value="detector">IMU detector</option><option value="oracle">oracle</option></select></label>
     <span id="liveStat"></span>
+    <div class="cubreak"></div>
+    <b title="values set here are tagged [ASSUMED, live slider]">Model sliders</b>
+    <label class="sl"><span>speed × <b data-v="sl_spd">1.0</b></span><input type="range" id="sl_spd" min="0.5" max="1.5" step="0.1" value="1" data-d="1"></label>
+    <label class="sl"><span>exit multipath <b data-v="sl_mp">30</b> m</span><input type="range" id="sl_mp" min="0" max="60" step="5" value="30" data-d="30"></label>
+    <label class="sl"><span>pressure gradient <b data-v="sl_pg">0</b> Pa/km</span><input type="range" id="sl_pg" min="0" max="40" step="5" value="0" data-d="0"></label>
+    <label class="sl"><span>vibration × <b data-v="sl_vib">1.0</b></span><input type="range" id="sl_vib" min="1" max="5" step="0.5" value="1" data-d="1"></label>
+    <label class="sl"><span>accel bias instability × <b data-v="sl_abi">1.0</b></span><input type="range" id="sl_abi" min="0.5" max="4" step="0.5" value="1" data-d="1"></label>
+    <label class="sl"><span>map lateral offset <b data-v="sl_mlat">0.0</b> m</span><input type="range" id="sl_mlat" min="0" max="6" step="0.5" value="0" data-d="0"></label>
+    <label class="sl"><span>map length error <b data-v="sl_mlen">0.0</b> %</span><input type="range" id="sl_mlen" min="0" max="1.5" step="0.1" value="0" data-d="0"></label>
+    <label class="sl"><span>driver wander σ_d <b data-v="sl_gs">0.5</b> m/s</span><input type="range" id="sl_gs" min="0.1" max="1.5" step="0.1" value="0.5" data-d="0.5"></label>
+    <label class="sl"><span>driver wander τ_d <b data-v="sl_gt">60</b> s</span><input type="range" id="sl_gt" min="20" max="180" step="10" value="60" data-d="60"></label>
+    <label class="sl"><span>NHC turn gate <b data-v="sl_nhc">0.3</b> m/s²</span><input type="range" id="sl_nhc" min="0" max="1" step="0.1" value="0.3" data-d="0.3"></label>
+    <button id="sl_reset">reset sliders</button>
     <div class="cubreak"></div>
     <b>Custom tunnel</b>
     <label>length <select id="cu_L" class="cu"><option value="500">0.5 km</option><option value="1000">1 km</option><option value="2000">2 km</option><option value="3000" selected>3 km</option><option value="5000">5 km</option></select></label>
@@ -142,7 +153,7 @@ input[type=range] { flex: 1; min-width: 140px; }
       </div>
       <div class="controls">
         <button id="play">Play</button>
-        <select id="speed"><option value="1">1×</option><option value="5">5×</option><option value="10" selected>10×</option><option value="30">30×</option></select>
+        <select id="speed"><option value="1">1×</option><option value="2">2×</option><option value="5">5×</option><option value="10" selected>10×</option><option value="30">30×</option><option value="60">60×</option></select>
         <input id="scrub" type="range" min="0" max="1" step="1" value="0" aria-label="time">
         <span id="clock" style="font-variant-numeric: tabular-nums">0.0 s</span>
         <label class="sub">zoom <input id="zoom" type="range" min="0.2" max="4" step="0.1" value="1" style="width:90px"></label>
@@ -214,7 +225,7 @@ input[type=range] { flex: 1; min-width: 140px; }
   <button id="fs_b10" title="back 10 s (Shift+←)">−10 s</button><button id="fs_b1" title="back 1 s (←)">−1 s</button>
   <input id="fs_scrub" type="range" min="0" max="1" step="1" value="0" aria-label="time">
   <button id="fs_f1" title="forward 1 s (→)">+1 s</button><button id="fs_f10" title="forward 10 s (Shift+→)">+10 s</button>
-  <select id="fs_speed"><option value="1">1×</option><option value="5">5×</option><option value="10" selected>10×</option><option value="30">30×</option></select>
+  <select id="fs_speed"><option value="1">1×</option><option value="2">2×</option><option value="5">5×</option><option value="10" selected>10×</option><option value="30">30×</option><option value="60">60×</option></select>
   <span id="fs_clock" style="font-variant-numeric: tabular-nums; min-width: 70px"></span>
   <button id="fs_exit" title="exit full screen (Esc or double-click)">✕</button>
 </div>
@@ -257,7 +268,10 @@ document.getElementById("meta").textContent =
   ` · GNSS updates accepted/rejected: ${D.events.gnss_pos_acc}/${D.events.gnss_pos_rej}` +
   (D.settings.eskf.length ? ` · filter: ${D.settings.eskf.join(", ")}` : "") +
   (D.settings.mount_err_deg ? ` · mount error ${D.settings.mount_err_deg.join("/")}°` : "") +
-  (D.settings.no_sideslip ? " · no sideslip" : "") + " · CV clipped to the error axis";
+  (D.settings.no_sideslip ? " · no sideslip" : "") +
+  (D.settings.speed_scale && D.settings.speed_scale !== 1 ? ` · speed ×${D.settings.speed_scale}` : "") +
+  (D.settings.map_err && (D.settings.map_err[0] || D.settings.map_err[1] !== 1) ? ` · map error ${D.settings.map_err[0]} m, ${((D.settings.map_err[1] - 1) * 100).toFixed(1)} %` : "") +
+  " · CV clipped to the error axis";
 }
 
 function setup(c) {
@@ -531,9 +545,10 @@ function customKey() {
 function liveQuery(key) {
   const r = ALL.runs[key] || {};
   const ov = [...(r.overrides || [])];
-  for (const id of ["lv_imu", "lv_vib", "lv_baro", "lv_gnss"]) { const v = document.getElementById(id).value; if (v && !ov.includes(v)) ov.push(v); }
-  const me = +document.getElementById("lv_me").value;
-  return new URLSearchParams({ scenario: key === "custom" ? CUSTOM : (r.scen || key), seed: document.getElementById("lv_seed").value, overrides: ov.join(","),
+  for (const id of ["lv_imu", "lv_gnss"]) { const v = document.getElementById(id).value; if (v && !ov.includes(v)) ov.push(v); }
+  const me = +document.getElementById("lv_me").value, sv = id => document.getElementById(id).value;
+  return new URLSearchParams({ spd: sv("sl_spd"), mp: sv("sl_mp"), pgrad: sv("sl_pg"), viblvl: sv("sl_vib"), abi: sv("sl_abi"),
+    map_lat: sv("sl_mlat"), map_len: sv("sl_mlen"), gm_sigma: sv("sl_gs"), gm_tau: sv("sl_gt"), nhc_turn_gate: sv("sl_nhc"), scenario: key === "custom" ? CUSTOM : (r.scen || key), seed: document.getElementById("lv_seed").value, overrides: ov.join(","),
     zupt: document.getElementById("lv_zupt").value, mount_err: me, no_sideslip: document.getElementById("lv_slip").checked ? 1 : 0,
     map_in_tunnel: document.getElementById("mapOn").checked ? 1 : 0, cruise: document.getElementById("lv_cruise").checked ? 1 : 0,
     baro_grad: document.getElementById("lv_grad").checked ? 1 : 0 });
@@ -551,7 +566,8 @@ async function liveRun(fresh) {
   } catch (e) { if (seq === liveSeq) st.textContent = `run failed: ${e.message || "see the server console"}`; }
 }
 function liveDefault() {
-  return document.getElementById("lv_seed").value === "0" && !["lv_imu", "lv_vib", "lv_baro", "lv_gnss"].some(id => document.getElementById(id).value) &&
+  return document.getElementById("lv_seed").value === "0" && !["lv_imu", "lv_gnss"].some(id => document.getElementById(id).value) &&
+    [...document.querySelectorAll("#live input[data-d]")].every(el => +el.value === +el.dataset.d) &&
     +document.getElementById("lv_me").value === 0 && document.getElementById("lv_cruise").checked && !document.getElementById("lv_grad").checked &&
     !document.getElementById("lv_slip").checked && document.getElementById("lv_zupt").value === "detector";
 }
@@ -658,6 +674,13 @@ if (ALL) {
     document.getElementById("cu_v_v").textContent = `${document.getElementById("cu_v").value} km/h`;
     document.getElementById("cu_at_v").textContent = (+document.getElementById("cu_at").value).toFixed(2);
   });
+  for (const el of document.querySelectorAll("#live input[data-d]")) el.addEventListener("input", () => {
+    const b = document.querySelector(`[data-v="${el.id}"]`); b.textContent = (+el.value).toFixed(+el.step < 1 ? 1 : 0);
+    b.parentElement.style.color = +el.value === +el.dataset.d ? "" : "var(--exit)"; });
+  document.getElementById("sl_reset").onclick = () => {
+    for (const el of document.querySelectorAll("#live input[data-d]")) { el.value = el.dataset.d; el.dispatchEvent(new Event("input")); }
+    document.getElementById("lv_seed").dispatchEvent(new Event("change"));
+  };
   document.getElementById("cu_run").onclick = () => {
     CUSTOM = customKey(); curKey = "custom";
     let tb = document.getElementById("cuTab");
