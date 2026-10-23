@@ -17,6 +17,8 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   OBD); §4.7 adds the σ_s / curve-matching effect of levelling; one car noted as a limitation.
 - Recording `docs/media/sim_S5_seed0.mp4` and its still re-made with the current page (driver's
   view, k = 1, spoken distance); `tools/record_frames.js` takes a tab key.
+- Results table tab (owner): every tab side by side, one drive each, with the current settings;
+  pre-run drives without the server, live re-run of all tabs with the LIVE settings.
 - Fix (owner, on GitHub Pages): playback at 1×/5×/10× did not move. The page data is on a 0.5 s
   grid and the play loop dropped the part of a frame's time step below one sample; it now keeps a
   continuous play clock (checked: 2 s of wall time = 2 / 10 / 20 / 60 s of drive).

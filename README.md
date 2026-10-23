@@ -30,6 +30,12 @@ place. A **custom tunnel** row in the same bar builds a new scenario without cod
 accepted by `tools/simulate.py`). `http://localhost:8000/controls` has the remaining switches (cruise model, NHC turn gate,
 re-acquisition). Rebuild the page with `python tools/build_site.py`.
 
+**Results table.** The last tab puts every scenario side by side, one drive each, under the
+current settings: along-track error and 2σ at the exit diverge, the largest error in the tunnel,
+along- and cross-track error and (e/σ)² at the portal, callout timing (with the k·σ and distance
+sliders) and the constant-velocity reference. Without the server it uses the pre-run drives; in
+live mode "Re-run every tab with the live settings" fills it from new runs (~70 s for all tabs).
+
 **Driver's view.** Next to the map, a phone-shaped panel shows what the navigation app would show
 from the estimate alone: heading-up, the car snapped to the road, the maneuver banner with the
 distance to the exit, the spoken callout at the moment the k·σ rule fires, speed, and "No GPS ·

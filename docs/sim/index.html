@@ -62,6 +62,18 @@ input[type=range] { flex: 1; min-width: 140px; }
 .tabs button { padding: 4px 10px; font-size: 13px; }
 .tabs button[aria-selected="true"] { border-color: var(--est); color: var(--est); font-weight: 600; }
 .tabs button.risk { border-style: dashed; }
+.tabs button.restab { margin-left: 10px; }
+[hidden] { display: none !important; }
+#results { margin: 14px 20px 20px; }
+.rtable { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+.rwrap { overflow-x: auto; }
+.rtable th, .rtable td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: right; white-space: nowrap; }
+.rtable th:first-child, .rtable td:first-child { text-align: left; white-space: normal; min-width: 210px; }
+.rtable thead th { color: var(--muted); font-weight: 600; vertical-align: bottom; }
+.rtable td.bad { color: var(--exit); font-weight: 600; }
+.rtable td.relive { background: color-mix(in srgb, var(--gnss) 10%, transparent); }
+.rtable td.pending { color: var(--muted); }
+.resbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 10px; font-size: 13px; }
 .ctl { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; margin-top: 10px; }
 .ctl .sl { display: grid; gap: 2px; font-size: 12px; color: var(--muted); min-width: 200px; flex: 1 1 200px; max-width: 320px; }
 .ctl .sl b { color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -182,6 +194,21 @@ input[type=range] { flex: 1; min-width: 140px; }
     </div>
   </section>
 </main>
+<section id="results" hidden>
+  <div class="card">
+    <h2>Results with the current settings</h2>
+    <div class="resbar">
+      <span id="resSrc"></span>
+      <button id="resRun" hidden>Re-run every tab with the live settings</button>
+      <span id="resStat" style="color:var(--exit);font-weight:600"></span>
+    </div>
+    <div class="rwrap"><table class="rtable" id="resTable"></table></div>
+    <div class="note">One drive per scenario (seed shown above), so single numbers scatter. "–" in live mode: press the re-run button for these settings; the 50-seed statistics are in REPORT.md §3.
+      Along-track error is estimate − truth (+ ahead). The diverge is where the exit branch leaves the main tunnel; the portal is where the car leaves the tunnel.
+      Callout: + late, − early, with the k·σ margin and callout distance from the sliders; red when more than 1 s late.
+      Highlighted columns were re-run live with the LIVE settings; the others are the pre-run drives (map switch applies).</div>
+  </div>
+</section>
 <div id="fsbar" aria-label="playback">
   <button id="fs_play">Play</button>
   <button id="fs_b10" title="back 10 s (Shift+←)">−10 s</button><button id="fs_b1" title="back 1 s (←)">−1 s</button>
@@ -501,20 +528,24 @@ function customKey() {
   const v = id => document.getElementById(id).value;
   return `custom:L=${v("cu_L")},g=${v("cu_g")},v=${v("cu_v")},stop=${v("cu_stop")},at=${v("cu_at")}`;
 }
-async function liveRun(fresh) {
-  if (!LIVE) return;
-  const r = ALL.runs[curKey] || {};
+function liveQuery(key) {
+  const r = ALL.runs[key] || {};
   const ov = [...(r.overrides || [])];
   for (const id of ["lv_imu", "lv_vib", "lv_baro", "lv_gnss"]) { const v = document.getElementById(id).value; if (v && !ov.includes(v)) ov.push(v); }
   const me = +document.getElementById("lv_me").value;
-  const q = new URLSearchParams({ scenario: curKey === "custom" ? CUSTOM : (r.scen || curKey), seed: document.getElementById("lv_seed").value, overrides: ov.join(","),
+  return new URLSearchParams({ scenario: key === "custom" ? CUSTOM : (r.scen || key), seed: document.getElementById("lv_seed").value, overrides: ov.join(","),
     zupt: document.getElementById("lv_zupt").value, mount_err: me, no_sideslip: document.getElementById("lv_slip").checked ? 1 : 0,
     map_in_tunnel: document.getElementById("mapOn").checked ? 1 : 0, cruise: document.getElementById("lv_cruise").checked ? 1 : 0,
     baro_grad: document.getElementById("lv_grad").checked ? 1 : 0 });
+}
+async function liveRun(fresh) {
+  if (!LIVE) return;
+  const q = liveQuery(curKey);
   const seq = ++liveSeq, st = document.getElementById("liveStat"); st.textContent = "running…"; const t0 = performance.now();
   try {
     const res = await fetch("/api/run?" + q); if (!res.ok) throw new Error((await res.text()).replace(/<[^>]+>/g, "").trim().split("\n").pop());
     const d = await res.json(); if (seq !== liveSeq) return;
+    LIVE_RES[curKey] = { d, q: String(q) };
     const tRel = fresh ? -20 : D.t[k] - D.t_entry; D = d; derive(); k = Math.max(0, D.t.findIndex(x => x >= D.t_entry + tRel)); render();
     st.textContent = `done in ${((performance.now() - t0) / 1000).toFixed(1)} s`;
   } catch (e) { if (seq === liveSeq) st.textContent = `run failed: ${e.message || "see the server console"}`; }
@@ -524,14 +555,103 @@ function liveDefault() {
     +document.getElementById("lv_me").value === 0 && document.getElementById("lv_cruise").checked && !document.getElementById("lv_grad").checked &&
     !document.getElementById("lv_slip").checked && document.getElementById("lv_zupt").value === "detector";
 }
+// ---- results matrix: one column per tab, metrics of one drive under the current settings
+const LIVE_RES = {};            // key -> {d, q}: drives re-run live; used while the LIVE settings are unchanged
+function drvMetrics(d) {
+  const ex = d.exits[0], at = i => (i >= 0 ? i : NaN);
+  const iDiv = ex ? at(d.s_true.findIndex(s => s >= ex.s)) : NaN;
+  const iPor = at(d.t.findIndex(t => t >= d.t_exit));
+  let mx = 0; for (let i = 0; i < d.t.length; i++) if (d.t[i] >= d.t_entry && d.t[i] <= d.t_exit) mx = Math.max(mx, Math.abs(d.e_s[i]));
+  const v = (arr, i) => Number.isFinite(i) ? arr[i] : NaN;
+  let call = NaN;
+  if (ex) {
+    const cs = ex.s - callLead, a = d.s_hat.findIndex((s, i) => s + callKs * d.sig_s[i] >= cs), b = d.s_true.findIndex(s => s >= cs);
+    if (a >= 0 && b >= 0) call = d.t[a] - d.t[b];
+  }
+  let cv = NaN;
+  if (Number.isFinite(iDiv) && d.cv && d.t[iDiv] >= d.cv.t0 && d.t[iDiv] <= d.cv.t1) cv = d.cv.s0 + d.cv.v * (d.t[iDiv] - d.cv.t0) - d.s_true[iDiv];
+  const eP = v(d.e_s, iPor), sP = v(d.sig_s, iPor);
+  return { div: v(d.e_s, iDiv), div2s: 2 * v(d.sig_s, iDiv), max: mx, por: eP, lat: v(d.e_lat, iPor), cons: (eP / sP) ** 2, call, cv,
+           tun: d.t_exit - d.t_entry };
+}
+const RES_ROWS = [
+  ["tunnel time [s]", "tun", x => x.toFixed(0)],
+  ["along-track error at the diverge [m]", "div", x => x.toFixed(1)],
+  ["2σ along-track at the diverge [m]", "div2s", x => x.toFixed(1)],
+  ["largest |along-track error| in the tunnel [m]", "max", x => x.toFixed(1)],
+  ["along-track error at the portal [m]", "por", x => x.toFixed(1)],
+  ["cross-track error at the portal [m]", "lat", x => x.toFixed(1)],
+  ["(e/σ)² at the portal", "cons", x => x.toFixed(2)],
+  ["callout timing [s] (+ late)", "call", x => (x > 0 ? "+" : "") + x.toFixed(1), x => x > 1.0],
+  ["constant-velocity error at the diverge [m]", "cv", x => x.toFixed(1)],
+];
+function resKeys() { return [...ALL.order, ...(CUSTOM ? ["custom"] : [])]; }
+function resData(key) {
+  const q = LIVE ? String(liveQuery(key)) : null;
+  if (LIVE_RES[key] && LIVE_RES[key].q === q) return [LIVE_RES[key].d, true];
+  if (key === "custom" || (LIVE && !liveDefault())) return [null, false];   // needs a live re-run
+  const r = ALL.runs[key], v = document.getElementById("mapOn").checked && r.variants.map ? "map" : (r.variants.nomap ? "nomap" : "map");
+  return [r.variants[v], false];
+}
+function renderResults() {
+  if (document.getElementById("results").hidden) return;
+  const keys = resKeys(), cols = keys.map(key => { const [d, live] = resData(key); return { key, d, live, m: d ? drvMetrics(d) : null }; });
+  const label = key => key === "custom" ? "Custom" : ALL.runs[key].label;
+  let h = "<thead><tr><th></th>" + cols.map(c => `<th>${label(c.key)}</th>`).join("") + "</tr></thead><tbody>";
+  for (const [name, f, fmt, bad] of RES_ROWS) {
+    h += `<tr><td>${name}</td>` + cols.map(c => {
+      if (!c.m) return `<td class="pending">–</td>`;
+      const x = c.m[f], cls = [c.live ? "relive" : "", bad && Number.isFinite(x) && bad(x) ? "bad" : ""].join(" ").trim();
+      return `<td class="${cls}">${Number.isFinite(x) ? fmt(x) : "–"}</td>`;
+    }).join("") + "</tr>";
+  }
+  document.getElementById("resTable").innerHTML = h + "</tbody>";
+  const anyLive = cols.some(c => c.live);
+  document.getElementById("resSrc").textContent =
+    `seed ${anyLive ? document.getElementById("lv_seed").value : 0} · map in the tunnel ${document.getElementById("mapOn").checked ? "on" : "off"} · ` +
+    `callout k = ${callKs.toFixed(2)}, ${callLead} m · ${anyLive ? "highlighted: re-run live" : "pre-run drives"}`;
+  document.getElementById("resRun").hidden = !LIVE;
+}
+function showResults(on) {
+  document.querySelector("main").hidden = on; document.getElementById("results").hidden = !on;
+  document.getElementById("resTab").setAttribute("aria-selected", on);
+  document.getElementById("callStat").hidden = on;
+  if (on) {
+    for (const b of document.querySelectorAll("#tabs button")) if (b.id !== "resTab") b.setAttribute("aria-selected", "false");
+    setPlay(false); renderResults();
+    document.getElementById("title").textContent = "Results table";
+    document.getElementById("desc").textContent = "Every tab side by side, one drive each, with the current settings.";
+  } else if (D) header();
+}
+async function runAllLive() {
+  const st = document.getElementById("resStat"), keys = resKeys(), t0 = performance.now();
+  document.getElementById("resRun").disabled = true;
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i], q = liveQuery(key);
+    if (LIVE_RES[key] && LIVE_RES[key].q === String(q)) continue;
+    st.textContent = `running ${i + 1}/${keys.length}: ${key === "custom" ? "Custom" : ALL.runs[key].label}…`;
+    try {
+      const res = await fetch("/api/run?" + q); if (!res.ok) throw new Error(await res.text());
+      LIVE_RES[key] = { d: await res.json(), q: String(q) };
+    } catch (e) { st.textContent = `run failed on ${key}`; }
+    renderResults();
+  }
+  st.textContent = `done in ${((performance.now() - t0) / 1000).toFixed(0)} s`;
+  document.getElementById("resRun").disabled = false;
+}
+
 if (ALL) {
   const tabs = document.getElementById("tabs"); tabs.hidden = false; document.getElementById("ctl").hidden = false;
   for (const key of ALL.order) {
     const b = document.createElement("button"); b.textContent = ALL.runs[key].label; b.dataset.key = key;
     if (ALL.runs[key].risk) b.className = "risk";
-    b.onclick = () => { liveSeq++; document.getElementById("cuTab")?.setAttribute("aria-selected", "false"); load(key, false); if (LIVE) { if (!liveDefault()) liveRun(); else document.getElementById("liveStat").textContent = "pre-run drive"; } }; tabs.appendChild(b);
+    b.onclick = () => { liveSeq++; showResults(false); document.getElementById("cuTab")?.setAttribute("aria-selected", "false"); load(key, false); if (LIVE) { if (!liveDefault()) liveRun(); else document.getElementById("liveStat").textContent = "pre-run drive"; } }; tabs.appendChild(b);
   }
-  document.getElementById("mapOn").onchange = () => { if (LIVE && (curKey === "custom" || !liveDefault())) liveRun(); else { liveSeq++; if (LIVE) document.getElementById("liveStat").textContent = "pre-run drive"; load(curKey, true); } };
+  { const rb = document.createElement("button"); rb.id = "resTab"; rb.className = "restab"; rb.textContent = "Results table";
+    rb.onclick = () => showResults(true); tabs.appendChild(rb);
+    document.getElementById("resRun").onclick = runAllLive; }
+  document.getElementById("mapOn").addEventListener("change", renderResults);
+  document.getElementById("mapOn").onchange = () => { if (!document.getElementById("results").hidden) return; if (LIVE && (curKey === "custom" || !liveDefault())) liveRun(); else { liveSeq++; if (LIVE) document.getElementById("liveStat").textContent = "pre-run drive"; load(curKey, true); } };
   const sel = document.getElementById("lv_seed"); for (let i = 0; i < 50; i++) sel.add(new Option(String(i), String(i)));
   for (const el of document.querySelectorAll("#live .cu")) el.addEventListener("input", () => {
     document.getElementById("cu_g_v").textContent = `${document.getElementById("cu_g").value} %`;
@@ -543,20 +663,22 @@ if (ALL) {
     let tb = document.getElementById("cuTab");
     if (!tb) {
       tb = document.createElement("button"); tb.id = "cuTab"; tb.textContent = "Custom";
-      tb.onclick = () => { if (CUSTOM) { curKey = "custom"; for (const b of document.querySelectorAll("#tabs button")) b.setAttribute("aria-selected", b === tb); liveRun(true); } };
-      document.getElementById("tabs").appendChild(tb);
+      tb.onclick = () => { if (CUSTOM) { showResults(false); curKey = "custom"; for (const b of document.querySelectorAll("#tabs button")) b.setAttribute("aria-selected", b === tb); liveRun(true); } };
+      document.getElementById("tabs").insertBefore(tb, document.getElementById("resTab"));
     }
+    showResults(false);
     for (const b of document.querySelectorAll("#tabs button")) b.setAttribute("aria-selected", b === tb);
     document.getElementById("mapOn").disabled = false;
     liveRun(true);
   };
   for (const el of document.querySelectorAll("#live select:not(.cu), #live input:not(.cu)")) el.addEventListener("change", () => {
     document.getElementById("lv_me_v").textContent = `${document.getElementById("lv_me").value}°`;
+    if (!document.getElementById("results").hidden) { renderResults(); return; }
     if (curKey === "custom") liveRun(); else if (liveDefault()) { liveSeq++; document.getElementById("liveStat").textContent = "pre-run drive"; load(curKey, true); } else liveRun(); });
   if (location.protocol.startsWith("http")) fetch("/api/ping").then(r => r.ok ? r.json() : null).then(j => { if (j && j.live) { LIVE = true; document.getElementById("live").classList.add("on"); } }).catch(() => {});
   const kS = document.getElementById("kSl"), lS = document.getElementById("lSl");
-  kS.oninput = () => { callKs = +kS.value; document.getElementById("kv").textContent = callKs.toFixed(2); callout(); render(); };
-  lS.oninput = () => { callLead = +lS.value; document.getElementById("lv").textContent = `${callLead} m`; callout(); render(); };
+  kS.oninput = () => { callKs = +kS.value; document.getElementById("kv").textContent = callKs.toFixed(2); callout(); render(); renderResults(); };
+  lS.oninput = () => { callLead = +lS.value; document.getElementById("lv").textContent = `${callLead} m`; callout(); render(); renderResults(); };
   callKs = +kS.value;
   const first = (location.hash.slice(1) && ALL.runs[location.hash.slice(1)]) ? location.hash.slice(1) : ALL.order[0];
   load(first, false);
