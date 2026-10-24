@@ -1,0 +1,412 @@
+{
+ "version": "0.5.10",
+ "seeds": 30,
+ "runs": {
+  "S1/note10": {
+   "1d": {
+    "at_diverge_rmse": 10.13,
+    "portal_rmse": 8.638,
+    "portal_p95": 15.21,
+    "portal_nees": 6.077,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 12.76,
+    "time_s": 6.0
+   },
+   "1d_nograde": {
+    "at_diverge_rmse": 10.13,
+    "portal_rmse": 8.638,
+    "portal_p95": 15.21,
+    "portal_nees": 6.077,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 12.76,
+    "time_s": 1.7
+   },
+   "1d_mount2": {
+    "at_diverge_rmse": 10.16,
+    "portal_rmse": 8.64,
+    "portal_p95": 15.39,
+    "portal_nees": 6.09,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 12.81,
+    "time_s": 5.9
+   },
+   "eskf": {
+    "at_diverge_rmse": 11.61,
+    "portal_rmse": 4.602,
+    "portal_p95": 7.955,
+    "portal_nees": 0.09,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 3.433,
+    "time_s": 21.3
+   }
+  },
+  "S1/lowend": {
+   "1d": {
+    "at_diverge_rmse": 11.15,
+    "portal_rmse": 12.57,
+    "portal_p95": 25.99,
+    "portal_nees": 0.395,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 40.09,
+    "time_s": 5.9
+   },
+   "eskf": {
+    "at_diverge_rmse": 16.93,
+    "portal_rmse": 10.41,
+    "portal_p95": 20.51,
+    "portal_nees": 0.159,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 4.182,
+    "time_s": 21.3
+   }
+  },
+  "S2/note10": {
+   "1d": {
+    "at_diverge_rmse": 3.914,
+    "portal_rmse": 3.713,
+    "portal_p95": 4.829,
+    "portal_nees": 6.297,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 2.37,
+    "time_s": 1.8
+   },
+   "1d_nograde": {
+    "at_diverge_rmse": 3.914,
+    "portal_rmse": 3.713,
+    "portal_p95": 4.829,
+    "portal_nees": 6.297,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 2.37,
+    "time_s": 1.7
+   },
+   "1d_mount2": {
+    "at_diverge_rmse": 3.883,
+    "portal_rmse": 3.7,
+    "portal_p95": 4.814,
+    "portal_nees": 6.253,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 2.366,
+    "time_s": 2.3
+   },
+   "eskf": {
+    "at_diverge_rmse": 3.108,
+    "portal_rmse": 4.053,
+    "portal_p95": 7.816,
+    "portal_nees": 0.226,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 5.203,
+    "time_s": 22.4
+   }
+  },
+  "S2/lowend": {
+   "1d": {
+    "at_diverge_rmse": 13.28,
+    "portal_rmse": 15.32,
+    "portal_p95": 23.72,
+    "portal_nees": 0.956,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 41.51,
+    "time_s": 1.7
+   },
+   "eskf": {
+    "at_diverge_rmse": 14.14,
+    "portal_rmse": 13.38,
+    "portal_p95": 26.57,
+    "portal_nees": 0.623,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 4.125,
+    "time_s": 21.9
+   }
+  },
+  "S3/note10": {
+   "1d": {
+    "at_diverge_rmse": 5.392,
+    "portal_rmse": 5.001,
+    "portal_p95": 6.172,
+    "portal_nees": 1.148,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 15.63,
+    "time_s": 5.5
+   },
+   "1d_nograde": {
+    "at_diverge_rmse": 3097.0,
+    "portal_rmse": 3411.0,
+    "portal_p95": 3452.0,
+    "portal_nees": 5898.33,
+    "late_gt_1s": 1.0,
+    "exit_step_p95": 295.0,
+    "time_s": 1.6
+   },
+   "1d_mount2": {
+    "at_diverge_rmse": 5.525,
+    "portal_rmse": 5.005,
+    "portal_p95": 6.369,
+    "portal_nees": 1.15,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 15.69,
+    "time_s": 5.5
+   },
+   "eskf": {
+    "at_diverge_rmse": 13.9,
+    "portal_rmse": 9.678,
+    "portal_p95": 17.85,
+    "portal_nees": 0.203,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 4.013,
+    "time_s": 21.8
+   }
+  },
+  "S3/lowend": {
+   "1d": {
+    "at_diverge_rmse": 6.067,
+    "portal_rmse": 19.41,
+    "portal_p95": 31.98,
+    "portal_nees": 1.633,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 32.92,
+    "time_s": 6.0
+   },
+   "eskf": {
+    "at_diverge_rmse": 25.59,
+    "portal_rmse": 19.54,
+    "portal_p95": 37.51,
+    "portal_nees": 0.518,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 5.463,
+    "time_s": 22.6
+   }
+  },
+  "S4/note10": {
+   "1d": {
+    "at_diverge_rmse": 34.06,
+    "portal_rmse": 89.0,
+    "portal_p95": 133.7,
+    "portal_nees": 817.655,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 39.75,
+    "time_s": 8.4
+   },
+   "1d_nograde": {
+    "at_diverge_rmse": 34.06,
+    "portal_rmse": 89.0,
+    "portal_p95": 133.7,
+    "portal_nees": 817.655,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 39.75,
+    "time_s": 2.7
+   },
+   "1d_mount2": {
+    "at_diverge_rmse": 33.55,
+    "portal_rmse": 86.21,
+    "portal_p95": 133.5,
+    "portal_nees": 769.72,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 36.14,
+    "time_s": 9.1
+   },
+   "eskf": {
+    "at_diverge_rmse": 33.74,
+    "portal_rmse": 4.704,
+    "portal_p95": 8.509,
+    "portal_nees": 0.077,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 3.809,
+    "time_s": 34.7
+   }
+  },
+  "S4/lowend": {
+   "1d": {
+    "at_diverge_rmse": 63.99,
+    "portal_rmse": 79.65,
+    "portal_p95": 156.1,
+    "portal_nees": 15.027,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 123.9,
+    "time_s": 8.9
+   },
+   "eskf": {
+    "at_diverge_rmse": 638.1,
+    "portal_rmse": 894.4,
+    "portal_p95": 1337.0,
+    "portal_nees": 182.966,
+    "late_gt_1s": 1.0,
+    "exit_step_p95": 179.9,
+    "time_s": 34.3
+   }
+  },
+  "S5/note10": {
+   "1d": {
+    "at_diverge_rmse": 17.14,
+    "portal_rmse": 4.763,
+    "portal_p95": 9.744,
+    "portal_nees": 5.275,
+    "late_gt_1s": 0.033,
+    "exit_step_p95": 4.085,
+    "time_s": 6.7
+   },
+   "1d_nograde": {
+    "at_diverge_rmse": 17.14,
+    "portal_rmse": 4.763,
+    "portal_p95": 9.744,
+    "portal_nees": 5.275,
+    "late_gt_1s": 0.033,
+    "exit_step_p95": 4.085,
+    "time_s": 1.9
+   },
+   "1d_mount2": {
+    "at_diverge_rmse": 17.13,
+    "portal_rmse": 4.737,
+    "portal_p95": 9.782,
+    "portal_nees": 5.21,
+    "late_gt_1s": 0.033,
+    "exit_step_p95": 4.091,
+    "time_s": 6.7
+   },
+   "eskf": {
+    "at_diverge_rmse": 22.69,
+    "portal_rmse": 7.58,
+    "portal_p95": 17.22,
+    "portal_nees": 0.279,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 3.347,
+    "time_s": 25.5
+   }
+  },
+  "S5/lowend": {
+   "1d": {
+    "at_diverge_rmse": 15.23,
+    "portal_rmse": 9.802,
+    "portal_p95": 22.48,
+    "portal_nees": 0.257,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 40.01,
+    "time_s": 6.9
+   },
+   "eskf": {
+    "at_diverge_rmse": 29.4,
+    "portal_rmse": 16.71,
+    "portal_p95": 28.56,
+    "portal_nees": 0.549,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 4.917,
+    "time_s": 25.0
+   }
+  },
+  "S6/note10": {
+   "1d": {
+    "at_diverge_rmse": 12.52,
+    "portal_rmse": 10.07,
+    "portal_p95": 29.08,
+    "portal_nees": 7.414,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 14.34,
+    "time_s": 6.3
+   },
+   "1d_nograde": {
+    "at_diverge_rmse": 12.52,
+    "portal_rmse": 10.07,
+    "portal_p95": 29.08,
+    "portal_nees": 7.414,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 14.34,
+    "time_s": 1.6
+   },
+   "1d_mount2": {
+    "at_diverge_rmse": 12.47,
+    "portal_rmse": 8.476,
+    "portal_p95": 18.9,
+    "portal_nees": 5.212,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 10.93,
+    "time_s": 5.8
+   },
+   "eskf": {
+    "at_diverge_rmse": 13.25,
+    "portal_rmse": 5.663,
+    "portal_p95": 10.06,
+    "portal_nees": 0.132,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 3.354,
+    "time_s": 22.6
+   }
+  },
+  "S6/lowend": {
+   "1d": {
+    "at_diverge_rmse": 11.88,
+    "portal_rmse": 12.66,
+    "portal_p95": 26.75,
+    "portal_nees": 0.37,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 38.71,
+    "time_s": 5.8
+   },
+   "eskf": {
+    "at_diverge_rmse": 19.98,
+    "portal_rmse": 19.27,
+    "portal_p95": 41.54,
+    "portal_nees": 0.523,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 4.067,
+    "time_s": 21.0
+   }
+  },
+  "S1-5km/note10": {
+   "1d": {
+    "at_diverge_rmse": 19.73,
+    "portal_rmse": 75.16,
+    "portal_p95": 101.5,
+    "portal_nees": 100.899,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 75.51,
+    "time_s": 6.5
+   },
+   "1d_nograde": {
+    "at_diverge_rmse": 19.73,
+    "portal_rmse": 75.16,
+    "portal_p95": 101.5,
+    "portal_nees": 100.899,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 75.51,
+    "time_s": 1.8
+   },
+   "1d_mount2": {
+    "at_diverge_rmse": 19.79,
+    "portal_rmse": 75.12,
+    "portal_p95": 101.4,
+    "portal_nees": 100.971,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 75.54,
+    "time_s": 6.6
+   },
+   "eskf": {
+    "at_diverge_rmse": 21.08,
+    "portal_rmse": 13.51,
+    "portal_p95": 25.1,
+    "portal_nees": 0.242,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 4.321,
+    "time_s": 22.9
+   }
+  },
+  "S1-5km/lowend": {
+   "1d": {
+    "at_diverge_rmse": 18.35,
+    "portal_rmse": 19.0,
+    "portal_p95": 34.3,
+    "portal_nees": 0.455,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 44.38,
+    "time_s": 6.1
+   },
+   "eskf": {
+    "at_diverge_rmse": 24.94,
+    "portal_rmse": 24.89,
+    "portal_p95": 48.81,
+    "portal_nees": 0.377,
+    "late_gt_1s": 0.0,
+    "exit_step_p95": 4.523,
+    "time_s": 23.2
+   }
+  }
+ }
+}

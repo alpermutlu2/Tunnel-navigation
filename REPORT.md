@@ -7,7 +7,7 @@ tunnel. The navigation app has to keep showing the car, call out an exit inside 
 right moment, and recover cleanly when the car comes out.
 
 All results come from simulation: 50-seed Monte Carlo runs (`tools/evaluate.py`,
-`reports/0.5.3/`) unless a section says otherwise. Every parameter is tagged [MEAS] (measured,
+`reports/0.5.10/`) unless a section says otherwise. Every parameter is tagged [MEAS] (measured,
 cited), [SPEC] (datasheet) or [ASSUMED] (chosen here); §2.2 lists the assumptions and
 `tunnelsim/profiles.py` holds every value. The simulator runs interactively (`python tools/serve.py`) or one page per run
 (`tools/simulate.py`); the README has the commands.
@@ -110,36 +110,37 @@ In every scenario the route leaves the main tunnel through a 20° branch inside 
 callout comes before that diverge. "At diverge" is the straight-tunnel result. "At portal" is
 the result when the car comes out.
 
-50 seeds per scenario; `reports/0.5.3/evaluation_50.json`.
+50 seeds per scenario; `reports/0.5.10/evaluation_50.json`. The stop detector is causal (real time)
+since v0.5.10; only S4 has stops, and only S4 changed (diverge 31.1 → 34.7 m).
 
 | | S1 | S2 | S3 | S4 | S5 | S6s | S6 | S6L | S1-1km | S1-5km |
 |---|---|---|---|---|---|---|---|---|---|---|
 | | 3 km straight | S-bend | V-profile | stop-and-go | braking | wander ±1 km/h | ±2 km/h | ±4 km/h | 1 km | 5 km |
-| along-track at diverge, rms [m] | 12.1 | 3.5 | 12.1 | 31.1 | 25.0 | 13.4 | 13.3 | 13.2 | 4.8 | 24.6 |
-| along-track at portal, rms / p95 [m] | 5.6 / 10 | 4.1 / 7 | 9.0 / 17 | 5.6 / 12 | 7.5 / 15 | 6.0 / 10 | 6.2 / 11 | 5.6 / 11 | 2.5 / 5 | 13.7 / 25 |
-| cross-track at portal, rms [m] | 1.5 | 3.2 | 2.0 | 1.3 | 1.9 | 1.5 | 1.5 | 1.5 | 1.4 | 2.1 |
-| mean (e/σ)² at portal | 0.13 | 0.23 | 0.18 | 0.11 | 0.27 | 0.15 | 0.16 | 0.13 | 0.22 | 0.25 |
-| callout timing, filter only (k = 0): mean / > 1 s late | +0.1 / 2 % | +0.1 / 0 % | +0.2 / 4 % | +0.2 / 30 % | +0.9 / 40 % | +0.1 / 2 % | +0.1 / 2 % | +0.0 / 2 % | -0.0 / 0 % | +0.4 / 24 % |
-| callout as announced (k = 1): mean [s] (− early) / late / > 1 s late | -0.8 / 2 % / 0 % | -0.3 / 2 % / 0 % | -0.9 / 4 % / 0 % | -2.6 / 4 % / 0 % | -0.8 / 16 % / 2 % | -0.8 / 2 % / 0 % | -0.8 / 2 % / 0 % | -0.9 / 4 % / 0 % | -0.2 / 12 % / 0 % | -1.6 / 4 % / 0 % |
+| along-track at diverge, rms [m] | 12.1 | 3.5 | 12.1 | 34.7 | 25.0 | 13.4 | 13.3 | 13.2 | 4.8 | 24.6 |
+| along-track at portal, rms / p95 [m] | 5.6 / 10 | 4.1 / 7 | 9.0 / 17 | 5.8 / 11 | 7.5 / 15 | 6.0 / 10 | 6.2 / 11 | 5.6 / 11 | 2.5 / 5 | 13.7 / 25 |
+| cross-track at portal, rms [m] | 1.5 | 3.2 | 2.0 | 1.5 | 1.9 | 1.5 | 1.5 | 1.5 | 1.4 | 2.1 |
+| mean (e/σ)² at portal | 0.13 | 0.23 | 0.18 | 0.12 | 0.27 | 0.15 | 0.16 | 0.13 | 0.22 | 0.25 |
+| callout timing, filter only (k = 0): mean / > 1 s late | +0.1 / 2 % | +0.1 / 0 % | +0.2 / 4 % | +0.7 / 42 % | +0.9 / 40 % | +0.1 / 2 % | +0.1 / 2 % | +0.0 / 2 % | -0.0 / 0 % | +0.4 / 24 % |
+| callout as announced (k = 1): mean [s] (− early) / late / > 1 s late | -0.8 / 2 % / 0 % | -0.3 / 2 % / 0 % | -0.9 / 4 % / 0 % | -2.3 / 4 % / 0 % | -0.8 / 16 % / 2 % | -0.8 / 2 % / 0 % | -0.8 / 2 % / 0 % | -0.9 / 4 % / 0 % | -0.2 / 12 % / 0 % | -1.6 / 4 % / 0 % |
 | branch reported (car takes it) / main reported (car goes straight) | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % | 100 / 100 % |
-| largest exit step, p95 [m] | 3.4 | 5.5 | 4.0 | 3.5 | 3.7 | 3.4 | 3.3 | 3.6 | 4.9 | 4.3 |
+| largest exit step, p95 [m] | 3.4 | 5.5 | 4.0 | 4.0 | 3.7 | 3.4 | 3.3 | 3.6 | 4.9 | 4.3 |
 | not < 10 m 60 s after the exit | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 
 - **Showing the car.**
-  - Along the road, in a straight tunnel at steady speed: 12–13 m after 1.5–2 min, 25–31 m
+  - Along the road, in a straight tunnel at steady speed: 12–13 m after 1.5–2 min, 25–35 m
     with braking or stops.
   - Across the road: 1.3–3 m, which is the map's own lateral uncertainty; the filter cannot do
     better than the map here. Without the map layer, the cross-track error was 26 m on S1 and 106 m at 5 km, because heading
     is not observable in a straight tunnel.
   - The exit curve brings the portal error down to 2.5–14 m.
-  - The filter is consistent: mean (e/σ)² 0.11–0.27.
+  - The filter is consistent: mean (e/σ)² 0.12–0.27.
 - **Callout.** "The right moment" is read as *never late, and only as early as the uncertainty
   requires*: a late callout can make the driver miss the exit. The table gives the filter's own
   timing (k = 0) and the announced callout (ŝ + k·σ_s, k = 1). With k = 1, one callout in 500 is
-  more than 1 s late (S5) and 0–16 % are late at all; on average they come 0.2–2.6 s early.
-  Without the rule, 30 % (S4) and 40 % (S5) were more than 1 s late. Why k = 1: σ_s is about twice
+  more than 1 s late (S5) and 0–16 % are late at all; on average they come 0.2–2.3 s early.
+  Without the rule, 42 % (S4) and 40 % (S5) were more than 1 s late. Why k = 1: σ_s is about twice
   the real error ((e/σ)² 0.1–0.3), so k = 1 is in effect ~2σ; k = 1.65 is never late but up to
-  4.4 s early (S4). The voice says the estimated distance rounded to 50 m. k has to be chosen
+  4.1 s early (S4). The voice says the estimated distance rounded to 50 m. k has to be chosen
   again once σ is calibrated on real data.
 - **Branch.**
   - Car takes the branch: the in-loop decision reports the branch in 500 of 500 runs, 2–3.5 s
@@ -158,8 +159,8 @@ GNSS.
 ## 4. Where it breaks, and why
 
 **4.1 Stops and braking.** ZUPT resets speed at stops, but each stop and start is integrated, and
-the bias acts during long stops. S4 and S5 have the largest errors (25–31 m at the diverge). The
-k·σ callout turns that into early rather than late callouts: 2.6 s early on average.
+the bias acts during long stops. S4 and S5 have the largest errors (25–35 m at the diverge). The
+k·σ callout turns that into early rather than late callouts: 2.3 s early on average.
 
 **4.2 Driver behaviour is an assumption.** Without GNSS a small real acceleration and an
 accelerometer bias look the same (ã = a + b_a + n). Three speed-hold forms were tried:
@@ -236,6 +237,9 @@ and the error at the portal is 0.3–3.6 km. Four fixes (review 11, `reports/0.5
 | (e/σ)² at the portal, v0.5.5 → v0.5.8 | 4.8 → 0.16 | 2.0 → 0.62 | 34 → 0.55 | 146 → 0.38 | 700 → 155 |
 | k = 1 callouts > 1 s late, v0.5.8 | 0 % | 0 % | 0 % | 0 % | 97 % |
 
+With the causal stop detector (v0.5.10), S4 is 638 / 894 m with (e/σ)² 183. The other columns
+have no stops and do not change.
+
 With these fixes a low-end phone works, and is honest about its uncertainty, in every scenario
 except stop-and-go: within 10–25 m at the portal and with no late callouts. S4 stays broken
 (~1 km), and the cause is low speed, not the stops. A trace of S4 seed 0 shows it:
@@ -276,14 +280,15 @@ P0 and IMU-class profile as the ESKF. Two adaptations were needed on this simula
   at 100 Hz on single samples it became over-confident;
 - κ(s) is the map's analytic curvature.
 
-30 seeds, paired. Along-track rms at the diverge / at the portal [m], and (e/σ)² at the portal:
+30 seeds, paired, causal stop detector for both (`reports/0.5.10/reference1d_30.json`). Along-track rms at
+the diverge / at the portal [m], and (e/σ)² at the portal:
 
 | | 1D, map with grade | ESKF | 1D, low-end IMU | ESKF, low-end IMU |
 |---|---|---|---|---|
 | S1 straight | 10.1 / 8.6, 6.1 | 11.6 / 4.6, 0.09 | 11.2 / 12.6, 0.40 | 16.9 / 10.4, 0.16 |
 | S2 S-bend | 3.9 / 3.7, 6.3 | 3.1 / 4.1, 0.23 | 13.3 / 15.3, 0.96 | 14.1 / 13.4, 0.62 |
 | S3 V profile ±5 % | 5.4 / 5.0, 1.1 | 13.9 / 9.7, 0.20 | 6.1 / 19.4, 1.6 | 25.6 / 19.5, 0.52 |
-| S4 stop-and-go | 34.8 / 91.4, 864 | 30.3 / 4.8, 0.08 | 64.8 / 80.2, 15 | 603 / 857, 155 |
+| S4 stop-and-go | 34.1 / 89.0, 818 | 33.7 / 4.7, 0.08 | 64.0 / 79.7, 15 | 638 / 894, 183 |
 | S5 braking | 17.1 / 4.8, 5.3 | 22.7 / 7.6, 0.28 | 15.2 / 9.8, 0.26 | 29.4 / 16.7, 0.55 |
 | S6 speed wander | 12.5 / 10.1, 7.4 | 13.3 / 5.7, 0.13 | 11.9 / 12.7, 0.37 | 20.0 / 19.3, 0.52 |
 | 5 km straight | 19.7 / 75.2, 101 | 21.1 / 13.5, 0.24 | 18.4 / 19.0, 0.46 | 24.9 / 24.9, 0.38 |
@@ -297,7 +302,7 @@ Readings:
   ≤ 2 m. A known mount on a level road makes pitch free, and both reduce to an INS on the
   GNSS-calibrated bias. The simple model is not wrong.
 - **It does not see suspension pitch.** On S4, launch squat and brake dive read as forward
-  acceleration: portal 91 m vs 4.8 m. With the suspension pitch turned off in the truth it is 4.9 m
+  acceleration: portal 89 m vs 4.7 m. With the suspension pitch turned off in the truth it is 4.9 m
   (5 seeds).
 - **Its curve update is strongly non-linear.** A trace of 5 km seed 2 shows the mechanism:
   - it reaches the exit curve 32 m ahead and expects the turn before the car turns;
@@ -305,14 +310,14 @@ Readings:
     falls from 35 m to 0.3 m;
   - the 1.2 km straight to the portal turns that speed error into −64 m.
   The ESKF's map layer matches heading and cross-track instead, with the map errors as states.
-- **Its σ is optimistic on the Note10.** (e/σ)² is 5–7 on S1, S2, S5, S6, 101 on 5 km and 864 on
+- **Its σ is optimistic on the Note10.** (e/σ)² is 5–7 on S1, S2, S5, S6, 101 on 5 km and 818 on
   S4. The causes are the curve update above and the unmodelled suspension pitch. The ESKF stays at
   0.08–0.28.
 - **It needs the grade in the map.** With the grade it is better on S3 (diverge 5.4 vs 13.9 m),
   because it reads pitch instead of estimating it. Without the grade it is off by 3.4 km. The ESKF
   bets that the tunnel grade in a navigation map is not reliable.
 - **On a low-end IMU it is the better filter.** It is better or equal at the diverge in every
-  scenario. On S4 it gives 65 / 80 m against the ESKF's 603 / 857 m, with (e/σ)² 15. It takes
+  scenario. On S4 it gives 64 / 80 m against the ESKF's 638 / 894 m, with (e/σ)² 15. It takes
   pitch from the map, so the weak gyro cannot tilt it at crawling speed. Elsewhere its (e/σ)² is
   0.3–1.6, because the large gyro R keeps the curve update weak. This is the measured case for the
   fallback in §4.6: on a phone classed as low-end, a map-constrained 1D model at low speed.
@@ -331,8 +336,10 @@ cost.
 - **Simplified map errors.** Map errors are a lateral offset and a length scale. Shape errors,
   missing curves and a wrong diverge position are not simulated. The truth car drives on the lane
   centre.
-- **The ZUPT detector is offline** (forward-backward filtering). A causal version is similar at
-  the exit and worse for the callout.
+- **The stop detector is causal since v0.5.10.** The forward-backward (offline) version used
+  before saw a little of the future. On S4, 30 seeds, the causal one costs 3.4 m at the diverge
+  (30.3 → 33.7 m), the portal error stays at 4.7–4.8 m, and no callout is more than 1 s late.
+  Its thresholds still rest on the [ASSUMED] vibration model.
 - **Narrow setting.** Two IMU classes, a rigid phone mount, a single lane, one car. A second car
   would only be another noise realisation of the same sensors; the 50 seeds cover that.
 - **Next, with real devices:**
@@ -347,7 +354,7 @@ cost.
   - the gyro bias as a sum of Gauss–Markov terms (τ 5/50/500 s, as in the truth model) instead of
     a random walk;
   - the CV + map fallback of `DESIGN.md` §5.1 for stop-and-go and long tunnels, or the 1D
-    map-constrained filter of §4.9, which measured 80 m on low-end S4 against the ESKF's 857 m;
+    map-constrained filter of §4.9, which measured 80 m on low-end S4 against the ESKF's 894 m;
   - Android's calibrated gyro stream, which removes the turn-on bias at stops but not the drift in
     the tunnel.
 - **A smaller filter** (not built). In the tunnel, 8 of the 16 core states are unobservable. A
@@ -425,6 +432,7 @@ change. The author is ready to explain or change any of them:
 | Playback did not advance at 1–10× | the author, on GitHub Pages |
 | Low-end S4 explained as yaw drift at stops; it is low-speed pitch unobservability | the author, from a trace |
 | `browser.html` published without its package (`*.zip` git-ignored) | the author |
+| Headline results used the offline (forward-backward) stop detector; the 0.5.3 results file recorded k = 1.65 in its main callout block while the report quoted its k = 1 row | an external AI comparison; measured (causal costs 3.4 m on S4 only), switched and re-run at v0.5.10 |
 | 1D baseline: re-lock after the tunnel started only on position fixes, so the gate locked out GNSS at the exit | the agent's event counts (230 rejections in 5 seeds) |
 
 **Process controls,** used because generated code can be confidently wrong:

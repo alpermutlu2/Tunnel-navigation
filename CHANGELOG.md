@@ -7,6 +7,26 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.10 (2026-10-25): causal stop detector by default; evaluation re-run
+
+- `EskfConfig.zupt_causal` False → True (owner 2026-10-25): the stop detector no longer filters
+  forward-backward, so it uses no future samples. The 1D baseline shares the detector.
+- 50-seed evaluation re-run at this version (`reports/0.5.10/evaluation_50.json`, with the
+  straight-on control); the report now cites it instead of `reports/0.5.3/`. Only S4 changed
+  (the only scenario with stops):
+  - diverge 31.1 → 34.7 m; portal 5.6 → 5.8 m; (e/σ)² 0.11 → 0.12;
+  - k = 1 callout −2.6 → −2.3 s, none > 1 s late; k = 0 > 1 s late 30 → 42 %;
+  - exit step p95 3.5 → 4.0 m; straight-on control portal 45 → 51 m.
+  Every other scenario is identical except the main `callout` block of the results file, which
+  is now recorded at k = 1. In 0.5.3 it was recorded at k = 1.65, the default before v0.5.4,
+  while the report quoted the `callout_k["1.0"]` row (found by an external AI comparison).
+- 1D comparison re-run (`reports/0.5.10/reference1d_30.json`). S4 only:
+  - Note10, 1D: 34.8 / 91.4 → 34.1 / 89.0 m, (e/σ)² 864 → 818;
+  - Note10, ESKF: 30.3 / 4.8 → 33.7 / 4.7 m;
+  - low-end, 1D: 64.8 / 80.2 → 64.0 / 79.7 m;
+  - low-end, ESKF: 603 / 857 → 638 / 894 m, (e/σ)² 155 → 183.
+- REPORT §3, §4.1, §4.6, §4.9, §5, §6.3; SUMMARY; deck and simulator rebuilt.
+
 ## v0.5.9 (2026-10-24): 1D map-constrained EKF baseline
 
 - New `tunnelsim/reference1d.py` (owner 2026-10-24): 4-state 1D EKF [s, v, b_a, b_g], map as a hard

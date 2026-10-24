@@ -22,7 +22,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 
 import numpy as np
-from scipy.signal import butter, sosfiltfilt, sosfilt
+from scipy.signal import butter, sosfiltfilt, sosfilt, sosfilt_zi
 
 from .frames import GRAVITY_N
 from .ins import so3_exp_batch
@@ -219,11 +219,22 @@ def zupt_detector(t, f, cfg, fs, win_s=1.0):
         m = (c[..., n:] - c[..., :-n]) / n
         return np.concatenate([np.repeat(m[..., :1], n - 1, axis=-1), m], axis=-1)   # length N
 
-    sos = butter(4, cfg.zupt_band_hz, btype="bandpass", fs=fs, output="sos")
-    filt = (lambda so, x, axis: sosfilt(so, x, axis=axis)) if cfg.zupt_causal else sosfiltfilt
+    # causal (v0.5.10): one pass at twice the order gives the magnitude response of the
+    # forward-backward pass (|H|² of the lower order), so the engine tone is rejected as before;
+    # 4th order one pass let it leak into the band (idle taken as stopped 74 % instead of 100 %).
+    # The filter starts from its steady state for the first sample (no start-up transient).
+    mult = 2 if cfg.zupt_causal else 1
+
+    def _causal(so, x, axis):
+        x = np.moveaxis(x, axis, -1)
+        zi = np.einsum("sk,...->s...k", sosfilt_zi(so), x[..., 0])
+        return np.moveaxis(sosfilt(so, x, axis=-1, zi=zi)[0], -1, axis)
+
+    filt = _causal if cfg.zupt_causal else sosfiltfilt
+    sos = butter(4 * mult, cfg.zupt_band_hz, btype="bandpass", fs=fs, output="sos")
     xb = filt(sos, np.linalg.norm(f, axis=-1), axis=-1)
     band_rms = np.sqrt(np.maximum(mov(xb * xb), 0.0))
-    lp = butter(2, 2.0, btype="lowpass", fs=fs, output="sos")
+    lp = butter(2 * mult, 2.0, btype="lowpass", fs=fs, output="sos")
     fl = filt(lp, f, axis=-2)                                         # (B,N,3)
     var = sum(np.maximum(mov(fl[..., i] ** 2) - mov(fl[..., i]) ** 2, 0.0) for i in range(3))
     raw = (band_rms < cfg.zupt_band_rms) & (np.sqrt(var) < cfg.zupt_lowf_std)

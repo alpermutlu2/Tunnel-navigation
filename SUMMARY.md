@@ -1,7 +1,7 @@
 # Through the Tunnel: summary
 
 Short version of [`REPORT.md`](REPORT.md), which has the full results, mechanisms and sources.
-All numbers come from simulation, 50 seeds per scenario (`reports/0.5.3/`, low-end IMU
+All numbers come from simulation, 50 seeds per scenario (`reports/0.5.10/`, low-end IMU
 `reports/0.5.5/`). Every parameter is tagged [MEAS] (measured, cited), [SPEC] (datasheet) or
 [ASSUMED] (chosen here).
 
@@ -72,12 +72,12 @@ sees truth.
 
 | | straight, steady (S1, S6) | stop-and-go, braking (S4, S5) | S-bend (S2) | 5 km |
 |---|---|---|---|---|
-| along-track error at the exit branch, rms | 12–13 m | 25–31 m | 3.5 m | 25 m |
+| along-track error at the exit branch, rms | 12–13 m | 25–35 m | 3.5 m | 25 m |
 | along-track error at the portal, rms | 5.6–6.2 m | 5.6–7.5 m | 4.1 m | 14 m |
 | cross-track error at the portal, rms | 1.5 m | 1.3–1.9 m | 3.2 m | 2.1 m |
-| callout as announced: mean, share > 1 s late | 0.8 s early, 0 % | 0.8–2.6 s early, 0–2 % | 0.3 s early, 0 % | 1.6 s early, 0 % |
+| callout as announced: mean, share > 1 s late | 0.8 s early, 0 % | 0.8–2.3 s early, 0–2 % | 0.3 s early, 0 % | 1.6 s early, 0 % |
 
-- **Consistent.** The filter's own uncertainty covers its error everywhere: mean (e/σ)² 0.11–0.27,
+- **Consistent.** The filter's own uncertainty covers its error everywhere: mean (e/σ)² 0.12–0.27,
   conservative.
 - **Exit branch.** The branch is recognised in 500 of 500 runs. When the car goes straight on
   instead, "main" is reported in 500 of 500.
@@ -90,12 +90,12 @@ A 4-state 1D filter (distance, speed, two biases; the map gives curvature and gr
 same sensors and seeds as a baseline (REPORT §4.9):
 - **Straight part:** it agrees with the ESKF within 2 m at the diverge.
 - **What it misses on the Note10:**
-  - suspension pitch: 91 m vs 5 m at the portal on S4;
+  - suspension pitch: 89 m vs 5 m at the portal on S4;
   - a non-linear exit-curve update: 75 m vs 14 m on 5 km;
-  - an optimistic σ, with (e/σ)² 5–860.
+  - an optimistic σ, with (e/σ)² 5–820.
 - **What it needs:** a map without grade puts it 3.4 km off on S3. With the grade it is better
   there (diverge 5 vs 14 m).
-- **On a low-end IMU** it is the better filter: S4 80 m vs 857 m, since it takes pitch from the
+- **On a low-end IMU** it is the better filter: S4 80 m vs 894 m, since it takes pitch from the
   map. That is the measured case for a 1D fallback on low-end phones at low speed.
 
 ## Where it breaks
@@ -127,7 +127,7 @@ same sensors and seeds as a baseline (REPORT §4.9):
   - simulation only: the IMU noise is measured, while the rest of the sensor and map behaviour is
     assumed;
   - a rigid mount, one lane, one car;
-  - an offline stop detector.
+  - a stop detector tuned on the [ASSUMED] vibration model (causal since v0.5.10).
 - **With real devices:**
   - static Allan runs;
   - recordings in Istanbul tunnels with the portals as checkpoints;
