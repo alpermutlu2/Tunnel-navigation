@@ -23,6 +23,7 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   results table (pre-run and live; `browser.html` too).
 - Tests: `tests/test_reference1d.py` (import purity; S1 diverge within 3 m of the ESKF; S3 without
   grade > 1 km; S4 (e/σ)² > 5).
+- Snapshot `reports/0.5.9/metrics.json` vs 0.5.8: no metric changed (ESKF untouched); tests 182 → 186.
 
 ## v0.5.8 (2026-10-24): low-end cruise threshold
 
