@@ -83,7 +83,8 @@ class EskfConfig:
     zupt_hold_s: float = 0.3          # s: debounce
     zupt_lowf_std: float = 0.05       # m/s²: 1 s std of the < 2 Hz specific force vector (a launch
                                       # or a brake moves it by ~1 m/s²; a stopped car does not)
-    zupt_causal: bool = False         # True: causal filters (real time); False: forward-backward (offline, optimistic)
+    zupt_causal: bool = True          # owner 2026-10-25 (v0.5.10): causal filters by default (real time); False: forward-backward
+                                      # (offline, optimistic). 30 seeds: S4 diverge 30.3 -> 33.7 m, portal 4.8 -> 4.7 m, no other scenario changes
     zupt_speed_max: float = 2.0       # m/s: filter speed must be below this
     cov_rate_hz: float = 10.0         # covariance propagation rate
     # GNSS re-acquisition after an outage (v0.5 A, accepted 2026-10-20): robust over fast
