@@ -13,6 +13,7 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   `reports/0.5.7/lowend_cruise_th_30.json`): low-end portal S1 13.6 → 10.4 m, S2 16.0 → 13.4,
   S5 22.0 → 16.7, 5 km 42.9 → 24.9; (e/σ)² 0.16–0.62; no late callout. S4 1098 → 857 m, still
   broken (low-speed pitch). Note10 untouched. REPORT §4.6, SUMMARY, low-end tab updated.
+- Snapshot `reports/0.5.8/metrics.json` vs 0.5.7: no metric changed (Note10 scenarios).
 
 ## v0.5.7 (2026-10-24): low-end gyro profile, crawl levelling A/B
 
