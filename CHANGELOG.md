@@ -7,6 +7,13 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.8 (2026-10-24): low-end cruise threshold
+
+- `FILTER_PROFILES["mpu9250"]["cruise_acc_th"]` 0.02 → 0.05 m/s² (owner's finding, 30-seed A/B
+  `reports/0.5.7/lowend_cruise_th_30.json`): low-end portal S1 13.6 → 10.4 m, S2 16.0 → 13.4,
+  S5 22.0 → 16.7, 5 km 42.9 → 24.9; (e/σ)² 0.16–0.62; no late callout. S4 1098 → 857 m, still
+  broken (low-speed pitch). Note10 untouched. REPORT §4.6, SUMMARY, low-end tab updated.
+
 ## v0.5.7 (2026-10-24): low-end gyro profile, crawl levelling A/B
 
 - `FILTER_PROFILES["mpu9250"]["gyro_noise"]` 6.3e-3 → 0.0634 rad/√s (owner): the bias-instability

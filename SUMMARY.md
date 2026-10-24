@@ -97,9 +97,9 @@ sees truth.
 4. **The map's own error limits what the map adds.** At twice the assumed map error the filter
    becomes optimistic, and on 5 km the map then does worse than no map.
 5. **A low-end IMU** (MPU9250 class [MEAS]) works with its own tuning, with the fast gyro bias
-   terms treated as white noise:
-   - 14–43 m at the portal in steady and long tunnels;
-   - consistent ((e/σ)² 0.2–1.0) and no late callouts;
+   terms treated as white noise and a looser cruise test:
+   - 10–25 m at the portal in steady and long tunnels;
+   - consistent ((e/σ)² 0.2–0.6) and no late callouts;
    - stop-and-go still fails (~1 km). At crawling speed the vehicle constraints see a pitch error
      only through v·δθ, so the cheap gyro's tilt leaks gravity into the speed. The app should not
      trust σ at low speed and should fall back to a different model there.

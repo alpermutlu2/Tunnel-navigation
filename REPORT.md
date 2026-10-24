@@ -210,7 +210,7 @@ comes from one development board and is ~100× the datasheet's typical gyro bias
 may be pessimistic; a real low-end phone must be measured.
 
 With the Note10 tuning the filter is overconfident, the χ² gate locks GNSS out before the tunnel,
-and the error at the portal is 0.3–3.6 km. Three fixes (review 11, `reports/0.5.5/`,
+and the error at the portal is 0.3–3.6 km. Four fixes (review 11, `reports/0.5.5/`,
 `reports/0.5.7/`):
 
 - **IMU class at start-up** from the gyro white noise over the first 10 s, σ̂ = std(Δω)/√2: Note10
@@ -224,17 +224,20 @@ and the error at the portal is 0.3–3.6 km. Three fixes (review 11, `reports/0.
   noise: √(ARW² + vibration² + Σ_{τ ≤ 50 s} 2τσᵢ²) = 0.063 rad/√s on the worst axis. In a sweep from
   ×1 to ×15 of the ARW-only value, this one brings (e/σ)² near 1 across scenarios. Larger values
   make the filter over-cautious.
+- **Cruise threshold 0.05 m/s² (v0.5.8).** With this gyro the filter's along-track acceleration is
+  noisier, so the 0.02 m/s² cruise-mode test rarely passed and the driver prior seldom engaged.
 
 | MPU9250, 30 seeds | S1 | S2 | S5 | 5 km | S4 |
 |---|---|---|---|---|---|
 | Note10 tuning, portal rms (10 seeds) | 1.6 km | 340 m | 1.4 km | 3.6 km | 1.5 km |
 | profile (v0.5.5): diverge / portal rms | 45 / 37 m | 14 / 16 m | 78 / 85 m | 206 / 614 m | 740 / 1080 m |
 | + fast terms as white noise: diverge / portal rms | 21 / 14 m | 17 / 16 m | 35 / 22 m | 40 / 43 m | 756 / 1099 m |
-| (e/σ)² at the portal, v0.5.5 → v0.5.7 | 4.8 → 0.19 | 2.0 → 0.66 | 34 → 1.0 | 146 → 0.79 | 700 → 340 |
-| k = 1 callouts > 1 s late, v0.5.7 | 0 % | 0 % | 0 % | 0 % | 80 % |
+| + cruise threshold 0.05 m/s² (v0.5.8): diverge / portal rms | 17 / 10 m | 14 / 13 m | 29 / 17 m | 25 / 25 m | 603 / 857 m |
+| (e/σ)² at the portal, v0.5.5 → v0.5.8 | 4.8 → 0.16 | 2.0 → 0.62 | 34 → 0.55 | 146 → 0.38 | 700 → 155 |
+| k = 1 callouts > 1 s late, v0.5.8 | 0 % | 0 % | 0 % | 0 % | 97 % |
 
 With these fixes a low-end phone works, and is honest about its uncertainty, in every scenario
-except stop-and-go: within 14–43 m at the portal and with no late callouts. S4 stays broken
+except stop-and-go: within 10–25 m at the portal and with no late callouts. S4 stays broken
 (~1 km), and the cause is low speed, not the stops. A trace of S4 seed 0 shows it:
 - During the 30 km/h crawl the filter's speed falls from about 7 to 2.6 m/s in 60 s while the true
   speed stays at 8.3 m/s (−320 m).

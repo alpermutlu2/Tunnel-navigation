@@ -152,7 +152,9 @@ FILTER_PROFILES = {
     # v0.5.7 (owner 2026-10-24): gyro_noise also folds the bias-instability GM terms with τ ≤ 50 s into
     # white noise, √(ARW² + vib² + Σ_{τ≤50 s} 2τσᵢ²) on the worst axis = 0.063 rad/√s: those terms decorrelate
     # within the filter's update intervals and a random walk cannot follow them (A/B: reports/0.5.7/)
-    "mpu9250": {"gyro_noise": 0.0634, "gyro_bias_rw": 3.07e-3 / np.sqrt(180.0),
+    # v0.5.8 (owner 2026-10-24): cruise_acc_th 0.05 m/s²: with this gyro the filter's along-track
+    # acceleration is noisier, so the 0.02 threshold rarely let the cruise prior engage (A/B 30 seeds)
+    "mpu9250": {"cruise_acc_th": 0.05, "gyro_noise": 0.0634, "gyro_bias_rw": 3.07e-3 / np.sqrt(180.0),
                 "accel_bias_rw": 5.4e-4 / np.sqrt(180.0), "p0_bg": np.deg2rad(0.4), "p0_ba": 0.45},
 }
 
