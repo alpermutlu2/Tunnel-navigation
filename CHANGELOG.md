@@ -7,6 +7,23 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.9 (2026-10-24): 1D map-constrained EKF baseline
+
+- New `tunnelsim/reference1d.py` (owner 2026-10-24): 4-state 1D EKF [s, v, b_a, b_g], map as a hard
+  constraint (curvature, grade), curvature-gyro update at 1 Hz with gyro BI in R, GNSS projected on
+  the route, the ESKF's ZUPT detector, R factors, P0 and IMU-class profile; re-lock phase after the
+  tunnel. Re-implemented from a description of a common design; a reference, not used by the app.
+- `experiments.ekf1d_experiment`, `tools/compare1d.py` → `reports/0.5.9/reference1d_30.json`
+  (30 seeds, paired with the ESKF; Note10 and low-end; map with/without grade; mount 2° off).
+  Diverge within 2 m of the ESKF on straight tunnels; portal S4 91 vs 4.8 m (suspension pitch;
+  4.9 m without it), 5 km 75 vs 14 m (non-linear curve update moves speed, σ_s collapses);
+  (e/σ)² 5–864; S3 without map grade 3.4 km. Low-end: better at the diverge everywhere, S4 80 vs
+  857 m. REPORT §4.9, §5 (smaller filter not built), §6; SUMMARY.
+- Simulator: 1D trace on the map, the error and speed plots, a "now" box and three rows of the
+  results table (pre-run and live; `browser.html` too).
+- Tests: `tests/test_reference1d.py` (import purity; S1 diverge within 3 m of the ESKF; S3 without
+  grade > 1 km; S4 (e/σ)² > 5).
+
 ## v0.5.8 (2026-10-24): low-end cruise threshold
 
 - `FILTER_PROFILES["mpu9250"]["cruise_acc_th"]` 0.02 → 0.05 m/s² (owner's finding, 30-seed A/B

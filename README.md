@@ -48,8 +48,12 @@ orange, and "reset sliders" returns to the nominal values. Playback speeds: 1×,
 **Results table.** The last tab puts every scenario side by side, one drive each, under the
 current settings: along-track error and 2σ at the exit diverge, the largest error in the tunnel,
 along- and cross-track error and (e/σ)² at the portal, callout timing (with the k·σ and distance
-sliders) and the constant-velocity reference. Without the server it uses the pre-run drives; in
+sliders), the constant-velocity reference and the 1D EKF baseline. Without the server it uses the pre-run drives; in
 live mode "Re-run every tab with the live settings" fills it from new runs (~70 s for all tabs).
+
+**1D EKF baseline.** A simpler 4-state filter (distance, speed, two biases; the map gives
+curvature and grade) runs on the same sensor data and is drawn in teal on the map and in the
+error and speed plots, for comparison only (REPORT §4.9).
 
 **Driver's view.** Next to the map, a phone-shaped panel shows what the navigation app would show
 from the estimate alone: heading-up, the car snapped to the road, the maneuver banner with the
@@ -117,6 +121,7 @@ changes).
 ```bash
 python tools/evaluate.py                 # Monte Carlo, 50 seeds per scenario (~1 h on 2 cores)
 python tools/evaluate.py --seeds 20 S1 S4 --negative   # subset + car-goes-straight control
+python tools/compare1d.py               # 1D map-constrained EKF vs ESKF, 30 seeds, Note10 + low-end
 python -m pytest -q tests                # ~150 tests (+2 slow: --runslow)
 python tools/snapshot.py                 # reports/<version>/metrics.json (tests, truth, sensors, INS, budget, ESKF)
 python tools/snapshot.py --diff 0.4.0 0.5.0
@@ -128,7 +133,8 @@ Other tools: `tools/budget.py` (INS error budget, v0.4), `tools/allan_scatter.py
 ## Repository map
 
 - `tunnelsim/`: truth generator (`truth.py`, `scenario.py`), sensor models (`sensors.py`,
-  `profiles.py`), strapdown INS (`ins.py`), ESKF (`eskf.py`), branch check (`branch.py`),
+  `profiles.py`), strapdown INS (`ins.py`), ESKF (`eskf.py`), 1D map-constrained EKF baseline
+  (`reference1d.py`), branch check (`branch.py`),
   experiments and metrics (`experiments.py`, `budget.py`). The estimator side never imports the
   truth objects (`docs/contracts.md`).
 - `DESIGN.md`: assumptions, sensor models, error budget, estimator roadmap, decision log.

@@ -84,6 +84,20 @@ sees truth.
 - **Exit.** The largest jump at the exit is under 6 m (p95).
 - **Callout rule.** Without it, 30–40 % of callouts on S4 and S5 came more than 1 s late.
 
+## Against a simpler filter
+
+A 4-state 1D filter (distance, speed, two biases; the map gives curvature and grade) was run on the
+same sensors and seeds as a baseline (REPORT §4.9):
+- **Straight part:** it agrees with the ESKF within 2 m at the diverge.
+- **What it misses on the Note10:**
+  - suspension pitch: 91 m vs 5 m at the portal on S4;
+  - a non-linear exit-curve update: 75 m vs 14 m on 5 km;
+  - an optimistic σ, with (e/σ)² 5–860.
+- **What it needs:** a map without grade puts it 3.4 km off on S3. With the grade it is better
+  there (diverge 5 vs 14 m).
+- **On a low-end IMU** it is the better filter: S4 80 m vs 857 m, since it takes pitch from the
+  map. That is the measured case for a 1D fallback on low-end phones at low speed.
+
 ## Where it breaks
 
 1. **Stops and braking** give the largest errors. The callout rule turns them into early rather
@@ -102,7 +116,8 @@ sees truth.
    - consistent ((e/σ)² 0.2–0.6) and no late callouts;
    - stop-and-go still fails (~1 km). At crawling speed the vehicle constraints see a pitch error
      only through v·δθ, so the cheap gyro's tilt leaks gravity into the speed. The app should not
-     trust σ at low speed and should fall back to a different model there.
+     trust σ at low speed and should fall back to a different model there; the 1D baseline
+     measured 80 m there.
 6. **Levelling from gravity** (an extra update) was tried and left off: it helps one scenario and
    hurts five.
 

@@ -13,7 +13,7 @@ self-contained HTML player.
 Output: sim_<scenario>_seed<k>.html (open in a browser; no server, no internet needed).
 The page shows the road from above with the tunnel and the exit ramp, the true car, the ESKF
 estimate (with its along-track 2-sigma bar), the constant-velocity (CV) reference, GNSS fixes,
-the exit callout, time plots of along-track error and speed, and the phone sensor data
+the exit callout, a 1D map-constrained EKF baseline (v0.5.9), time plots of along-track error and speed, and the phone sensor data
 (accelerometer, gyroscope, barometer, GNSS speed) the app records.
 """
 import argparse
@@ -76,6 +76,9 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
     from tunnelsim.mapview import MapView
     out = run_eskf(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, _eskf_config(eskf), zupt_mask=zmask,
                    road_map=MapView(get_scenario(key).road, *(map_err or (0.0, 1.0))))
+    # 1D map-constrained EKF baseline on the same sensor data (v0.5.9); its map has the grade
+    from tunnelsim.reference1d import Ekf1dConfig, run_ekf1d
+    o1 = run_ekf1d(t, F, W, gnss, C_bp_f, tr.lever_arm_b, sc.road, Ekf1dConfig(), _eskf_config(eskf), zupt_mask=zmask)
     idx = np.clip(np.round((out.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
     tn = _tangent(tr, idx)
     pR = out.p[0] - np.einsum("kij,j->ki", out.C[0] @ tr.C_bp.T, tr.lever_arm_b)
@@ -136,6 +139,10 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
         "e_s": e_s[sel].round(2).tolist(),
         "e_lat": e_lat[sel].round(2).tolist(),
         "sig_s": sig_s[sel].round(2).tolist(),
+        "s_1d": np.interp(out.t[sel], o1.t, o1.s[0]).round(2).tolist(),
+        "e_1d": (np.interp(out.t[sel], o1.t, o1.s[0]) - tr.s[idx[sel]]).round(2).tolist(),
+        "sig_1d": np.interp(out.t[sel], o1.t, o1.sig_s[0]).round(2).tolist(),
+        "v_1d": np.interp(out.t[sel], o1.t, o1.v[0]).round(3).tolist(),
         "callout_k": CALLOUT_K,
         "v_true": tr.v[idx[sel]].round(3).tolist(),
         "v_est": np.linalg.norm(out.v[0, sel], axis=1).round(3).tolist(),

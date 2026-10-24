@@ -285,3 +285,61 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
     if keep_tracks:
         res["_tracks"] = {"t": out.t, "e_s": e_s, "e_lat": e_lat, "e_psi": e_psi, "sig_s": sig_s, "s_true": s_true, "t_entry": t_e, "t_exit": t_x}
     return res
+
+
+# ---------------------------------------------------------------------------------------------
+# v0.5.9: 1D map-constrained EKF baseline (tunnelsim/reference1d.py), scored like the ESKF
+# ---------------------------------------------------------------------------------------------
+def ekf1d_experiment(key, seeds=50, overrides=(), use_grade=True, mount_err_deg=None, keep_tracks=False,
+                     eskf_cfg=None, sim=None):
+    """Same sensors and seeds as eskf_experiment (simulate_run); along-track metrics only (the 1D
+    filter has no cross-track). use_grade=False: the map has no grade. sim: a simulate_run tuple
+    to reuse (the simulator page runs both filters on one batch)."""
+    from .eskf import EskfConfig
+    from .reference1d import Ekf1dConfig, run_ekf1d
+    seed_ids = np.arange(seeds) if np.isscalar(seeds) else np.asarray(seeds)
+    sc, tr, t, F, W, gnss, bt, bh = sim if sim is not None else simulate_run(key, seed_ids, overrides)
+    map_road = get_scenario(key, branch=True).road if sim is None else sc.road
+    C_bp_filter = tr.C_bp
+    if mount_err_deg is not None:
+        from .frames import C_BP_NOMINAL, mount_rotation
+        C_bp_filter = mount_rotation(*mount_err_deg) @ C_BP_NOMINAL.T @ tr.C_bp
+    out = run_ekf1d(t, F, W, gnss, C_bp_filter, tr.lever_arm_b, map_road, Ekf1dConfig(use_grade=use_grade),
+                    eskf_cfg or EskfConfig())
+    i_e = int(np.argmax(tr.in_tunnel))
+    i_x = len(tr.in_tunnel) - int(np.argmax(tr.in_tunnel[::-1]))
+    t_e, t_x = tr.t[i_e], tr.t[min(i_x, len(tr.t) - 1)]
+    idx = np.clip(np.round((out.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
+    s_true = tr.s[idx]
+    e_s = out.s - s_true[None]
+    sig_s = out.sig_s
+
+    def at(tt):
+        return int(np.argmin(np.abs(out.t - tt)))
+
+    kx = at(t_x - 0.05)
+    res = {"scenario": key, "filter": "1D map-constrained EKF", "seeds": len(seed_ids), "overrides": list(overrides),
+           "use_grade": use_grade, "events": out.events,
+           "real_exit": stats(e_s[:, kx]), "fixed_180s": stats(e_s[:, at(t_e + 180.0)])}
+    z = e_s[:, kx] / sig_s[:, kx]
+    res["consistency_real_exit"] = {"frac_within_2sigma": round(float(np.mean(np.abs(z) < 2)), 3),
+                                    "mean_norm_sq": round(float(np.mean(z * z)), 3),
+                                    "sigma_s_mean_m": round(float(sig_s[:, kx].mean()), 2)}
+    if sc.road.exits:
+        ex = sc.road.exits[0]
+        res["at_diverge"] = stats(e_s[:, int(np.argmax(s_true >= ex.s))])
+        s_call = ex.s - CALLOUT_LEAD_M
+        k_true = int(np.argmax(s_true >= s_call))
+        k_hat = np.argmax(out.s + CALLOUT_K * sig_s >= s_call, axis=1)
+        dt_call = out.t[k_hat] - out.t[k_true]
+        res["callout"] = {"k_sigma": CALLOUT_K, "timing_error_s": stats(dt_call),
+                          "late_gt_1s_frac": round(float(np.mean(dt_call > CALLOUT_LATE_S)), 3)}
+    win = (out.t >= t_x) & (out.t <= t_x + 60.0)
+    jumps = np.abs(np.diff(out.s[:, win], axis=1) - np.diff(s_true[win])[None])
+    res["recovery"] = {"max_step_jump_m": stats(jumps.max(axis=1))}
+    cls, cnt = np.unique(out.imu_class, return_counts=True)
+    res["imu_class_detected"] = {str(c): int(n) for c, n in zip(cls, cnt)}
+    if keep_tracks:
+        res["_tracks"] = {"t": out.t, "e_s": e_s, "sig_s": sig_s, "s_hat": out.s, "v_hat": out.v,
+                          "t_entry": t_e, "t_exit": t_x}
+    return res

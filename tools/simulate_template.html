@@ -8,13 +8,13 @@
 :root {
   --bg: #f6f5f1; --panel: #ffffff; --ink: #1d232b; --muted: #6b7380; --line: #d9d6cf;
   --road: #b9b4aa; --tunnel: #3d434d; --true: #1d232b; --est: #c2410c; --band: rgba(194,65,12,.18);
-  --cv: #2563eb; --gnss: #16a34a; --exit: #7c3aed;
+  --cv: #2563eb; --gnss: #16a34a; --exit: #7c3aed; --ref: #0f766e;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #12151a; --panel: #1a1f26; --ink: #e8e6e1; --muted: #98a0ab; --line: #2c333d;
     --road: #4a515c; --tunnel: #8a93a0; --true: #f2f0eb; --est: #fb923c; --band: rgba(251,146,60,.22);
-    --cv: #60a5fa; --gnss: #4ade80; --exit: #c4b5fd;
+    --cv: #60a5fa; --gnss: #4ade80; --exit: #c4b5fd; --ref: #2dd4bf;
   }
 }
 * { box-sizing: border-box; }
@@ -152,6 +152,7 @@ input[type=range] { flex: 1; min-width: 140px; }
         <span><span class="sw" style="background:var(--true)"></span>true car (ground truth)</span>
         <span><span class="sw" style="background:var(--est)"></span>estimated car (ESKF)</span>
         <span><span class="sw" style="background:var(--cv)"></span>constant-velocity reference</span>
+        <span><span class="sw" style="background:var(--ref)"></span>1D map-constrained EKF (baseline)</span>
         <span><span class="sw" style="background:var(--gnss)"></span>GNSS fix</span>
         <span><span class="sw" style="background:var(--exit)"></span>exit ramp</span>
       </div>
@@ -194,12 +195,13 @@ input[type=range] { flex: 1; min-width: 140px; }
         <div class="stat"><div class="k">along-track error (ESKF)</div><div class="v" id="s_err">–</div></div>
         <div class="stat"><div class="k">2σ along-track</div><div class="v" id="s_sig">–</div></div>
         <div class="stat"><div class="k">along-track error (CV)</div><div class="v" id="s_cv">–</div></div>
+        <div class="stat"><div class="k">along-track error (1D EKF)</div><div class="v" id="s_1d">–</div></div>
         <div class="stat"><div class="k">speed true / est</div><div class="v" id="s_v">–</div></div>
         <div class="stat"><div class="k">cross-track error (ESKF)</div><div class="v" id="s_lat">–</div></div>
       </div>
     </div>
     <div class="card" style="margin-top:14px">
-      <h2>Along-track error [m]</h2>
+      <h2>Along-track error [m] <span class="hint">ESKF with 2σ band · CV · 1D EKF; clipped to the ESKF's range</span></h2>
       <canvas id="err"></canvas>
     </div>
     <div class="card" style="margin-top:14px">
@@ -219,7 +221,7 @@ input[type=range] { flex: 1; min-width: 140px; }
     </div>
     <div class="rwrap"><table class="rtable" id="resTable"></table></div>
     <div class="note">One drive per scenario (seed shown above), so single numbers scatter. "–" in live mode: press the re-run button for these settings; the 50-seed statistics are in REPORT.md §3.
-      Along-track error is estimate − truth (+ ahead). The diverge is where the exit branch leaves the main tunnel; the portal is where the car leaves the tunnel.
+      Along-track error is estimate − truth (+ ahead). The diverge is where the exit branch leaves the main tunnel; the portal is where the car leaves the tunnel. The 1D EKF is a simple baseline (state: distance, speed, two biases; the map gives curvature and grade); it is shown for comparison only and is not what the app uses.
       Callout: + late, − early, with the k·σ margin and callout distance from the sliders; red when more than 1 s late.
       Highlighted columns were re-run live with the LIVE settings; the others are the pre-run drives (map switch applies).</div>
   </div>
@@ -342,6 +344,7 @@ function drawMap() {
     g.strokeStyle = css("--panel"); g.lineWidth = 3; g.strokeText(label, tx, ty); g.fillText(label, tx, ty);
   };
   const c = cvS(k); if (c !== null) { const [x, y] = sToXY(c); drawCar(x, y, D.heading[k], css("--cv"), "CV", 0.55, -Wc / 2 - 20); }
+  if (D.s_1d) { const [x, y] = sToXY(D.s_1d[k]); drawCar(x, y, headingAt(D.s_1d[k]), css("--ref"), "1D", 0.6, -Wc / 2 - 33); }
   const eh = isFinite(D.est_heading[k]) ? D.est_heading[k] : D.heading[k];
   drawCar(D.est_xy[k][0], D.est_xy[k][1], eh, css("--est"), "estimate", 0.9, -Wc / 2 - 7);
   drawCar(cx, cy, D.heading[k], css("--true"), "true car", 1, Wc / 2 + 15);
@@ -458,18 +461,20 @@ function drawNav() {
 
 function render() {
   drawMap(); drawStrip(); drawNav();
-  plot("err", [{ y: D.e_s, c: css("--est") }, { y: cvErr, c: css("--cv") }], v => v.toFixed(0), errBand, errLim);
+  plot("err", [{ y: D.e_s, c: css("--est") }, { y: cvErr, c: css("--cv") }, ...(D.e_1d ? [{ y: D.e_1d, c: css("--ref") }] : [])], v => v.toFixed(0), errBand, errLim);
   const S = D.sensors, xyz = [css("--est"), css("--cv"), css("--gnss")];
   plot("acc", S.acc.map((y, j) => ({ y, c: xyz[j] })), v => v.toFixed(1));
   plot("gyr", S.gyro.map((y, j) => ({ y, c: xyz[j] })), v => v.toFixed(1));
   plot("bar", [{ y: S.baro, c: css("--ink") }], v => v.toFixed(1));
   plot("gsp", [{ y: D.v_true.map(v => v * 3.6), c: css("--line") }, { y: S.gnss_kmh, c: css("--gnss") }], v => v.toFixed(0));
-  plot("spd", [{ y: D.v_true.map(v => v * 3.6), c: css("--true") }, { y: D.v_est.map(v => v * 3.6), c: css("--est") }], v => v.toFixed(0));
+  plot("spd", [{ y: D.v_true.map(v => v * 3.6), c: css("--true") }, { y: D.v_est.map(v => v * 3.6), c: css("--est") },
+               ...(D.v_1d ? [{ y: D.v_1d.map(v => v * 3.6), c: css("--ref") }] : [])], v => v.toFixed(0));
   document.getElementById("clock").textContent = `${D.t[k].toFixed(1)} s`;
   document.getElementById("s_err").textContent = `${D.e_s[k].toFixed(1)} m`;
   document.getElementById("s_sig").textContent = `${(2 * D.sig_s[k]).toFixed(1)} m`;
   document.getElementById("s_lat").textContent = `${D.e_lat[k].toFixed(1)} m`;
   document.getElementById("s_cv").textContent = cvErr[k] === null ? "–" : `${cvErr[k].toFixed(1)} m`;
+  document.getElementById("s_1d").textContent = D.e_1d ? `${D.e_1d[k].toFixed(1)} m` : "–";
   document.getElementById("s_v").textContent = `${(D.v_true[k] * 3.6).toFixed(0)} / ${(D.v_est[k] * 3.6).toFixed(0)} km/h`;
   let msg = "";
   if (callK >= 0 && k >= callK && k < callK + 12) {
@@ -592,8 +597,9 @@ function drvMetrics(d) {
   let cv = NaN;
   if (Number.isFinite(iDiv) && d.cv && d.t[iDiv] >= d.cv.t0 && d.t[iDiv] <= d.cv.t1) cv = d.cv.s0 + d.cv.v * (d.t[iDiv] - d.cv.t0) - d.s_true[iDiv];
   const eP = v(d.e_s, iPor), sP = v(d.sig_s, iPor);
+  const r1 = d.e_1d ? { div1: v(d.e_1d, iDiv), por1: v(d.e_1d, iPor), cons1: (v(d.e_1d, iPor) / v(d.sig_1d, iPor)) ** 2 } : {};
   return { div: v(d.e_s, iDiv), div2s: 2 * v(d.sig_s, iDiv), max: mx, por: eP, lat: v(d.e_lat, iPor), cons: (eP / sP) ** 2, call, cv,
-           tun: d.t_exit - d.t_entry };
+           tun: d.t_exit - d.t_entry, ...r1 };
 }
 const RES_ROWS = [
   ["tunnel time [s]", "tun", x => x.toFixed(0)],
@@ -605,6 +611,9 @@ const RES_ROWS = [
   ["(e/σ)² at the portal", "cons", x => x.toFixed(2)],
   ["callout timing [s] (+ late)", "call", x => (x > 0 ? "+" : "") + x.toFixed(1), x => x > 1.0],
   ["constant-velocity error at the diverge [m]", "cv", x => x.toFixed(1)],
+  ["1D EKF error at the diverge [m]", "div1", x => x.toFixed(1)],
+  ["1D EKF error at the portal [m]", "por1", x => x.toFixed(1)],
+  ["1D EKF (e/σ)² at the portal", "cons1", x => x.toFixed(2), x => x > 4],
 ];
 function resKeys() { return [...ALL.order, ...(CUSTOM ? ["custom"] : [])]; }
 function resData(key) {
