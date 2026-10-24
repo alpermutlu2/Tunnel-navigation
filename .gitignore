@@ -3,3 +3,6 @@ __pycache__/
 .pytest_cache/
 *.zip
 truth_review.png
+
+# the in-browser page needs the zipped package on GitHub Pages
+!docs/sim/py/tunnelsim.zip

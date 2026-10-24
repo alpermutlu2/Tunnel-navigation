@@ -235,10 +235,19 @@ and the error at the portal is 0.3–3.6 km. Three fixes (review 11, `reports/0.
 
 With these fixes a low-end phone works, and is honest about its uncertainty, in every scenario
 except stop-and-go: within 14–43 m at the portal and with no late callouts. S4 stays broken
-(~1 km), and neither a perfect stop detector nor levelling at stops helps
-(`reports/0.5.7/lowend_s4_level_10.json`). The likely cause is attitude drift, yaw above all,
-during the 20–45 s stops, which turns into position error when the car moves off. On a phone
-classed as low-end, the app should not trust σ in stop-and-go traffic. There it needs a different
+(~1 km), and the cause is low speed, not the stops. A trace of S4 seed 0 shows it:
+- During the 30 km/h crawl the filter's speed falls from about 7 to 2.6 m/s in 60 s while the true
+  speed stays at 8.3 m/s (−320 m).
+- At the second stop the filter still believes it is moving at about 6.6 m/s (−250 m more).
+- Yaw drifts 5–7° during the stops, but the map corrects it within seconds of moving off, and the
+  cross-track error stays under 1 m.
+
+The NHC and the barometer see a pitch error only through v·δθ, so at 8 m/s they hold pitch about a
+third as strongly as at 22 m/s. The low-end gyro then tilts the filter and gravity leaks into the
+speed. The same IMU gives 14 m on S1 and ~1 km on S4: the difference is the speed. A perfect stop
+detector, levelling at stops, the stop detector's speed gate and the cruise threshold do not
+change this (`reports/0.5.7/lowend_s4_level_10.json`). On a phone classed as low-end, the app
+should not trust σ at low speed. There it needs a different
 model: motion modes, or the CV and map fallback of `DESIGN.md` §5.1.
 
 **4.7 Levelling does not help** (review 11 option 3, `EskfConfig.level`, off). At 1 Hz in cruise
@@ -309,6 +318,7 @@ stays rigid); the shape of the bias model.
 | Callout | Asked for callouts that err early, not late. **Overruled k = 1.65** (proposed by the agent): σ_s is already about twice the real error, so k = 1. Added the k = 0 row and the definition of "the right moment" | CHANGELOG v0.5.4 |
 | Low-end IMU (review 11) | Chose which options to build: IMU class, profile, levelling A/B | CHANGELOG v0.5.5 |
 | Simulator | Set the requirements: one page with tabs, live re-runs, the driver's view, full screen, the results table, the sliders. Found the playback bug at 1–10× on GitHub Pages | CHANGELOG v0.5.4–0.5.6 |
+| Low-end S4 mechanism | **Corrected the agent's diagnosis** (yaw drift at stops) from a trace: the filter loses speed while crawling, because pitch is weakly observable at low speed. Found that the in-browser page could not work on GitHub Pages because `*.zip` was git-ignored | §4.6, CHANGELOG v0.5.7 |
 
 ### 6.2 Choices the agent made
 
@@ -339,6 +349,8 @@ change. The author is ready to explain or change any of them:
 | Voice said a fixed "300 m"; early/late label fixed to "early" | AI review 11 |
 | Levelling gate on the per-sample gyro maximum (noise) | the agent's sweep (the update never fired in cruise) |
 | Playback did not advance at 1–10× | the author, on GitHub Pages |
+| Low-end S4 explained as yaw drift at stops; it is low-speed pitch unobservability | the author, from a trace |
+| `browser.html` published without its package (`*.zip` git-ignored) | the author |
 
 **Process controls,** used because generated code can be confidently wrong:
 - parameter tags;

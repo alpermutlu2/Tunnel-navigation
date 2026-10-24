@@ -100,8 +100,9 @@ sees truth.
    terms treated as white noise:
    - 14–43 m at the portal in steady and long tunnels;
    - consistent ((e/σ)² 0.2–1.0) and no late callouts;
-   - stop-and-go still fails (~1 km): attitude drifts during long stops, so the app should not
-     trust σ there and should fall back to a different model.
+   - stop-and-go still fails (~1 km). At crawling speed the vehicle constraints see a pitch error
+     only through v·δθ, so the cheap gyro's tilt leaks gravity into the speed. The app should not
+     trust σ at low speed and should fall back to a different model there.
 6. **Levelling from gravity** (an extra update) was tried and left off: it helps one scenario and
    hurts five.
 

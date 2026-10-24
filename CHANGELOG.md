@@ -18,6 +18,11 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
 - Levelling restricted to crawling speed (`level_vmax`, off): S4 30.3 → 29.1–29.6 m, no effect
   elsewhere (`level_crawl_30.json`); stays off.
 - REPORT §4.6–4.7, SUMMARY, the low-end tab of the simulator updated.
+- Owner's review: the low-end S4 failure is low-speed pitch unobservability (NHC and barometer see
+  pitch through v·δθ; filter speed falls 7 → 2.6 m/s while crawling at 8.3 m/s and stays ~6.6 m/s
+  at the second stop), not yaw drift at stops; REPORT §4.6, §6 and SUMMARY corrected.
+- `docs/sim/py/tunnelsim.zip` was git-ignored (`*.zip`), so `browser.html` could not start on
+  GitHub Pages (owner); now committed with a `.gitignore` exception.
 - Snapshot `reports/0.5.7/metrics.json` vs 0.5.6: no metric changed (the snapshot covers the Note10
   scenarios); tests 181 → 182 (live-slider overrides).
 
