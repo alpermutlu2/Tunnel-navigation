@@ -457,7 +457,10 @@ def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None, eskf_
         bt, bh = bt[m], bh[:, m]
     oe = run_eskf(t, F, W, gnss, bt, bh, C_bp, r_b, eskf_cfg or EskfConfig(), road_map=mv)
     s_e, g_e = _eskf_along(mv, oe.t, oe.p, oe.C, oe.P_pos, C_bp, r_b)
-    o10 = run_ekf10(t, F, W, gnss, bt, bh, C_bp, r_b, road)
+    # the 10-state curve landmark acts after the ESKF's "branch" decision only (owner 2026-10-26)
+    dec, bt_ = oe.aux.get("branch_decision"), oe.aux.get("branch_time")
+    gate = None if dec is None or getattr(mv, "s_div", None) is None else np.where(dec == 1, np.nan_to_num(bt_, nan=np.inf), np.inf)
+    o10 = run_ekf10(t, F, W, gnss, bt, bh, C_bp, r_b, road, branch_gate=gate)
     o1 = run_ekf1d(t, F, W, gnss, C_bp, r_b, road)
     ip = lambda tt, x: np.stack([np.interp(oe.t, tt, xb) for xb in x])
     s = {"1d": ip(o1.t, o1.s), "ekf10": ip(o10.t, o10.s), "eskf": s_e}

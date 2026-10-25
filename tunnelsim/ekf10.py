@@ -56,6 +56,11 @@ from .eskf import FILTER_PROFILES, EskfConfig, detect_imu_class, zupt_detector
 from .frames import G0
 
 CHI2_1_999 = 10.83
+# Short-term yaw-gyro noise for the curve landmark (estimator-side copy of the sensor spec, worst axis,
+# [MEAS] Suvorkin et al. 2024 Table 5 via tunnelsim.sensors.bi_components): ARW [rad/√s] and the
+# bias-instability GM terms with τ ≤ 50 s as (σ [rad/s], τ [s]); the τ = 500 s term is the bias state.
+LANDMARK_GYRO = {"note10": (7.0e-4, ((2.2e-4, 5.0), (1.8e-4, 50.0))),
+                 "mpu9250": (6.25e-3, ((6.64e-3, 5.0), (5.61e-3, 50.0)))}
 NX = 10
 I_S, I_V, I_H, I_T, I_PSI, I_BA, I_BGY, I_BGZ, I_BH, I_SG = range(NX)
 
@@ -74,14 +79,23 @@ class Ekf10Config:
     p0_h: float = 10.0                    # m
     map_window_m: float = 300.0
     cov_rate_hz: float = 10.0
-    # v0.5.12 (owner 2026-10-25): re-association along the arc during an outage, as the ESKF map layer
-    # (v0.5.11) but on the yaw RATE: the 10-state yaw is pulled to ψ_map(ŝ) by the map-heading row
-    # every second, so it carries no position, and a gyro-only heading drifts ~90° in 300 s on the
-    # low-end IMU (measured, S4). Candidates s_c in s ± 3σ_s, J = (w̄ − (1+s_g)·v·κ(s_c)·cosθ − b_gz)²/σ_w² + u²;
-    # if J(s) − min J > χ²₁ 99.9 %, a position pseudo-measurement s = s*, R = max(5 m, σ_w/|v·κ'(s*)|)².
-    # The route is given (no branch decision here), so it runs on the whole route.
-    map_reassoc: bool = False
-    map_reassoc_n: int = 121
+    # v0.5.12 (owner 2026-10-26), in this order:
+    # (a) curve_s_guard: while σ_s exceeds the route's shortest clothoid, the map-heading and
+    #     curvature-gyro rows do not correct s (H_s = 0): linearised over more than the curve they lock
+    #     s to a wrong point (low-end S4: σ_s 350 → 20 m at −160 m error). Same criterion as the
+    #     ESKF's branch deferral (L_clothoid).
+    # (b) curve landmark: the yaw CHANGE over the last landmark_T s, Δψ_g(t_j) = ∫(w_z − b̂_gz)dt/(1+ŝ_g),
+    #     matched against ψ_map(c − d_T + d_j) − ψ_map(c − d_T) for candidates c in s ± 3σ_s
+    #     (d_j = ∫v̂ dt). The bias is nearly constant over T, so only the short-term gyro noise counts
+    #     (the profile's 0.063 rad/√s folds τ ≤ 50 s bias terms into white noise for 300 s consistency,
+    #     which is the wrong model over 12 s). C = ARW²·min(t_i,t_j) + Σ_GM(τ≤50 s) + P_bgz·t_i t_j
+    #     + diag(sideslip k·v·|w| and map heading)². Fires only when |Δψ_g| > landmark_min_deg (a turn was
+    #     seen) and, if given, after a "branch" decision (run_ekf10(branch_gate=)); one update per T.
+    curve_s_guard: bool = False
+    landmark: bool = False
+    landmark_T: float = 12.0              # s [ASSUMED] (owner: 10-15 s, one curve)
+    landmark_min_deg: float = 5.0         # [ASSUMED] (owner)
+    landmark_n: int = 121
     outage_s: float = 2.0                 # no fix for this long = outage (the ESKF's cruise_no_gnss_s)
 
 
@@ -119,8 +133,31 @@ class _RouteGrid:
         return out
 
 
+def _landmark_cov(n, arw, gm, dt_fine=0.1):
+    """Covariance (n,n) of the integrated short-term gyro noise at t = 1..n s: ARW and GM terms."""
+    t = np.arange(1, n + 1, dtype=float)
+    C = arw ** 2 * np.minimum(t[:, None], t[None])
+    u = np.arange(0.0, n, dt_fine) + 0.5 * dt_fine
+    L = (u[None] < t[:, None]).astype(float) * dt_fine                  # ∫_0^t_i as a sum
+    for sg, tau in gm:
+        K = sg ** 2 * np.exp(-np.abs(u[:, None] - u[None]) / tau)
+        C += L @ K @ L.T
+    return C
+
+
+def _min_clothoid(road, step=0.5):
+    """Shortest stretch of the route over which |κ| changes (a clothoid), m; inf if none."""
+    sg = np.arange(0.0, road.length, step)
+    m = np.abs(road.curvature_rate(sg)) > 1e-9
+    if not m.any():
+        return np.inf
+    d = np.diff(np.r_[0, m.astype(int), 0]); a, b = np.nonzero(d == 1)[0], np.nonzero(d == -1)[0]
+    L = (b - a) * step
+    return float(L[L > 1.0].min()) if (L > 1.0).any() else np.inf
+
+
 def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf10Config = Ekf10Config(),
-              cfg: EskfConfig = EskfConfig()) -> Ekf10Output:
+              cfg: EskfConfig = EskfConfig(), branch_gate=None) -> Ekf10Output:
     """imu_t (N,); f, w (B,N,3) phone frame; gnss as for run_eskf (t (M,), pos/vel (B,M,3), acc_pos_h,
     acc_pos_v, acc_vel (B,M)); baro_t (L,), baro_h (B,L); C_bp the filter's mount (body <- phone);
     r_b the lever arm of the IMU from R in the body frame; road_map the route as the filter knows it."""
@@ -179,6 +216,16 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
     bi = int(np.searchsorted(b_idx, i0, side="right"))
     last_fix = np.full(B, imu_t[i0]); relock = np.zeros(B, bool); settle = np.zeros(B, int)
     wsum = np.zeros(B); wn = 0
+    L_clo = _min_clothoid(road_map)
+    nT = int(round(cfg10.landmark_T))
+    if cfg10.landmark:
+        arw_, gm_ = LANDMARK_GYRO.get(name, LANDMARK_GYRO["note10"])
+        C_lm0 = _landmark_cov(nT, arw_, gm_)
+        tT = np.arange(1, nT + 1, dtype=float)
+        lm_psi = np.zeros(B); lm_d = np.zeros(B)                          # integrated Δψ_g and ∫v dt
+        lm_buf_psi, lm_buf_d, lm_buf_a = [], [], []                        # 1 Hz samples (newest last)
+        lm_last = np.full(B, -np.inf)
+        gate_t = np.full(B, -np.inf) if branch_gate is None else np.asarray(branch_gate, float)
     Fsum = np.zeros((B, NX, NX)); dt_sum = 0.0
     ev = {"gnss_pos_acc": 0, "gnss_pos_rej": 0, "heading": 0, "curv": 0, "zupt": 0, "baro": 0}
     out = {k_: [] for k_ in ("t", "s", "v", "sig_s", "theta", "psi", "b_a")}
@@ -215,6 +262,8 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
         F[:, I_PSI, I_BGZ] = -1.0
         Fsum += F * dt; dt_sum += dt
         wsum += 0.5 * (wz[:, k] + wz[:, k + 1]); wn += 1
+        if cfg10.landmark:
+            lm_psi += psi_rate * dt / (1.0 + x[:, I_SG]); lm_d += v * dt
         kk = k + 1
         gnss_due = gi < len(g_idx) and g_idx[gi] == kk
         baro_due = bi < len(b_idx) and b_idx[bi] == kk
@@ -278,42 +327,56 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
             z = np.where(okb, np.nan_to_num(hz) - (x[:, I_H] - lag * v * np.sin(th) + x[:, I_BH]), 0.0)
             update(okb, z, H, np.full(B, cfg.baro_sigma ** 2), None)
             ev["baro"] += int(okb.sum()); bi += 1
-        # --- re-association along the arc (outage only)
-        if map_due and cfg10.map_reassoc and wn > 0:
-            out_ = imu_t[kk] - last_fix > cfg10.outage_s
-            ra = out_ & (x[:, I_V] > 1.0)
-            if ra.any():
-                sg_s = np.sqrt(P[:, I_S, I_S])
-                u_ = np.linspace(-3.0, 3.0, cfg10.map_reassoc_n)
-                th, v = x[:, I_T], x[:, I_V]
-                cand = np.clip(x[:, I_S, None] + lever + sg_s[:, None] * u_[None], 0.0, road_map.length - 1.0)
-                cc = cand - 0.5 * v[:, None] * (wn / fs)                          # window centre
-                kc = road_map.curvature(cc.ravel()).reshape(cc.shape)
-                krc = road_map.curvature_rate(cc.ravel()).reshape(cc.shape)
-                sg = 1.0 + x[:, I_SG]; cth = np.cos(th)
-                wm = wsum / wn
-                r_ = wm[:, None] - (sg[:, None] * v[:, None] * kc * cth[:, None] + x[:, I_BGZ, None])
-                var_w = (cfg.gyro_noise ** 2 / (wn / fs) + sig_bi ** 2 + cfg10.lane_wander_rate_sigma ** 2
-                         + (cfg10.slip_gain * np.abs(v[:, None]) ** 3 * np.abs(krc)) ** 2
-                         + P[:, I_BGZ, I_BGZ, None] + (sg[:, None] * kc) ** 2 * P[:, I_V, I_V, None]
-                         + (v[:, None] * kc) ** 2 * P[:, I_SG, I_SG, None])
-                J = r_ ** 2 / var_w + u_[None] ** 2
-                jb = np.argmin(J, axis=1); ar = np.arange(B)
-                go = ra & (J[:, cfg10.map_reassoc_n // 2] - J[ar, jb] > CHI2_1_999)
-                if go.any():
-                    s_star = cand[ar, jb] - lever
-                    # along-track precision of the match: the rate's σ over its slope v·κ' there
-                    sig_a = np.maximum(5.0, np.sqrt(var_w[ar, jb]) / np.maximum(np.abs(v * krc[ar, jb]), 1e-9))
-                    H = np.zeros((B, NX)); H[:, I_S] = 1.0
-                    update(go, np.where(go, s_star - x[:, I_S], 0.0), H, sig_a ** 2, None)
-                    ev["reassoc"] = ev.get("reassoc", 0) + int(go.sum())
+        # --- curve landmark (outage only; see Ekf10Config)
+        if map_due and cfg10.landmark:
+            out_ = imu_t[kk] - last_fix > 2.0
+            lm_buf_psi.append(np.where(out_, lm_psi, np.nan)); lm_buf_d.append(lm_d.copy())
+            lm_buf_a.append(np.abs(x[:, I_V] * (wsum / max(wn, 1))))             # |a_lat| ≈ v·|w|
+            if len(lm_buf_psi) > nT + 1:
+                lm_buf_psi.pop(0); lm_buf_d.pop(0); lm_buf_a.pop(0)
+            if len(lm_buf_psi) == nT + 1:
+                Pg = np.stack(lm_buf_psi, 1); Dg = np.stack(lm_buf_d, 1); Ag = np.stack(lm_buf_a, 1)
+                dpsi = Pg[:, 1:] - Pg[:, :1]; dd = Dg - Dg[:, :1]                   # (B,nT), (B,nT+1)
+                seen = np.isfinite(dpsi).all(axis=1) & (np.abs(np.nan_to_num(dpsi[:, -1])) > np.deg2rad(cfg10.landmark_min_deg))
+                go0 = seen & (imu_t[kk] >= gate_t) & (imu_t[kk] - lm_last >= cfg10.landmark_T)
+                if go0.any():
+                    sg_s = np.sqrt(P[:, I_S, I_S])
+                    u_ = np.linspace(-3.0, 3.0, cfg10.landmark_n)
+                    cur = x[:, I_S, None] + lever + sg_s[:, None] * u_[None]          # candidate current position
+                    st0 = cur - dd[:, -1:]
+                    pos = st0[:, :, None] + dd[:, None, 1:]                           # (B,n_c,nT)
+                    clip = lambda q: np.clip(q, 0.0, road_map.length - 1.0)
+                    psm = road_map.heading(clip(pos).ravel()).reshape(pos.shape)
+                    ps0 = road_map.heading(clip(st0).ravel()).reshape(st0.shape)
+                    r_ = np.nan_to_num(dpsi)[:, None, :] - np.angle(np.exp(1j * (psm - ps0[:, :, None])))
+                    C_ = (C_lm0[None] + P[:, I_BGZ, I_BGZ, None, None] * tT[None, :, None] * tT[None, None, :])
+                    slip = cfg10.slip_gain * np.abs(Ag[:, 1:] - Ag[:, :1])
+                    C_ = C_ + np.einsum("bi,ij->bij", slip ** 2 + 2.0 * np.deg2rad(cfg10.heading_sigma_deg) ** 2, np.eye(nT))
+                    Ci = np.linalg.inv(C_)
+                    Jl = np.einsum("bci,bij,bcj->bc", r_, Ci, r_)
+                    J = Jl + u_[None] ** 2
+                    ar = np.arange(B); jb = np.argmin(J, axis=1); mid = cfg10.landmark_n // 2
+                    jb_ = np.clip(jb, 1, cfg10.landmark_n - 2)
+                    h = sg_s * (u_[1] - u_[0])
+                    d2 = (Jl[ar, jb_ + 1] - 2 * Jl[ar, jb_] + Jl[ar, jb_ - 1]) / np.maximum(h, 1e-9) ** 2
+                    sig_a = np.maximum(5.0, np.sqrt(2.0 / np.maximum(d2, 1e-12)))
+                    chi_n = nT * (1 - 2 / (9 * nT) + 3.09 * np.sqrt(2 / (9 * nT))) ** 3   # χ²_nT 99.9 % (Wilson-Hilferty)
+                    plaus = Jl[ar, jb] < chi_n                                         # the matched profile fits
+                    go = go0 & plaus & (J[:, mid] - J[ar, jb] > CHI2_1_999) & (jb > 0) & (jb < cfg10.landmark_n - 1)
+                    if go.any():
+                        Hl = np.zeros((B, NX)); Hl[:, I_S] = 1.0
+                        update(go, np.where(go, cur[ar, jb] - lever - x[:, I_S], 0.0), Hl, sig_a ** 2, None)
+                        lm_last = np.where(go, imu_t[kk], lm_last)
+                        ev["landmark"] = ev.get("landmark", 0) + int(go.sum())
+                    ev["landmark_seen"] = ev.get("landmark_seen", 0) + int(go0.sum())
+        guard = (np.sqrt(P[:, I_S, I_S]) > L_clo) if cfg10.curve_s_guard else np.zeros(B, bool)
         # --- map heading (global along the route)
         if map_due and cfg10.heading_update:
             sp = x[:, I_S] + lever
             psi_m, kap = road_map.heading(sp), road_map.curvature(sp)
             v = x[:, I_V]
             z = np.angle(np.exp(1j * (psi_m - x[:, I_PSI])))          # h = psi - psi_map(s); z = 0 - h
-            H = np.zeros((B, NX)); H[:, I_S] = -kap; H[:, I_PSI] = 1.0
+            H = np.zeros((B, NX)); H[:, I_S] = np.where(guard, 0.0, -kap); H[:, I_PSI] = 1.0
             R = np.deg2rad(cfg10.heading_sigma_deg) ** 2 + (cfg10.slip_gain * v * v * kap) ** 2   # sideslip beta = -k a_lat
             update(np.ones(B, bool), z, H, R, CHI2_1_999)
             ev["heading"] += B
@@ -325,7 +388,7 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
             kap, kap_r, cth = road_map.curvature(sc), road_map.curvature_rate(sc), np.cos(th)
             sg = 1.0 + x[:, I_SG]
             H = np.zeros((B, NX))
-            H[:, I_S] = sg * v * kap_r * cth; H[:, I_V] = sg * kap * cth; H[:, I_T] = -sg * v * kap * np.sin(th)
+            H[:, I_S] = np.where(guard, 0.0, sg * v * kap_r * cth); H[:, I_V] = sg * kap * cth; H[:, I_T] = -sg * v * kap * np.sin(th)
             H[:, I_BGZ] = 1.0; H[:, I_SG] = v * kap * cth
             z = wm - (sg * v * kap * cth + x[:, I_BGZ])
             R = (cfg.gyro_noise ** 2 / (wn / fs) + sig_bi ** 2
