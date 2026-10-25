@@ -66,6 +66,9 @@ class EskfConfig:
     map_lateral_sigma: float = 1.5               # m: lane-centre deviation + polyline error [ASSUMED]
     map_window_m: float = 300.0                  # ŝ searched within ±window of the last ŝ
     map_pre_m: float = 100.0                     # pause starts this far before the diverge
+    # v0.5.12 (owner 2026-10-25, from S4 seed 247): the window starts max(map_pre_m, k·σ_s) before the
+    # diverge, so a filter far behind the car still sees the turn inside it; 0 = fixed 100 m.
+    map_pre_sigma_k: float = 0.0
     map_branch_deg: float = 5.0                  # branch decision threshold (as branch.py)
     # Map-row innovation gate and branch deferral (owner 2026-10-25, v0.5.11 A/B; thresholds chosen
     # before the runs): reject the heading/cross-track update when its NIS exceeds χ² 99.9 % (2 dof,
@@ -81,6 +84,9 @@ class EskfConfig:
     # seconds) says where in the curve the car is; a point linearisation at a wrong ŝ cannot.
     map_reassoc: bool = True               # default since v0.5.11 (owner), with the gate as a safety net
     map_reassoc_n: int = 121
+    # v0.5.12 A/B, off (owner): R floor from the sideslip, β = −k·a_lat read as an along-track shift
+    # β/κ = k·v² (k as ekf10's slip_gain, 7e-3 rad/(m/s²) [ASSUMED]: 3.4 m at 22 m/s); 0 = the 5 m floor only
+    map_reassoc_slip_k: float = 0.0
     map_reassoc_scale: bool = True     # the map length-error state in the re-association row (owner's map-error states)
     # map errors as states, constant per tunnel, reset at each outage (owner, 2026-10-20): lateral
     # offset of the polyline and a length (scale) error; the curve-matching gain is then bounded
@@ -391,6 +397,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     ra_flag = np.zeros(B, bool)             # re-association applied since the last output epoch
     m_hat = np.zeros(B); e_hat = np.zeros(B); off_hat = np.zeros(B)   # + pitch-prior offset [rad]  # map lateral offset [m], map scale error [-]
     br_time = np.full(B, np.nan)              # time of the in-loop branch decision
+    pre_w = np.full(B, cfg.map_pre_m)         # branch window length before the diverge [m]
     if use_map and road_map.s_div is not None:
         sg = np.arange(road_map.s_div, road_map.s_div + road_map.curve_len + 1.0, 0.5)
         _, psg, _ = road_map.at(sg)
@@ -664,6 +671,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             out_m = (tk - last_vel > cfg.cruise_no_gnss_s) & (np.linalg.norm(v, axis=1) > 1.0)
             new_m = out_m & ~map_prev_out
             br_dec = np.where(new_m, 0, br_dec); psi_start = np.where(new_m, np.nan, psi_start)
+            pre_w = np.where(new_m, cfg.map_pre_m, pre_w)
             if new_m.any():                       # a new tunnel: its map errors are unknown, independent
                 for j, sg_ in ((IM, cfg.map_offset_sigma), (IE, cfg.map_scale_sigma), (IP, cfg.pitch_prior_offset_sigma)):
                     P[new_m, j, :] = 0.0; P[new_m, :, j] = 0.0; P[new_m, j, j] = sg_ ** 2
@@ -721,6 +729,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                                 lev_s = np.zeros(B)
                             zr = (np.einsum("bi,bi->b", t_s, pR[:, :2] - c_s) + lev_s * e_hat)[:, None] - np.einsum("bij,bj->bi", Hr, x)
                             sig_a = np.maximum(5.0, np.sqrt(var_psi) / np.maximum(np.abs(k_s), 1e-6))
+                            if cfg.map_reassoc_slip_k > 0.0:
+                                sig_a = np.maximum(sig_a, cfg.map_reassoc_slip_k * np.sum(v[:, :2] ** 2, axis=1))
                             Rr = (sig_a ** 2)[:, None, None]
                             Psub, xs = P[go], x[go]
                             _update(xs, Psub, zr[go], Hr[go], Rr[go], None)
@@ -730,7 +740,11 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                             ev["map_reassoc"] = ev.get("map_reassoc", 0) + int(go.sum())
                 paused = np.zeros(B, bool)
                 if road_map.s_div is not None:
-                    inwin = out_m & (br_dec == 0) & (s_map >= road_map.s_div - cfg.map_pre_m)
+                    _, psw, _ = road_map.at(np.nan_to_num(s_map))
+                    tw = np.stack([np.cos(psw), np.sin(psw)], 1)
+                    pre = np.maximum(cfg.map_pre_m, cfg.map_pre_sigma_k * np.sqrt(np.einsum("bi,bij,bj->b", tw, P[:, 0:2, 0:2], tw)))
+                    pre_w = np.where(br_dec == 0, np.maximum(pre_w, pre), pre_w)   # never shrinks once open
+                    inwin = out_m & (br_dec == 0) & (s_map >= road_map.s_div - pre_w)
                     first = inwin & ~np.isfinite(psi_start)
                     psi_start = np.where(first, psi_hat, psi_start); s_start = np.where(first, s_map, s_start)
                     if inwin.any():
@@ -747,7 +761,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                         br_dec = np.where(go_b, 1, np.where(go_m, -1, br_dec))
                         br_time = np.where(go_b | go_m, tk, br_time)
                         ev["map_branch"] += int(go_b.sum()); ev["map_main"] += int(go_m.sum())
-                    paused = (br_dec == 0) & (s_map >= road_map.s_div - cfg.map_pre_m)
+                    paused = (br_dec == 0) & (s_map >= road_map.s_div - pre_w)
                 sel = out_m & ~paused
                 if sel.any():
                     c, psi_m, n, kap = road_map.at(np.nan_to_num(s_map), main=(br_dec == -1), with_kappa=True)
@@ -905,10 +919,11 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         if do_cov:
             out_t.append(imu_t[kk]); out_p.append(p.copy()); out_v.append(v.copy()); out_C.append(C.copy())
             out_P.append(P[:, 0:3, 0:3].copy()); out_ba.append(b_a.copy()); out_z.append(st.copy())
-            out_aux.append(np.stack([b_h, g_hat, cruise_on.astype(float), np.sqrt(P[:, IG, IG]), ra_flag.astype(float)], 1))
+            out_aux.append(np.stack([b_h, g_hat, cruise_on.astype(float), np.sqrt(P[:, IG, IG]), ra_flag.astype(float),
+                                     br_dec.astype(float)], 1))
             ra_flag[:] = False
     return EskfOutput(t=np.array(out_t), p=np.stack(out_p, 1), v=np.stack(out_v, 1), C=np.stack(out_C, 1),
                       P_pos=np.stack(out_P, 1), b_a=np.stack(out_ba, 1), zupt=np.stack(out_z, 1), events=ev,
-                      aux={**dict(zip(("b_h", "g_h", "cruise", "sigma_g", "reassoc"), np.moveaxis(np.stack(out_aux, 1), -1, 0))),
+                      aux={**dict(zip(("b_h", "g_h", "cruise", "sigma_g", "reassoc", "branch_state"), np.moveaxis(np.stack(out_aux, 1), -1, 0))),
                            "branch_decision": br_dec.copy(), "branch_time": br_time.copy(),
                            "imu_class": imu_classes, "imu_sigma": imu_sig})

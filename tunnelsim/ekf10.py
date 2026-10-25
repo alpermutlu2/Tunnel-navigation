@@ -74,6 +74,15 @@ class Ekf10Config:
     p0_h: float = 10.0                    # m
     map_window_m: float = 300.0
     cov_rate_hz: float = 10.0
+    # v0.5.12 (owner 2026-10-25): re-association along the arc during an outage, as the ESKF map layer
+    # (v0.5.11) but on the yaw RATE: the 10-state yaw is pulled to ψ_map(ŝ) by the map-heading row
+    # every second, so it carries no position, and a gyro-only heading drifts ~90° in 300 s on the
+    # low-end IMU (measured, S4). Candidates s_c in s ± 3σ_s, J = (w̄ − (1+s_g)·v·κ(s_c)·cosθ − b_gz)²/σ_w² + u²;
+    # if J(s) − min J > χ²₁ 99.9 %, a position pseudo-measurement s = s*, R = max(5 m, σ_w/|v·κ'(s*)|)².
+    # The route is given (no branch decision here), so it runs on the whole route.
+    map_reassoc: bool = False
+    map_reassoc_n: int = 121
+    outage_s: float = 2.0                 # no fix for this long = outage (the ESKF's cruise_no_gnss_s)
 
 
 @dataclass
@@ -269,6 +278,35 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
             z = np.where(okb, np.nan_to_num(hz) - (x[:, I_H] - lag * v * np.sin(th) + x[:, I_BH]), 0.0)
             update(okb, z, H, np.full(B, cfg.baro_sigma ** 2), None)
             ev["baro"] += int(okb.sum()); bi += 1
+        # --- re-association along the arc (outage only)
+        if map_due and cfg10.map_reassoc and wn > 0:
+            out_ = imu_t[kk] - last_fix > cfg10.outage_s
+            ra = out_ & (x[:, I_V] > 1.0)
+            if ra.any():
+                sg_s = np.sqrt(P[:, I_S, I_S])
+                u_ = np.linspace(-3.0, 3.0, cfg10.map_reassoc_n)
+                th, v = x[:, I_T], x[:, I_V]
+                cand = np.clip(x[:, I_S, None] + lever + sg_s[:, None] * u_[None], 0.0, road_map.length - 1.0)
+                cc = cand - 0.5 * v[:, None] * (wn / fs)                          # window centre
+                kc = road_map.curvature(cc.ravel()).reshape(cc.shape)
+                krc = road_map.curvature_rate(cc.ravel()).reshape(cc.shape)
+                sg = 1.0 + x[:, I_SG]; cth = np.cos(th)
+                wm = wsum / wn
+                r_ = wm[:, None] - (sg[:, None] * v[:, None] * kc * cth[:, None] + x[:, I_BGZ, None])
+                var_w = (cfg.gyro_noise ** 2 / (wn / fs) + sig_bi ** 2 + cfg10.lane_wander_rate_sigma ** 2
+                         + (cfg10.slip_gain * np.abs(v[:, None]) ** 3 * np.abs(krc)) ** 2
+                         + P[:, I_BGZ, I_BGZ, None] + (sg[:, None] * kc) ** 2 * P[:, I_V, I_V, None]
+                         + (v[:, None] * kc) ** 2 * P[:, I_SG, I_SG, None])
+                J = r_ ** 2 / var_w + u_[None] ** 2
+                jb = np.argmin(J, axis=1); ar = np.arange(B)
+                go = ra & (J[:, cfg10.map_reassoc_n // 2] - J[ar, jb] > CHI2_1_999)
+                if go.any():
+                    s_star = cand[ar, jb] - lever
+                    # along-track precision of the match: the rate's σ over its slope v·κ' there
+                    sig_a = np.maximum(5.0, np.sqrt(var_w[ar, jb]) / np.maximum(np.abs(v * krc[ar, jb]), 1e-9))
+                    H = np.zeros((B, NX)); H[:, I_S] = 1.0
+                    update(go, np.where(go, s_star - x[:, I_S], 0.0), H, sig_a ** 2, None)
+                    ev["reassoc"] = ev.get("reassoc", 0) + int(go.sum())
         # --- map heading (global along the route)
         if map_due and cfg10.heading_update:
             sp = x[:, I_S] + lever

@@ -255,6 +255,28 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
                     "confirmed_frac": round(float(np.mean(right)), 3),
                     "before_diverge_frac": round(float(np.mean(delay[choice != 0] < 0)) if (choice != 0).any() else 0.0, 3),
                     "delay_s": stats(delay[right]) if right.any() else None}
+        # v0.5.12 (owner): how long the decision stays "not yet" after the car passes the diverge,
+        # and what the screen shows meanwhile: the map point nearest the estimate on the route
+        # polyline (the branch is on the route), scored horizontally against the true position
+        bs = out.aux.get("branch_state")
+        if bs is not None:
+            after_div = (out.t >= t_div) & (out.t <= t_x)
+            und = (bs == 0) & after_div[None]
+            dur = und.sum(axis=1) * (out.t[1] - out.t[0])
+            derr = np.zeros(len(seed_ids)); doff = np.zeros(len(seed_ids))
+            road_xy = tr.pos_n[::max(1, int(round(0.05 / tr.dt))), :2]     # the road the car drove, 0.05 s apart
+            for b in np.nonzero(und.any(axis=1))[0]:
+                kk_ = np.nonzero(und[b])[0]
+                s_d = mv.nearest(pR_hat[b, kk_, :2], np.full(len(kk_), np.nan))
+                c_d, _, _ = mv.at(s_d)
+                derr[b] = float(np.linalg.norm(c_d - tr.pos_n[idx[kk_], :2], axis=1).max())
+                doff[b] = float(np.sqrt(((c_d[:, None] - road_xy[None]) ** 2).sum(-1).min(axis=1)).max())
+            res["undecided"] = {"after_diverge_s": stats(dur), "any_frac": round(float(np.mean(dur > 0)), 3),
+                                "at_portal_frac": round(float(np.mean(bs[:, -1] == 0)), 3),
+                                "display_err_max_m": stats(derr),
+                                "display_err_gt_20m": int((derr > 20.0).sum()),
+                                "display_off_road_max_m": stats(doff),     # distance to the road the car is on
+                                "display_off_road_gt_10m": int((doff > 10.0).sum())}
         # offline check (branch.py, run after the fact on the filter output; independent reference)
         res["branch_offline"] = summary(*branch_check(t, W, out.t, out.C, out.p, out.v, map_road, out_P_pos=out.P_pos))
         # in-loop decision of the map layer (the one the app acts on); offline when the layer is off
