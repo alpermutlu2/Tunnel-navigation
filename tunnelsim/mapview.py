@@ -24,6 +24,13 @@ class MapView:
         self.xy = xy + lat_offset_m * n
         self.psi = np.unwrap(psi)
         self.kappa = np.gradient(self.psi, self.s)          # map curvature [1/m]
+        # road grade γ(s) [rad] and dγ/ds, when the road object has them (v0.5.11, pitch prior)
+        if hasattr(road, "grade"):
+            s0 = np.arange(0.0, road.length, step)
+            self.gamma = road.grade(s0)
+            self.gamma_rate = np.gradient(self.gamma, self.s)
+        else:
+            self.gamma = np.zeros_like(self.s); self.gamma_rate = np.zeros_like(self.s)
         self.s_entry = self.s[k_e]
         self.xy_entry = self.xy[k_e].copy()
         self.step = step
@@ -35,6 +42,11 @@ class MapView:
         if ex is not None and ex.on_route:
             k = int(np.argmin(np.abs(self.s - self.s_div)))
             self.main_xy0, self.main_psi = self.xy[k], self.psi[k]
+
+    def grade_at(self, s):
+        """Road grade γ [rad] and dγ/ds at map s (B,)."""
+        k = np.clip(np.searchsorted(self.s, s), 0, len(self.s) - 1)
+        return self.gamma[k], self.gamma_rate[k]
 
     def nearest(self, p_xy, s_prev, window=300.0):
         """Along-track position of points p_xy (B,2): nearest polyline point within ±window of

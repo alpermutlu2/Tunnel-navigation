@@ -136,6 +136,17 @@ class EskfConfig:
                                        # (30 seeds: no effect, the ZUPT already holds there; reports/0.5.5)
     level_vmax: float = 0.0            # m/s; > 0: levelling only below this speed (crawl), 0 = any speed
     level_rate_gate: float = 0.3       # m/s²: skipped while the 1 s mean |ω_y,z|·v exceeds this (curves, grade changes)
+    # Pitch prior from the road geometry (owner 2026-10-25, v0.5.11 A/B; off by default): during an
+    # outage, below pitch_prior_vmax and only for the listed IMU classes, the body pitch is tied to
+    # the map's road grade, θ_b = γ(ŝ) ± σ, every pitch_prior_every_s. At low speed the NHC and the
+    # barometer see pitch only through v·δθ; the 1D baseline takes pitch from the map and holds S4
+    # low-end at 80 m. map grade off: γ = 0 (a map without grade).
+    pitch_prior: bool = False
+    pitch_prior_sigma: float = np.deg2rad(1.0)      # [ASSUMED] grade error + suspension pitch + mount
+    pitch_prior_vmax: float = 10.0                  # m/s [ASSUMED]: S4 crawls at 8.3 m/s
+    pitch_prior_every_s: float = 1.0
+    pitch_prior_map_grade: bool = True
+    pitch_prior_classes: tuple = ("mpu9250",)
     imu_class: str = "auto"
     imu_detect_s: float = 10.0
     imu_detect_th: float = 0.027      # rad/s per sample at 100 Hz ≈ ARW 2.7e-3 rad/√s: geometric mean of
@@ -292,12 +303,14 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     """
     B, N = f.shape[0], imu_t.size
     imu_classes, imu_sig = None, None
+    cls_name = cfg.imu_class
     if cfg.imu_class == "auto":
         g0 = np.nonzero(np.all(np.isfinite(gnss["pos"][:, :, 0]), axis=0) & np.all(np.isfinite(gnss["vel"][:, :, 0]), axis=0))[0][0]
         i_det = int(np.searchsorted(imu_t, gnss["t"][g0] if t_start is None else t_start))
         imu_classes, imu_sig = detect_imu_class(imu_t, w, cfg, i_det)
         vals, cnt = np.unique(imu_classes, return_counts=True)   # one batch = one phone model
-        cfg = replace(cfg, **FILTER_PROFILES[str(vals[np.argmax(cnt)])])
+        cls_name = str(vals[np.argmax(cnt)])
+        cfg = replace(cfg, **FILTER_PROFILES[cls_name])
     elif cfg.imu_class != "note10":
         cfg = replace(cfg, **FILTER_PROFILES[cfg.imu_class])
     NA = NX + 5          # + speed clone / v_ref (NX), driver wander d (NX + 1), baro gradient g_h (NX + 2),
@@ -713,6 +726,27 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     Psub, xs = P[sel], x[sel]
                     _update(xs, Psub, z[sel][:, rows], H[sel][:, rows], R[sel][:, rows, rows], None)
                     P[sel], x[sel] = Psub, xs
+        # pitch prior from the road (v0.5.11 A/B): θ_b = asin(u_z), u = Ĉ C_pb e_x (body forward, nav);
+        # z = θ̂_b − γ(ŝ); ∂θ_b/∂δθ = [u_y, −u_x, 0]/cos θ_b (Ĉ = Exp(δθ)C), ∂/∂δp = −γ'(ŝ)·tᵀ
+        if (cfg.pitch_prior and use_map and cls_name in cfg.pitch_prior_classes
+                and (kk - i0) % max(1, int(round(cfg.pitch_prior_every_s * fs))) == 0):
+            spd_p = np.linalg.norm(v, axis=1)
+            sel = np.isfinite(s_map) & (spd_p < cfg.pitch_prior_vmax) & (imu_t[kk] - last_vel > cfg.cruise_no_gnss_s)
+            if sel.any():
+                u = np.einsum("bij,j->bi", C, C_bp.T @ np.array([1.0, 0.0, 0.0]))
+                th = np.arcsin(np.clip(u[:, 2], -1.0, 1.0))
+                sm = np.nan_to_num(s_map)
+                gam, gam_r = road_map.grade_at(sm) if cfg.pitch_prior_map_grade else (np.zeros(B), np.zeros(B))
+                _, psi_g, _ = road_map.at(sm)
+                H = np.zeros((B, 1, NA))
+                H[:, 0, 6] = u[:, 1] / np.cos(th); H[:, 0, 7] = -u[:, 0] / np.cos(th)
+                H[:, 0, 0] = -gam_r * np.cos(psi_g); H[:, 0, 1] = -gam_r * np.sin(psi_g)
+                z = (th - gam)[:, None] - np.einsum("bij,bj->bi", H, x)
+                R = np.full((B, 1, 1), cfg.pitch_prior_sigma ** 2)
+                Psub, xs = P[sel], x[sel]
+                _update(xs, Psub, z[sel], H[sel], R[sel], None)
+                P[sel], x[sel] = Psub, xs
+                ev["pitch_prior_updates"] = ev.get("pitch_prior_updates", 0) + int(sel.sum())
         # levelling: f̄ = −Ĉᵀg + b̂_a; δz = −Ĉᵀ[g×]δθ + δb_a  (Ĉ = Exp(δθ)C, δ = estimate − truth)
         if cfg.level and (kk - i0) % int(round(fs)) == 0 and kk - i0 >= int(round(fs)):
             n1 = int(round(fs))

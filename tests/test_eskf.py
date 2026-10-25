@@ -190,6 +190,18 @@ def test_levelling_jacobian_finite_difference():
         np.testing.assert_allclose((h(so3_exp(d) @ C) - h(C)) / 1e-6, H_th[:, i], atol=1e-4)
 
 
+def test_pitch_prior_jacobian_finite_difference():
+    """θ_b = asin(u_z), u = C C_pb e_x, Ĉ = Exp(δθ)C: ∂θ_b/∂δθ = [u_y, −u_x, 0]/cos θ_b."""
+    C_bp = mount_rotation(1, 12, 3)
+    C = rot_z(0.7) @ mount_rotation(0, -4, 0) @ C_bp.T
+    th = lambda C_: np.arcsin((C_ @ C_bp.T @ np.array([1.0, 0, 0]))[2])
+    u = C @ C_bp.T @ np.array([1.0, 0, 0])
+    H = np.array([u[1], -u[0], 0.0]) / np.cos(th(C))
+    for i in range(3):
+        d = np.zeros(3); d[i] = 1e-6
+        np.testing.assert_allclose((th(so3_exp(d) @ C) - th(C)) / 1e-6, H[i], atol=1e-5)
+
+
 def test_imu_class_detection_separates_note10_and_mpu9250():
     """Review 11: gyro white noise in the first 10 s picks the filter profile (noisy vibration
     included); a Note10 batch keeps the default tuning."""
