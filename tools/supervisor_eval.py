@@ -33,11 +33,16 @@ def one(args):
 
 if __name__ == "__main__":
     part = sys.argv[1] if len(sys.argv) > 1 else "dev"
+    if ":" in part:                 # e.g. "sets:0-100": the class rule on seeds 0-99, in 50-seed sets
+        name_, rng = part.split(":")
+        lo_, hi_ = map(int, rng.split("-"))
+        globals()["_SPANS"] = [(a_, a_ + 50) for a_ in range(lo_, hi_, 50)]
+        part = f"{name_}_{lo_}-{hi_ - 1}"
     # "sets": the class rule only (no rehearsals) on four independent sets of 50 seeds
     spans = {"dev": [(0, 50)], "heldout": [(50, 100)], "smoke": [(0, 2)],
              "sets": [(0, 50), (50, 100), (100, 150), (150, 200)],
-             "validation": [(200, 250), (250, 300)]}[part]
-    rules = ("class",) if part in ("sets", "validation") else ("class", "rehearsal", "simplest")
+             "validation": [(200, 250), (250, 300)]}.get(part) or globals()["_SPANS"]
+    rules = ("class",) if part.startswith(("sets", "validation")) else ("class", "rehearsal", "simplest")
     res = {"version": tunnelsim.__version__, "spans": spans, "rules": rules, "runs": {}}
     d = ROOT / "reports" / tunnelsim.__version__
     d.mkdir(parents=True, exist_ok=True)
