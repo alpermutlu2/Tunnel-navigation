@@ -17,11 +17,15 @@ sys.path.insert(0, str(ROOT))
 import tunnelsim  # noqa: E402
 
 SETS = (0, 50, 100, 150)
+if "--validation" in sys.argv:          # untouched seeds, final configuration only, run once (owner 2026-10-25)
+    SETS = (200, 250)
+    sys.argv.remove("--validation")
 KEYS = ("S1", "S2", "S3", "S4", "S5", "S6s", "S6", "S6L", "S1-1km", "S1-5km")
 VARIANTS = {"base": {"map_nis_gate": False}, "gate": {"map_nis_gate": True},
             "gate+defer": {"map_nis_gate": True, "map_branch_defer": True},
             "gate+reassoc": {"map_nis_gate": True, "map_reassoc": True},
-            "reassoc": {"map_nis_gate": False, "map_reassoc": True}}
+            "reassoc": {"map_nis_gate": False, "map_reassoc": True},
+            "default": {}}
 RUN = tuple(sys.argv[1].split(",")) if len(sys.argv) > 1 else tuple(VARIANTS)
 FAIL_M = 100.0     # a run whose portal error exceeds this counts as a failure
 
@@ -52,7 +56,9 @@ if __name__ == "__main__":
     jobs = [(v, k, lo, True) for v in RUN for lo in SETS for k in KEYS] + \
            [(v, k, lo, False) for v in RUN for lo in SETS for k in ("S1", "S4")]
     out_name = "eval_sets_200.json" if RUN == tuple(VARIANTS)[:3] else f"eval_sets_200_{'_'.join(RUN).replace('+', '-')}.json"
-    res = {"version": tunnelsim.__version__, "sets": SETS, "seeds_per_set": 50, "fail_m": FAIL_M, "runs": {}}
+    if SETS[0] >= 200:
+        out_name = "validation_200-299.json"
+    res = {"version": tunnelsim.__version__, "sets": list(SETS), "variants": {v: VARIANTS[v] for v in RUN}, "seeds_per_set": 50, "fail_m": FAIL_M, "runs": {}}
     d = ROOT / "reports" / tunnelsim.__version__
     d.mkdir(parents=True, exist_ok=True)
     with ProcessPoolExecutor(2) as ex:

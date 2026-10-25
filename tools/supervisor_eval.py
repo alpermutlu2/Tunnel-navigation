@@ -35,8 +35,9 @@ if __name__ == "__main__":
     part = sys.argv[1] if len(sys.argv) > 1 else "dev"
     # "sets": the class rule only (no rehearsals) on four independent sets of 50 seeds
     spans = {"dev": [(0, 50)], "heldout": [(50, 100)], "smoke": [(0, 2)],
-             "sets": [(0, 50), (50, 100), (100, 150), (150, 200)]}[part]
-    rules = ("class",) if part == "sets" else ("class", "rehearsal", "simplest")
+             "sets": [(0, 50), (50, 100), (100, 150), (150, 200)],
+             "validation": [(200, 250), (250, 300)]}[part]
+    rules = ("class",) if part in ("sets", "validation") else ("class", "rehearsal", "simplest")
     res = {"version": tunnelsim.__version__, "spans": spans, "rules": rules, "runs": {}}
     d = ROOT / "reports" / tunnelsim.__version__
     d.mkdir(parents=True, exist_ok=True)

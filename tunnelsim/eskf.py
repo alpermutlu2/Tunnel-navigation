@@ -79,7 +79,7 @@ class EskfConfig:
     # if J(ŝ) − min J > χ²₁ 99.9 %, an along-track position pseudo-measurement pulls ŝ to s* = argmin J,
     # z = tᵀ(p̂_R − c(s*)), R = max(5 m, σ_ψ,eff/|κ(s*)|)². In a curve the yaw (gyro, accurate over
     # seconds) says where in the curve the car is; a point linearisation at a wrong ŝ cannot.
-    map_reassoc: bool = False
+    map_reassoc: bool = True               # default since v0.5.11 (owner), with the gate as a safety net
     map_reassoc_n: int = 121
     map_reassoc_scale: bool = True     # the map length-error state in the re-association row (owner's map-error states)
     # map errors as states, constant per tunnel, reset at each outage (owner, 2026-10-20): lateral

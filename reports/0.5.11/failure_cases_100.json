@@ -138,10 +138,10 @@
    "map_reassoc": 0
   },
   "eskf/gate+reassoc/S1/map2x": {
-   "portal_rmse": 24.26,
-   "portal_p95": 32.04,
+   "portal_rmse": 19.74,
+   "portal_p95": 27.5,
    "failures_gt_100m": 0,
-   "nees": 4.789,
+   "nees": 1.658,
    "branch": 1.0,
    "main": 0.0,
    "late_gt_1s_k1": 0.0,
@@ -149,10 +149,10 @@
    "map_reassoc": 38
   },
   "eskf/gate+reassoc/S4/map2x": {
-   "portal_rmse": 29.17,
-   "portal_p95": 38.2,
+   "portal_rmse": 26.5,
+   "portal_p95": 33.44,
    "failures_gt_100m": 0,
-   "nees": 5.417,
+   "nees": 2.431,
    "branch": 1.0,
    "main": 0.0,
    "late_gt_1s_k1": 0.0,
@@ -160,10 +160,10 @@
    "map_reassoc": 49
   },
   "eskf/gate+reassoc/S5/map2x": {
-   "portal_rmse": 27.69,
-   "portal_p95": 32.36,
+   "portal_rmse": 18.25,
+   "portal_p95": 25.26,
    "failures_gt_100m": 0,
-   "nees": 13.153,
+   "nees": 1.607,
    "branch": 1.0,
    "main": 0.0,
    "late_gt_1s_k1": 0.02,
@@ -212,62 +212,62 @@
   },
   "supervisor/S1/map2x": {
    "none": {
-    "portal": 25.14,
-    "nees": 5.111,
+    "portal": 20.62,
+    "nees": 1.809,
     "callout_mean_s": -0.66,
     "late_gt_1s": 0.0,
     "early_gt_5s": 0.0,
-    "alarm_time_frac": 0.051,
-    "alarm_runs_frac": 0.38
+    "alarm_time_frac": 0.0,
+    "alarm_runs_frac": 0.0
    },
    "majority": {
-    "portal": 25.14,
-    "nees": 1.636,
+    "portal": 20.62,
+    "nees": 1.462,
     "callout_mean_s": -0.66,
     "late_gt_1s": 0.0,
     "early_gt_5s": 0.0,
-    "alarm_time_frac": 0.042,
-    "alarm_runs_frac": 0.38
+    "alarm_time_frac": 0.0,
+    "alarm_runs_frac": 0.0
    }
   },
   "supervisor/S4/map2x": {
    "none": {
-    "portal": 30.17,
-    "nees": 5.777,
+    "portal": 27.49,
+    "nees": 2.617,
     "callout_mean_s": -2.13,
     "late_gt_1s": 0.0,
     "early_gt_5s": 0.01,
-    "alarm_time_frac": 0.078,
-    "alarm_runs_frac": 1.0
+    "alarm_time_frac": 0.062,
+    "alarm_runs_frac": 0.98
    },
    "majority": {
-    "portal": 30.17,
-    "nees": 1.627,
+    "portal": 27.49,
+    "nees": 1.474,
     "callout_mean_s": -2.15,
     "late_gt_1s": 0.0,
     "early_gt_5s": 0.01,
-    "alarm_time_frac": 0.023,
-    "alarm_runs_frac": 0.42
+    "alarm_time_frac": 0.001,
+    "alarm_runs_frac": 0.02
    }
   },
   "supervisor/S5/map2x": {
    "none": {
-    "portal": 28.65,
-    "nees": 14.075,
+    "portal": 19.21,
+    "nees": 1.781,
     "callout_mean_s": -0.59,
     "late_gt_1s": 0.02,
     "early_gt_5s": 0.0,
-    "alarm_time_frac": 0.125,
-    "alarm_runs_frac": 0.92
+    "alarm_time_frac": 0.0,
+    "alarm_runs_frac": 0.04
    },
    "majority": {
-    "portal": 28.65,
-    "nees": 1.382,
+    "portal": 19.21,
+    "nees": 1.295,
     "callout_mean_s": -0.59,
     "late_gt_1s": 0.02,
     "early_gt_5s": 0.0,
-    "alarm_time_frac": 0.118,
-    "alarm_runs_frac": 0.91
+    "alarm_time_frac": 0.0,
+    "alarm_runs_frac": 0.0
    }
   }
  }
