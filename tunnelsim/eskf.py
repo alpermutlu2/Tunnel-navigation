@@ -81,6 +81,7 @@ class EskfConfig:
     # seconds) says where in the curve the car is; a point linearisation at a wrong ŝ cannot.
     map_reassoc: bool = False
     map_reassoc_n: int = 121
+    map_reassoc_scale: bool = True     # the map length-error state in the re-association row (owner's map-error states)
     # map errors as states, constant per tunnel, reset at each outage (owner, 2026-10-20): lateral
     # offset of the polyline and a length (scale) error; the curve-matching gain is then bounded
     # by the map's own uncertainty instead of being taken as exact
@@ -705,7 +706,14 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                             t_s = np.stack([np.cos(ps_s), np.sin(ps_s)], 1)
                             Hr = np.zeros((B, 1, NA)); Hr[:, 0, 0:2] = t_s
                             Hr[:, 0, 6:9] = np.einsum("bi,bij->bj", np.c_[t_s, np.zeros(B)], skew_b(l_n))
-                            zr = np.einsum("bi,bi->b", t_s, pR[:, :2] - c_s)[:, None] - np.einsum("bij,bj->bi", Hr, x)
+                            if cfg.map_reassoc_scale:
+                                # the candidate is a map point: with the map's length error ε the true point
+                                # lies tᵀ(c − c_entry)·ε further on (the lever the other map rows use)
+                                lev_s = np.einsum("bi,bi->b", t_s, c_s - road_map.xy_entry)
+                                Hr[:, 0, IE] = lev_s            # as the cross-track row: h = tᵀ(p̂_R − c) + lever·ε̂
+                            else:
+                                lev_s = np.zeros(B)
+                            zr = (np.einsum("bi,bi->b", t_s, pR[:, :2] - c_s) + lev_s * e_hat)[:, None] - np.einsum("bij,bj->bi", Hr, x)
                             sig_a = np.maximum(5.0, np.sqrt(var_psi) / np.maximum(np.abs(k_s), 1e-6))
                             Rr = (sig_a ** 2)[:, None, None]
                             Psub, xs = P[go], x[go]
