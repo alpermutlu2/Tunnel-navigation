@@ -1,7 +1,7 @@
 {
   "version": "0.5.10",
-  "tests": "2 failed, 184 passed in 230.08s (0:03:50)",
-  "tests_ok": false,
+  "tests": "186 passed in 240.60s (0:04:00)",
+  "tests_ok": true,
   "truth": {
     "S1": {
       "duration_s": 420.15,

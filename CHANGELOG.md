@@ -34,6 +34,9 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   - low-end, 1D: 64.8 / 80.2 → 64.0 / 79.7 m;
   - low-end, ESKF: 603 / 857 → 638 / 894 m, (e/σ)² 155 → 183.
 - REPORT §3, §4.1, §4.6, §4.9, §5 (detector A/B table), §6.3; SUMMARY; deck and simulator rebuilt.
+- Snapshot `reports/0.5.10/metrics.json` vs 0.5.9: only S4 changed (snapshot seeds). Diverge rms
+  26.2 → 30.6 m, portal 5.4 → 5.0 m, (e/σ)² 0.10 → 0.09, callout rms 2.6 → 2.3 s, exit step p95
+  3.4 → 3.5 m; tests 186 passed.
 
 ## v0.5.9 (2026-10-24): 1D map-constrained EKF baseline
 
