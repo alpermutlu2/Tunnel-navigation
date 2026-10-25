@@ -1,6 +1,6 @@
 {
   "version": "0.5.11",
-  "tests": "191 passed in 311.47s (0:05:11)",
+  "tests": "195 passed in 324.02s (0:05:24)",
   "tests_ok": true,
   "truth": {
     "S1": {
