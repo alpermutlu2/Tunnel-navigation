@@ -153,10 +153,11 @@ The branch is reported in 800 of 800 runs; when the car goes straight on, "main"
   - **With k = 1:** 11 of 2000 callouts are more than 1 s late (10 on S5, 1 on S4), and on average
     they come 0.1–2.4 s early. The development set alone gave "1 in 500"; over 200 seeds S5 is at
     0–10 % per set.
-  - **With k = 1.3 or 1.65:** none of 2000 are late. The cost is 0.3–0.9 s more advance
-    (S4: 2.2 → 3.0 → 4.0 s early on average).
+  - **With k = 1.3 or 1.65:** none of 2000 are late on 0–199, but 3 of 100 on S5 in the
+    validation tier (§3.1). The cost is 0.3–0.9 s more advance (S4: 2.2 → 3.0 → 4.0 s early on
+    average).
   - **Why k = 1 stays:** σ_s is about twice the real error ((e/σ)² 0.1–0.4), so k = 1 is in effect
-    ~2σ. The k = 1.3 row is the measured alternative if no late callout is acceptable.
+    ~2σ. The k = 1.3 row is the measured alternative; it halves the late callouts.
   - k has to be chosen again once σ is calibrated on real data. The voice says the estimated
     distance rounded to 50 m.
 - **Branch.**
@@ -165,6 +166,33 @@ The branch is reported in 800 of 800 runs; when the car goes straight on, "main"
     error then stays at the no-map value (S1 18–28 m, S4 51–78 m: no exit curve), which shows that
     the map's along-track gain comes only from curves.
 - **Recovery.** The largest step at the exit is ≤ 6 m (p95, worst set).
+
+**3.1 Validation on untouched seeds** (200–299, final configuration, run once;
+`reports/0.5.11/validation_200-299.json`). Nothing was changed after this run.
+
+| | S1 | S2 | S3 | S4 | S5 | S6s | S6 | S6L | 1 km | 5 km |
+|---|---|---|---|---|---|---|---|---|---|---|
+| diverge rms, two sets [m] | 11.4 / 14.6 | 4.0 / 4.6 | 12.2 / 15.0 | 44.9 / 41.5 | 29.1 / 35.7 | 11.7 / 14.7 | 11.4 / 14.9 | 11.1 / 15.3 | 4.1 / 5.4 | 28.8 / 38.2 |
+| portal rms, two sets [m] | 6.8 / 6.9 | 4.1 / 4.9 | 9.4 / 11.1 | 16.7 / 5.1 | 6.1 / 8.6 | 7.2 / 7.3 | 7.6 / 7.6 | 7.4 / 7.4 | 2.6 / 3.1 | 14.4 / 16.2 |
+| runs > 100 m off (of 100) | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
+| worst (e/σ)² | 0.20 | 0.34 | 0.25 | 0.20 | 0.36 | 0.22 | 0.24 | 0.22 | 0.33 | 0.35 |
+| > 1 s late of 100, k = 1 / 1.3 | 0 / 0 | 0 / 0 | 0 / 0 | 2 / 2 | 7 / 3 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 2 / 0 |
+
+- **Inside the ranges of §3.** Most numbers fall there. The 5 km diverge (38 m in one set) is
+  above them.
+- **One new failure, S4 seed 247.**
+  - The crawl leaves an unusually large dead-reckoning error: −220 m at the diverge region, with
+    σ_s 93 m (2.4σ).
+  - The car turns while ŝ is still more than 100 m before the diverge, outside the branch
+    decision's window, so the branch is decided "main".
+  - Re-association, which runs only on a decided branch, never starts. The portal error is
+    −110 m with e/σ 2.0.
+  - The same seed going straight on is 323 m off with "main" reported correctly. One straight-on
+    run in 100 reported the branch.
+  - The structural limit: the along-track error can exceed the branch window. A window that grows
+    with σ_s is the next step (§5).
+- **k = 1.3 is not "never late".** It gave 0 in 2000 on 0–199, but 3 of 100 on S5 here (k = 1:
+  7). The claim is "k = 1.3 halves the late callouts", not "removes them".
 
 **Tunnel length** (diverge at min(0.73·L, L − 200 m) [ASSUMED]). At the diverge: 4.8 m after
 1 km, 12 m after 3 km, 25 m after 5 km. The error grows faster than linearly, since bias drift
@@ -285,7 +313,8 @@ reported accuracy; a 1–3° mount error (absorbed by the lumped accelerometer b
 stays rigid); the shape of the bias model.
 
 **4.9 Three filter sizes: 4, 10 and 16 states** (owner 2026-10-24/25; `tunnelsim/reference1d.py`,
-`tunnelsim/ekf10.py`, `tools/compare_filters.py`, `reports/0.5.11/compare_filters_50.json`). Two
+`tunnelsim/ekf10.py`, `tools/compare_filters.py`, `reports/0.5.11/compare_filters_50.json`; the ESKF
+column is the final configuration with re-association, seeds 0–49). Two
 smaller filters ran on the same sensor data and seeds as the ESKF, with the same stop detector,
 GNSS R inflation, P0 and IMU-class profile. Both treat the map as a hard constraint.
 - **4 states (1D):**
@@ -307,20 +336,20 @@ the portal:
 
 | Note10 | 4 states | 10 states | 16 states (ESKF) |
 |---|---|---|---|
-| S1 straight | 10.8 / 8.6, 6.0 | 10.6 / 5.1, 0.77 | 12.1 / 5.6, 0.13 |
+| S1 straight | 10.8 / 8.6, 6.0 | 10.6 / 5.1, 0.77 | 12.1 / 5.5, 0.13 |
 | S2 S-bend | 3.9 / 3.7, 6.4 | 3.8 / 3.5, 1.1 | 3.5 / 4.1, 0.23 |
 | S3 V profile ±5 % | 5.1 / 4.7, 1.0 | 12.0 / 8.7, 0.45 | 12.1 / 9.0, 0.18 |
-| S4 stop-and-go | 35.2 / 94.3, 914 | 22.7 / 25.2, 8.8 | 34.7 / 5.8, 0.12 |
-| S5 braking | 18.5 / 5.5, 6.6 | 20.1 / 3.8, 0.92 | 25.0 / 7.5, 0.27 |
-| S6 speed wander | 12.4 / 9.2, 6.2 | 12.0 / 5.2, 0.77 | 13.3 / 6.2, 0.16 |
-| 5 km straight | 22.6 / 86.3, 133 | 20.3 / 18.6, 2.0 | 24.6 / 13.7, 0.25 |
+| S4 stop-and-go | 35.2 / 94.3, 914 | 22.7 / 25.2, 8.8 | 34.7 / 4.7, 0.08 |
+| S5 braking | 18.5 / 5.5, 6.6 | 20.1 / 3.8, 0.92 | 25.0 / 6.5, 0.21 |
+| S6 speed wander | 12.4 / 9.2, 6.2 | 12.0 / 5.2, 0.77 | 13.3 / 6.1, 0.15 |
+| 5 km straight | 22.6 / 86.3, 133 | 20.3 / 18.6, 2.0 | 24.6 / 12.8, 0.22 |
 | exit step p95 | 2–106 m | 8–39 m | 3–5 m |
 | car goes straight on at the diverge | follows the branch | 147–439 m off at the portal | "main" in 500/500 |
 
 | Low-end IMU | 4 states | 10 states | 16 states (ESKF) |
 |---|---|---|---|
 | S1 | 11.2 / 12.2, 0.36 | 10.9 / 9.9, 0.30 | 16.7 / 10.5, 0.19 |
-| S2 | 13.4 / 14.7, 0.86 | 12.0 / 11.3, 0.66 | 14.0 / 12.4, 0.58 |
+| S2 | 13.4 / 14.7, 0.86 | 12.0 / 11.3, 0.66 | 14.9 / 16.7, 0.94 |
 | S3 | 5.7 / 18.6, 1.5 | 16.2 / 16.8, 0.24 | 22.6 / 17.9, 0.47 |
 | S4 | 64.9 / 81.5, 16 | 64.2 / 93.8, 14 | 626 / 868, 162 |
 | S5 | 17.4 / 10.8, 0.31 | 15.8 / 7.4, 0.19 | 29.8 / 16.6, 0.53 |
@@ -605,6 +634,9 @@ Readings:
   re-association (§4.11) is the first step, then the pitch prior (§4.10).
 - **The validation tier is one set of 100 seeds** (§3.1); claims on rarer failures (2 in 200 in
   §4.11) need more.
+- **The branch decision's window** is fixed at 100 m before the diverge. A dead-reckoning error
+  larger than that (S4, 1 in 100 validation runs) puts the turn outside it and decides "main";
+  the window should grow with σ_s.
 - **Next, for the pitch prior** (§4.10):
   - learn the offset at the portal, where pitch is still known from GNSS, instead of restarting it
     with σ 1°;

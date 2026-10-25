@@ -82,10 +82,14 @@ Ranges over four sets of 50 seeds (0–199):
 
 - **Consistent.** The filter's own uncertainty covers its error everywhere: mean (e/σ)² ≤ 0.39 in
   every set, conservative.
-- **Callout.** Without the rule (k = 1), 10–56 % of callouts come more than 1 s late. With k = 1.3,
-  none of 2000 are late, at 0.3–0.9 s more advance.
+- **Callout.** Without the rule, 10–56 % of callouts come more than 1 s late; with k = 1, 11 of
+  2000. k = 1.3 halves the late callouts (none on 0–199, 3 of 100 on S5 in validation), at
+  0.3–0.9 s more advance.
 - **Exit branch.** Recognised in every run; when the car goes straight on, "main" in every run.
 - **Exit.** The largest jump at the exit is under 6 m (p95).
+- **Validation on 100 untouched seeds** (run once, nothing changed after): inside the ranges,
+  except one S4 run 110 m off. Its dead-reckoning error (−220 m, 2.4σ) put the turn outside the
+  branch decision's 100 m window, so the branch was decided "main".
 - **Seed tiers.** The development set (0–49) gave the low end of the ranges: S1 12 m on it,
   13–17 m on the other sets. A callout claim of "1 in 500 late" made on 0–49 became 11 in 2000.
 - **A failure found on new seeds and fixed.**

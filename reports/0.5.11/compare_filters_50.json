@@ -21,9 +21,9 @@
    },
    "eskf": {
     "diverge": 12.14,
-    "portal": 5.579,
+    "portal": 5.48,
     "portal_p95": 10.0,
-    "nees": 0.133,
+    "nees": 0.128,
     "late_gt_1s": 0.0,
     "exit_step_p95": 3.433
    },
@@ -136,12 +136,12 @@
     "exit_step_p95": 34.85
    },
    "eskf": {
-    "diverge": 13.97,
-    "portal": 12.37,
+    "diverge": 14.91,
+    "portal": 16.66,
     "portal_p95": 24.73,
-    "nees": 0.577,
+    "nees": 0.935,
     "late_gt_1s": 0.0,
-    "exit_step_p95": 4.16
+    "exit_step_p95": 4.143
    }
   },
   "S3/note10": {
@@ -163,9 +163,9 @@
    },
    "eskf": {
     "diverge": 12.1,
-    "portal": 9.037,
+    "portal": 8.992,
     "portal_p95": 17.29,
-    "nees": 0.182,
+    "nees": 0.18,
     "late_gt_1s": 0.0,
     "exit_step_p95": 3.984
    },
@@ -234,11 +234,11 @@
    },
    "eskf": {
     "diverge": 34.73,
-    "portal": 5.783,
-    "portal_p95": 11.1,
-    "nees": 0.118,
+    "portal": 4.7,
+    "portal_p95": 10.02,
+    "nees": 0.077,
     "late_gt_1s": 0.0,
-    "exit_step_p95": 4.003
+    "exit_step_p95": 3.518
    },
    "1d_mount2": {
     "diverge": 34.52,
@@ -281,7 +281,7 @@
     "diverge": 625.9,
     "portal": 868.0,
     "portal_p95": 1337.0,
-    "nees": 162.266,
+    "nees": 161.328,
     "late_gt_1s": 0.94,
     "exit_step_p95": 182.7
    }
@@ -305,11 +305,11 @@
    },
    "eskf": {
     "diverge": 25.01,
-    "portal": 7.497,
-    "portal_p95": 15.48,
-    "nees": 0.273,
+    "portal": 6.498,
+    "portal_p95": 12.73,
+    "nees": 0.206,
     "late_gt_1s": 0.02,
-    "exit_step_p95": 3.662
+    "exit_step_p95": 3.495
    },
    "1d_mount2": {
     "diverge": 18.51,
@@ -376,9 +376,9 @@
    },
    "eskf": {
     "diverge": 13.32,
-    "portal": 6.183,
+    "portal": 6.07,
     "portal_p95": 10.86,
-    "nees": 0.158,
+    "nees": 0.153,
     "late_gt_1s": 0.0,
     "exit_step_p95": 3.339
    },
@@ -447,9 +447,9 @@
    },
    "eskf": {
     "diverge": 24.64,
-    "portal": 13.67,
-    "portal_p95": 25.1,
-    "nees": 0.25,
+    "portal": 12.78,
+    "portal_p95": 24.54,
+    "nees": 0.218,
     "late_gt_1s": 0.0,
     "exit_step_p95": 4.321
    },

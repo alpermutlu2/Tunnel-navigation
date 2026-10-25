@@ -13,7 +13,10 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   (final configuration, run once). Main results are now ranges over four sets of 50
   (`tools/eval_sets.py`); the development set gave the low end (S1 diverge 12.1 vs 13.0–16.9 m).
   The callout claim "1 in 500 late" (k = 1, 0–49) is 11 in 2000 over 200 seeds (S5 0–10 % per
-  set); with k = 1.3 none (k unchanged, row added).
+  set); k = 1.3 halves it (none on 0–199, 3/100 on S5 in validation; k unchanged, row added).
+- **Validation 200–299** (final configuration, once; `validation_200-299.json`): inside the ranges
+  except S4 seed 247 (−110 m: a −220 m crawl error put the turn outside the 100 m branch window,
+  branch decided "main") and S5 late callouts 7/100 (k = 1), 3/100 (k = 1.3).
 - **Map NIS gate** (`map_nis_gate`, default on, owner). χ² 99.9 % on the map heading/cross-track
   rows. On its own: S4 failures 2 → 3 (−694/−571 m → +104/+117/+121 m), worst (e/σ)² 44 → 1.2.
   Branch deferral (σ_s > clothoid length) rejected: branch decided in 18 %, portal ~33 m.
