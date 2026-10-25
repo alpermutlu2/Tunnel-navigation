@@ -74,6 +74,13 @@ class EskfConfig:
     # σ_s exceeds the branch's clothoid length, read from the map's curvature profile.
     map_nis_gate: bool = True              # default since v0.5.11 (owner): fixes the two −500 m runs, costs three +110 m overshoots in 200 (S4)
     map_branch_defer: bool = False
+    # Re-association along the arc (owner 2026-10-25, v0.5.11 A/B, threshold fixed before the runs): at
+    # 1 Hz, candidates s_c in ŝ ± 3σ_s, J(s_c) = wrap(ψ̂ − ψ_map(s_c))²/(σ_ψ² + P_ψψ) + (s_c − ŝ)²/σ_s²;
+    # if J(ŝ) − min J > χ²₁ 99.9 %, an along-track position pseudo-measurement pulls ŝ to s* = argmin J,
+    # z = tᵀ(p̂_R − c(s*)), R = max(5 m, σ_ψ,eff/|κ(s*)|)². In a curve the yaw (gyro, accurate over
+    # seconds) says where in the curve the car is; a point linearisation at a wrong ŝ cannot.
+    map_reassoc: bool = False
+    map_reassoc_n: int = 121
     # map errors as states, constant per tunnel, reset at each outage (owner, 2026-10-20): lateral
     # offset of the polyline and a length (scale) error; the curve-matching gain is then bounded
     # by the map's own uncertainty instead of being taken as exact
@@ -672,6 +679,36 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     s_main = road_map.s_div + (pR[:, :2] - road_map.main_xy0) @ tm
                     s_new = np.where(br_dec == -1, np.maximum(s_main, road_map.s_div), s_new)
                 s_map = np.where(out_m, s_new, np.nan)
+                if cfg.map_reassoc:
+                    ra = out_m & (br_dec != -1)
+                    if ra.any():
+                        sm0 = np.nan_to_num(s_map)
+                        _, ps0_, _ = road_map.at(sm0)
+                        t0_ = np.stack([np.cos(ps0_), np.sin(ps0_)], 1)
+                        sg_s = np.sqrt(np.einsum("bi,bij,bj->b", t0_, P[:, 0:2, 0:2], t0_))
+                        u_ = np.linspace(-3.0, 3.0, cfg.map_reassoc_n)
+                        cand = sm0[:, None] + sg_s[:, None] * u_[None]
+                        _, psc, _ = road_map.at(cand.ravel())
+                        psc = psc.reshape(cand.shape)
+                        var_psi = cfg.map_heading_sigma ** 2 + P[:, 8, 8]
+                        J = np.angle(np.exp(1j * (psi_hat[:, None] - psc))) ** 2 / var_psi[:, None] + u_[None] ** 2
+                        jbest = np.argmin(J, axis=1)
+                        j0 = J[:, cfg.map_reassoc_n // 2]
+                        go = ra & (j0 - J[np.arange(B), jbest] > CHI2_1_999)
+                        if go.any():
+                            s_star = cand[np.arange(B), jbest]
+                            c_s, ps_s, _, k_s = road_map.at(s_star, with_kappa=True)
+                            t_s = np.stack([np.cos(ps_s), np.sin(ps_s)], 1)
+                            Hr = np.zeros((B, 1, NA)); Hr[:, 0, 0:2] = t_s
+                            Hr[:, 0, 6:9] = np.einsum("bi,bij->bj", np.c_[t_s, np.zeros(B)], skew_b(l_n))
+                            zr = np.einsum("bi,bi->b", t_s, pR[:, :2] - c_s)[:, None] - np.einsum("bij,bj->bi", Hr, x)
+                            sig_a = np.maximum(5.0, np.sqrt(var_psi) / np.maximum(np.abs(k_s), 1e-6))
+                            Rr = (sig_a ** 2)[:, None, None]
+                            Psub, xs = P[go], x[go]
+                            _update(xs, Psub, zr[go], Hr[go], Rr[go], None)
+                            P[go], x[go] = Psub, xs
+                            s_map = np.where(go, s_star, s_map)
+                            ev["map_reassoc"] = ev.get("map_reassoc", 0) + int(go.sum())
                 paused = np.zeros(B, bool)
                 if road_map.s_div is not None:
                     inwin = out_m & (br_dec == 0) & (s_map >= road_map.s_div - cfg.map_pre_m)

@@ -18,7 +18,11 @@ import tunnelsim  # noqa: E402
 
 SETS = (0, 50, 100, 150)
 KEYS = ("S1", "S2", "S3", "S4", "S5", "S6s", "S6", "S6L", "S1-1km", "S1-5km")
-VARIANTS = {"base": {}, "gate": {"map_nis_gate": True}, "gate+defer": {"map_nis_gate": True, "map_branch_defer": True}}
+VARIANTS = {"base": {"map_nis_gate": False}, "gate": {"map_nis_gate": True},
+            "gate+defer": {"map_nis_gate": True, "map_branch_defer": True},
+            "gate+reassoc": {"map_nis_gate": True, "map_reassoc": True},
+            "reassoc": {"map_nis_gate": False, "map_reassoc": True}}
+RUN = tuple(sys.argv[1].split(",")) if len(sys.argv) > 1 else tuple(VARIANTS)
 FAIL_M = 100.0     # a run whose portal error exceeds this counts as a failure
 
 
@@ -45,8 +49,9 @@ def one(args):
 
 
 if __name__ == "__main__":
-    jobs = [(v, k, lo, True) for v in VARIANTS for lo in SETS for k in KEYS] + \
-           [(v, k, lo, False) for v in VARIANTS for lo in SETS for k in ("S1", "S4")]
+    jobs = [(v, k, lo, True) for v in RUN for lo in SETS for k in KEYS] + \
+           [(v, k, lo, False) for v in RUN for lo in SETS for k in ("S1", "S4")]
+    out_name = "eval_sets_200.json" if RUN == tuple(VARIANTS)[:3] else f"eval_sets_200_{'_'.join(RUN).replace('+', '-')}.json"
     res = {"version": tunnelsim.__version__, "sets": SETS, "seeds_per_set": 50, "fail_m": FAIL_M, "runs": {}}
     d = ROOT / "reports" / tunnelsim.__version__
     d.mkdir(parents=True, exist_ok=True)
@@ -54,4 +59,4 @@ if __name__ == "__main__":
         for tag, out in ex.map(one, jobs):
             res["runs"][tag] = out
             print(tag, out["diverge_rmse"], out["portal_rmse"], out["failures"], out["nees"], flush=True)
-            (d / "eval_sets_200.json").write_text(json.dumps(res, indent=1) + "\n")
+            (d / out_name).write_text(json.dumps(res, indent=1) + "\n")
