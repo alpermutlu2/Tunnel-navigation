@@ -42,6 +42,9 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
 - **Simulator:** 4-, 10- and 16-state traces and the app's selected filter with show toggles;
   re-association and disagreement in the banner; results-table rows for each.
 - **Docs:** REPORT §3, §4.9–4.12, §5, §6; SUMMARY; README; deck.
+- Snapshot `reports/0.5.11/metrics.json` vs 0.5.10 (snapshot seeds): portal improves on S4
+  (4.96 → 4.86 m), S5 (8.6 → 7.6 m, (e/σ)² 0.36 → 0.28), S6/S6s (−0.1 m), 5 km (13.6 → 13.4 m);
+  diverge unchanged everywhere (re-association acts after the branch); tests 186 → 191, all pass.
 
 ## v0.5.10 (2026-10-25): causal stop detector by default; evaluation re-run
 

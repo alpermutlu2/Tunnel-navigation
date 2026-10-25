@@ -553,6 +553,13 @@ the first Doppler fix moved ŝ by up to 25 m. The branch decision always comes f
 | low-end S4 | 40–229 m | 89–335 m | 59 / 10.4 | 6 % | 36 % |
 | pressure 30 Pa/km, S1 / S3 | 105–153 m | 96–106 m | 13.3 / 1.9, 8.5 / 1.05 | 0 % | 32 % / 68 % |
 
+*Validation, seeds 200–299* (`supervisor_sets_200-299.json`, run once): the same picture.
+- Note10: portal 4.1–16.5 m, (e/σ)² ≤ 0.37.
+- Low-end except S4: 8.8–19.8 m, (e/σ)² ≤ 0.70.
+- Low-end S4: 177–249 m, (e/σ)² 28 → 12.9 with the monitor.
+- Pressure gradient: (e/σ)² 8.5–12.7 → 1.05–2.05.
+- Exit step ≤ 1.2 m except the pressure gradient on S3 (6.8 m).
+
 Readings:
 - **Low-end S4 stays broken in the product configuration.** The 10-state filter has the
   point-linearised heading update that re-association replaced in the ESKF, and fails in some
