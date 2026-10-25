@@ -1,0 +1,2 @@
+S1/note10/0 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 5.62, "any": 5.62, "majority": 5.62}}
+S1/lowend/0 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.851, "any": 9.851, "majority": 9.851}}

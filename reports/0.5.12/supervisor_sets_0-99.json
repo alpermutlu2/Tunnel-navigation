@@ -1,0 +1,218 @@
+{
+ "version": "0.5.12",
+ "spans": [
+  [
+   0,
+   50
+  ],
+  [
+   50,
+   100
+  ]
+ ],
+ "rules": [
+  "class"
+ ],
+ "runs": {
+  "S1/note10/0": {
+   "scenario": "S1",
+   "seeds": [
+    0,
+    49
+   ],
+   "overrides": [],
+   "rehearsal_windows": [
+    [
+     40.0,
+     70.0
+    ],
+    [
+     85.0,
+     115.0
+    ],
+    [
+     130.0,
+     160.0
+    ]
+   ],
+   "filters": {
+    "1d": {
+     "diverge": 10.82,
+     "portal": 8.59,
+     "portal_p95": 15.05,
+     "nees": 5.985,
+     "callout_mean_s": -0.69,
+     "late_gt_1s": 0.0,
+     "early_gt_5s": 0.0,
+     "exit_step_p95": 11.91
+    },
+    "ekf10": {
+     "diverge": 10.58,
+     "portal": 5.058,
+     "portal_p95": 8.496,
+     "nees": 0.77,
+     "callout_mean_s": -0.75,
+     "late_gt_1s": 0.0,
+     "early_gt_5s": 0.0,
+     "exit_step_p95": 17.22
+    },
+    "eskf": {
+     "diverge": 12.21,
+     "portal": 5.62,
+     "portal_p95": 10.53,
+     "nees": 0.135,
+     "callout_mean_s": -0.77,
+     "late_gt_1s": 0.0,
+     "early_gt_5s": 0.0,
+     "exit_step_p95": 3.716
+    }
+   },
+   "rules": {
+    "class": {
+     "selected": {
+      "1d": 0,
+      "ekf10": 0,
+      "eskf": 50
+     },
+     "none": {
+      "diverge": 12.21,
+      "portal": 5.62,
+      "portal_p95": 10.53,
+      "nees": 0.135,
+      "callout_mean_s": -0.77,
+      "late_gt_1s": 0.0,
+      "early_gt_5s": 0.0,
+      "exit_step_p95": 0.9274,
+      "alarm_time_frac": 0.0,
+      "alarm_runs_frac": 0.0
+     },
+     "any": {
+      "diverge": 12.21,
+      "portal": 5.62,
+      "portal_p95": 10.53,
+      "nees": 0.113,
+      "callout_mean_s": -0.77,
+      "late_gt_1s": 0.0,
+      "early_gt_5s": 0.0,
+      "exit_step_p95": 0.9274,
+      "alarm_time_frac": 0.0,
+      "alarm_runs_frac": 0.0
+     },
+     "majority": {
+      "diverge": 12.21,
+      "portal": 5.62,
+      "portal_p95": 10.53,
+      "nees": 0.122,
+      "callout_mean_s": -0.77,
+      "late_gt_1s": 0.0,
+      "early_gt_5s": 0.0,
+      "exit_step_p95": 0.9274,
+      "alarm_time_frac": 0.0,
+      "alarm_runs_frac": 0.0
+     }
+    }
+   }
+  },
+  "S1/lowend/0": {
+   "scenario": "S1",
+   "seeds": [
+    0,
+    49
+   ],
+   "overrides": [
+    "imu_lowend"
+   ],
+   "rehearsal_windows": [
+    [
+     40.0,
+     70.0
+    ],
+    [
+     85.0,
+     115.0
+    ],
+    [
+     130.0,
+     160.0
+    ]
+   ],
+   "filters": {
+    "1d": {
+     "diverge": 11.22,
+     "portal": 12.19,
+     "portal_p95": 24.48,
+     "nees": 0.363,
+     "callout_mean_s": -0.68,
+     "late_gt_1s": 0.0,
+     "early_gt_5s": 0.0,
+     "exit_step_p95": 39.82
+    },
+    "ekf10": {
+     "diverge": 10.95,
+     "portal": 9.851,
+     "portal_p95": 19.87,
+     "nees": 0.302,
+     "callout_mean_s": -0.8,
+     "late_gt_1s": 0.0,
+     "early_gt_5s": 0.0,
+     "exit_step_p95": 36.77
+    },
+    "eskf": {
+     "diverge": 16.75,
+     "portal": 10.57,
+     "portal_p95": 21.24,
+     "nees": 0.193,
+     "callout_mean_s": -1.08,
+     "late_gt_1s": 0.0,
+     "early_gt_5s": 0.0,
+     "exit_step_p95": 4.131
+    }
+   },
+   "rules": {
+    "class": {
+     "selected": {
+      "1d": 0,
+      "ekf10": 50,
+      "eskf": 0
+     },
+     "none": {
+      "diverge": 10.95,
+      "portal": 9.851,
+      "portal_p95": 19.87,
+      "nees": 0.302,
+      "callout_mean_s": -0.8,
+      "late_gt_1s": 0.0,
+      "early_gt_5s": 0.0,
+      "exit_step_p95": 0.2574,
+      "alarm_time_frac": 0.0,
+      "alarm_runs_frac": 0.0
+     },
+     "any": {
+      "diverge": 10.95,
+      "portal": 9.851,
+      "portal_p95": 19.87,
+      "nees": 0.302,
+      "callout_mean_s": -0.8,
+      "late_gt_1s": 0.0,
+      "early_gt_5s": 0.0,
+      "exit_step_p95": 0.2574,
+      "alarm_time_frac": 0.0,
+      "alarm_runs_frac": 0.0
+     },
+     "majority": {
+      "diverge": 10.95,
+      "portal": 9.851,
+      "portal_p95": 19.87,
+      "nees": 0.302,
+      "callout_mean_s": -0.8,
+      "late_gt_1s": 0.0,
+      "early_gt_5s": 0.0,
+      "exit_step_p95": 0.2574,
+      "alarm_time_frac": 0.0,
+      "alarm_runs_frac": 0.0
+     }
+    }
+   }
+  }
+ }
+}
