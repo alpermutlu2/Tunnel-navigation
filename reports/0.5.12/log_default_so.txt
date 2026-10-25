@@ -1,0 +1,12 @@
+default/S1_straight_on/0 12.14 18.4 0 0.239
+default/S4_straight_on/0 34.73 51.25 3 0.311
+default/S1_straight_on/50 16.86 28.03 0 0.548
+default/S4_straight_on/50 39.39 60.29 7 0.386
+default/S1_straight_on/100 13.0 20.56 0 0.297
+default/S4_straight_on/100 38.37 56.37 8 0.361
+default/S1_straight_on/150 13.95 21.64 0 0.334
+default/S4_straight_on/150 50.2 78.46 10 0.553
+default/S1_straight_on/200 11.36 17.91 0 0.232
+default/S4_straight_on/200 44.85 63.94 3 0.385
+default/S1_straight_on/250 14.6 22.89 0 0.369
+default/S4_straight_on/250 41.5 61.09 7 0.395

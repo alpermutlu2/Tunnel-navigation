@@ -68,7 +68,7 @@ class EskfConfig:
     map_pre_m: float = 100.0                     # pause starts this far before the diverge
     # v0.5.12 (owner 2026-10-25, from S4 seed 247): the window starts max(map_pre_m, k·σ_s) before the
     # diverge, so a filter far behind the car still sees the turn inside it; 0 = fixed 100 m.
-    map_pre_sigma_k: float = 0.0
+    map_pre_sigma_k: float = 2.0                 # default since v0.5.12 (owner): S4 seed 247 −110 → −3 m, straight-on unchanged
     map_branch_deg: float = 5.0                  # branch decision threshold (as branch.py)
     # Map-row innovation gate and branch deferral (owner 2026-10-25, v0.5.11 A/B; thresholds chosen
     # before the runs): reject the heading/cross-track update when its NIS exceeds χ² 99.9 % (2 dof,

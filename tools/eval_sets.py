@@ -29,6 +29,7 @@ VARIANTS = {"base": {"map_nis_gate": False}, "gate": {"map_nis_gate": True},
             "gate+reassoc": {"map_nis_gate": True, "map_reassoc": True},
             "reassoc": {"map_nis_gate": False, "map_reassoc": True},
             "default": {},
+            "win0": {"map_pre_sigma_k": 0.0},
             "win2": {"map_pre_sigma_k": 2.0},
             "win2+slip": {"map_pre_sigma_k": 2.0, "map_reassoc_slip_k": 7e-3}}
 RUN = tuple(sys.argv[1].split(",")) if len(sys.argv) > 1 else tuple(VARIANTS)
