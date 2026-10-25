@@ -42,27 +42,36 @@ def test_nhc_jacobian_finite_difference():
 
 
 def test_zupt_detector_separates_idle_from_driving():
-    """Engine idle (narrow 25 Hz) is outside the road band; driving at 15 km/h is inside."""
+    """Engine idle (narrow 25 Hz) is outside the road band; driving at 15 km/h is inside.
+    Offline (forward-backward): idle always detected. Causal (default since v0.5.10): one pass
+    rejects the engine tone less, so idle is detected only part of the time (deliberately
+    conservative); driving is never taken as standing."""
     stop = ImuTruthSource.static(30.0)
     m0, _ = simulate_imu(stop, NOMINAL, Switches.only("vib_road", "vib_engine", "a_white"), seed=1)
     drive = ImuTruthSource(t=stop.t, f_p=stop.f_p, w_p=stop.w_p, v=np.full(stop.t.size, 15 / 3.6), C_pb=stop.C_pb)
     m1, _ = simulate_imu(drive, NOMINAL, Switches.only("vib_road", "vib_engine", "a_white"), seed=1)
-    cfg = EskfConfig()
-    s0 = zupt_detector(m0.t, m0.f[None], cfg, 100.0)[0, 200:-200]
-    s1 = zupt_detector(m1.t, m1.f[None], cfg, 100.0)[0, 200:-200]
-    assert np.mean(s0) > 0.99
-    assert np.mean(s1) < 0.01
+    for cfg, idle_min in ((EskfConfig(zupt_causal=False), 0.99), (EskfConfig(), 0.5)):
+        s0 = zupt_detector(m0.t, m0.f[None], cfg, 100.0)[0, 200:-200]
+        s1 = zupt_detector(m1.t, m1.f[None], cfg, 100.0)[0, 200:-200]
+        assert np.mean(s0) > idle_min
+        assert np.mean(s1) < 0.01
 
 
 def test_zupt_detector_on_s4_stops():
-    """S4: detected stops cover the true stops; no detection while the car moves faster than
-    0.5 m/s (a launch after a stop must not be taken as standing)."""
+    """S4: detected stops cover the true stops, and the detector does not hold "stopped" while
+    the car moves (a launch after a stop must not be taken as standing). Offline: > 90 % of the
+    stop time, nothing above 0.5 m/s. Causal (default): > 70 % of the stop time, no run of more
+    than 0.5 s while the car moves faster than 0.5 m/s (10 seeds)."""
     from tunnelsim.experiments import simulate_run
-    sc, tr, t, F, W, g, bt, bh = simulate_run("S4", [0])
-    st = zupt_detector(t, F, EskfConfig(), 100.0)[0]
+    sc, tr, t, F, W, g, bt, bh = simulate_run("S4", np.arange(10))
     stop = tr.v < 0.05
-    assert np.mean(st[stop]) > 0.9
-    assert np.max(tr.v[st]) < 0.5
+    st = zupt_detector(t, F, EskfConfig(zupt_causal=False), 100.0)
+    assert np.mean(st[0, stop]) > 0.9
+    assert np.max(tr.v[st[0]]) < 0.5
+    st = zupt_detector(t, F, EskfConfig(), 100.0)
+    assert np.mean(st[:, stop]) > 0.7
+    moving = st & (tr.v[None] > 0.5)
+    assert (moving.sum(axis=1) / 100.0 <= 0.5).all()
 
 
 def test_nominal_s1_tracks_through_tunnel():

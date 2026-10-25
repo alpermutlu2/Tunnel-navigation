@@ -336,10 +336,26 @@ cost.
 - **Simplified map errors.** Map errors are a lateral offset and a length scale. Shape errors,
   missing curves and a wrong diverge position are not simulated. The truth car drives on the lane
   centre.
-- **The stop detector is causal since v0.5.10.** The forward-backward (offline) version used
-  before saw a little of the future. On S4, 30 seeds, the causal one costs 3.4 m at the diverge
-  (30.3 → 33.7 m), the portal error stays at 4.7–4.8 m, and no callout is more than 1 s late.
-  Its thresholds still rest on the [ASSUMED] vibration model.
+- **The stop detector is causal since v0.5.10, and deliberately conservative.** The
+  forward-backward (offline) version used before saw a little of the future. One pass of the same
+  filters rejects the ~25 Hz engine tone less, so idle and crawling vibration stay slightly above
+  the band threshold. The detector then catches 80 % of the stop time instead of 96 %, and never
+  holds "stopped" for more than 0.5 s while the car moves. Filter order A/B on S4
+  (`reports/0.5.10/zupt_order_ab.json`; 50 seeds for the detector, 30 for the ESKF):
+
+  | Causal band-pass order | Stop time caught | Seeds with > 0.5 s false "stopped" | ESKF diverge / portal, (e/σ)², > 1 s late |
+  |---|---|---|---|
+  | 2 | 2 % | 0 | 192 / 334 m, 31, 13 % |
+  | 3 | 24 % | 0 | 30.4 / 4.4 m, 0.07, 0 % |
+  | **4 (default)** | **80 %** | **0** | **33.7 / 4.7 m, 0.08, 0 %** |
+  | 8, the offline rejection | 95 % | 3 | 51.9 / 13.3 m, 0.64, 7 % |
+  | offline (reference) | 96 % | 0 | 30.3 / 4.8 m, 0.08, 0 % |
+
+  - **The asymmetry:** a missed stop costs little, because the ZUPT still fires for most of it;
+    a false stop at 3 m/s cost hundreds of metres.
+  - **Why not order 3:** it scores slightly better, but it sits next to the cliff at order 2.
+  - **What it still rests on:** the margin comes from the [ASSUMED] vibration and engine model,
+    so the thresholds must be re-set on recordings.
 - **Narrow setting.** Two IMU classes, a rigid phone mount, a single lane, one car. A second car
   would only be another noise realisation of the same sensors; the 50 seeds cover that.
 - **Next, with real devices:**
@@ -432,7 +448,8 @@ change. The author is ready to explain or change any of them:
 | Playback did not advance at 1–10× | the author, on GitHub Pages |
 | Low-end S4 explained as yaw drift at stops; it is low-speed pitch unobservability | the author, from a trace |
 | `browser.html` published without its package (`*.zip` git-ignored) | the author |
-| Headline results used the offline (forward-backward) stop detector; the 0.5.3 results file recorded k = 1.65 in its main callout block while the report quoted its k = 1 row | an external AI comparison; measured (causal costs 3.4 m on S4 only), switched and re-run at v0.5.10 |
+| Headline results used the offline (forward-backward) stop detector; the 0.5.3 results file recorded k = 1.65 in its main callout block while the report quoted its k = 1 row | an external AI comparison; measured, switched and re-run at v0.5.10 |
+| The causal stop detector at twice the order (to restore the offline engine rejection) took a 3 m/s crawl as a stop in 3 of 50 seeds: S4 portal 91 m | the agent's 50-seed re-run; the order A/B and the choice of the conservative order were the author's |
 | 1D baseline: re-lock after the tunnel started only on position fixes, so the gate locked out GNSS at the exit | the agent's event counts (230 rejections in 5 seeds) |
 
 **Process controls,** used because generated code can be confidently wrong:

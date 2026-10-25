@@ -10,7 +10,15 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
 ## v0.5.10 (2026-10-25): causal stop detector by default; evaluation re-run
 
 - `EskfConfig.zupt_causal` False → True (owner 2026-10-25): the stop detector no longer filters
-  forward-backward, so it uses no future samples. The 1D baseline shares the detector.
+  forward-backward, so it uses no future samples; the filters start from their steady state.
+  The 1D baseline shares the detector. New fields `zupt_band_order` (4) and `zupt_lp_order` (2).
+- Order A/B (`tools/zupt_order_ab.py` → `reports/0.5.10/zupt_order_ab.json`). Owner's choice:
+  order 4, deliberately conservative.
+  - It catches 80 % of the S4 stop time, never > 0.5 s false.
+  - Twice the order restores the offline engine rejection, but then takes a 3 m/s crawl as a
+    stop in 3/50 seeds: S4 portal 91 m, (e/σ)² 7.7.
+  - Order 3 is slightly better but sits next to the cliff at order 2 (S4 334 m).
+  - Detector tests now check both the offline and the causal behaviour.
 - 50-seed evaluation re-run at this version (`reports/0.5.10/evaluation_50.json`, with the
   straight-on control); the report now cites it instead of `reports/0.5.3/`. Only S4 changed
   (the only scenario with stops):
@@ -25,7 +33,7 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   - Note10, ESKF: 30.3 / 4.8 → 33.7 / 4.7 m;
   - low-end, 1D: 64.8 / 80.2 → 64.0 / 79.7 m;
   - low-end, ESKF: 603 / 857 → 638 / 894 m, (e/σ)² 155 → 183.
-- REPORT §3, §4.1, §4.6, §4.9, §5, §6.3; SUMMARY; deck and simulator rebuilt.
+- REPORT §3, §4.1, §4.6, §4.9, §5 (detector A/B table), §6.3; SUMMARY; deck and simulator rebuilt.
 
 ## v0.5.9 (2026-10-24): 1D map-constrained EKF baseline
 

@@ -1,0 +1,80 @@
+{
+ "version": "0.5.10",
+ "variants": {
+  "offline (band 4, low-pass 2, forward-backward)": {
+   "idle_detected": 1.0,
+   "drive_15kmh_detected": 0.0,
+   "s4_stop_coverage": 0.958,
+   "s4_seeds_false_gt_0p5s": 0,
+   "s4_max_true_speed_at_detection": 3.03,
+   "eskf_s4_30": {
+    "diverge_rmse": 30.29,
+    "portal_rmse": 4.829,
+    "portal_p95": 10.34,
+    "nees": 0.081,
+    "k1_mean_s": -2.57,
+    "k1_late_gt_1s": 0.0
+   }
+  },
+  "causal band 2": {
+   "idle_detected": 0.035,
+   "drive_15kmh_detected": 0.0,
+   "s4_stop_coverage": 0.019,
+   "s4_seeds_false_gt_0p5s": 0,
+   "s4_max_true_speed_at_detection": 0.05,
+   "eskf_s4_30": {
+    "diverge_rmse": 192.0,
+    "portal_rmse": 333.6,
+    "portal_p95": 953.0,
+    "nees": 31.203,
+    "k1_mean_s": -2.25,
+    "k1_late_gt_1s": 0.133
+   }
+  },
+  "causal band 3": {
+   "idle_detected": 0.245,
+   "drive_15kmh_detected": 0.0,
+   "s4_stop_coverage": 0.236,
+   "s4_seeds_false_gt_0p5s": 0,
+   "s4_max_true_speed_at_detection": 0.07,
+   "eskf_s4_30": {
+    "diverge_rmse": 30.44,
+    "portal_rmse": 4.438,
+    "portal_p95": 8.153,
+    "nees": 0.068,
+    "k1_mean_s": -3.17,
+    "k1_late_gt_1s": 0.0
+   }
+  },
+  "causal band 4": {
+   "idle_detected": 0.747,
+   "drive_15kmh_detected": 0.0,
+   "s4_stop_coverage": 0.8,
+   "s4_seeds_false_gt_0p5s": 0,
+   "s4_max_true_speed_at_detection": 2.93,
+   "eskf_s4_30": {
+    "diverge_rmse": 33.74,
+    "portal_rmse": 4.704,
+    "portal_p95": 8.509,
+    "nees": 0.077,
+    "k1_mean_s": -2.16,
+    "k1_late_gt_1s": 0.0
+   }
+  },
+  "causal band 8, low-pass 4": {
+   "idle_detected": 1.0,
+   "drive_15kmh_detected": 0.0,
+   "s4_stop_coverage": 0.953,
+   "s4_seeds_false_gt_0p5s": 3,
+   "s4_max_true_speed_at_detection": 3.26,
+   "eskf_s4_30": {
+    "diverge_rmse": 51.89,
+    "portal_rmse": 13.29,
+    "portal_p95": 28.27,
+    "nees": 0.636,
+    "k1_mean_s": -1.15,
+    "k1_late_gt_1s": 0.067
+   }
+  }
+ }
+}

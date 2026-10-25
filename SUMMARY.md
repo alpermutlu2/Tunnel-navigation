@@ -127,7 +127,8 @@ same sensors and seeds as a baseline (REPORT §4.9):
   - simulation only: the IMU noise is measured, while the rest of the sensor and map behaviour is
     assumed;
   - a rigid mount, one lane, one car;
-  - a stop detector tuned on the [ASSUMED] vibration model (causal since v0.5.10).
+  - a causal stop detector tuned on the [ASSUMED] vibration model: conservative, it catches 80 % of
+    the stop time and never fires while the car moves.
 - **With real devices:**
   - static Allan runs;
   - recordings in Istanbul tunnels with the portals as checkpoints;

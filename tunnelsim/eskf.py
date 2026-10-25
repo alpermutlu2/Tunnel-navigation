@@ -86,6 +86,8 @@ class EskfConfig:
     zupt_causal: bool = True          # owner 2026-10-25 (v0.5.10): causal filters by default (real time); False: forward-backward
                                       # (offline, optimistic). 30 seeds: S4 diverge 30.3 -> 33.7 m, portal 4.8 -> 4.7 m, no other scenario changes
     zupt_speed_max: float = 2.0       # m/s: filter speed must be below this
+    zupt_band_order: int = 4          # Butterworth order of the road band-pass [ASSUMED]
+    zupt_lp_order: int = 2            # Butterworth order of the < 2 Hz low-pass [ASSUMED]
     cov_rate_hz: float = 10.0         # covariance propagation rate
     # GNSS re-acquisition after an outage (v0.5 A, accepted 2026-10-20): robust over fast
     reacq_gap_s: float = 10.0         # an outage longer than this starts a re-acquisition phase
@@ -219,11 +221,12 @@ def zupt_detector(t, f, cfg, fs, win_s=1.0):
         m = (c[..., n:] - c[..., :-n]) / n
         return np.concatenate([np.repeat(m[..., :1], n - 1, axis=-1), m], axis=-1)   # length N
 
-    # causal (v0.5.10): one pass at twice the order gives the magnitude response of the
-    # forward-backward pass (|H|² of the lower order), so the engine tone is rejected as before;
-    # 4th order one pass let it leak into the band (idle taken as stopped 74 % instead of 100 %).
-    # The filter starts from its steady state for the first sample (no start-up transient).
-    mult = 2 if cfg.zupt_causal else 1
+    # causal (v0.5.10, owner 2026-10-25): one pass, starting from the filter's steady state for the
+    # first sample. Deliberately conservative: one pass rejects the ~25 Hz engine tone less than
+    # the forward-backward pass, which keeps idle and crawling vibration slightly above the band
+    # threshold; the detector then misses part of each stop (a missed stop costs little) but does
+    # not fire while the car crawls (a false stop at 3 m/s cost hundreds of metres with twice the
+    # order, which restores the offline rejection: reports/0.5.10/zupt_order_ab.json).
 
     def _causal(so, x, axis):
         x = np.moveaxis(x, axis, -1)
@@ -231,10 +234,10 @@ def zupt_detector(t, f, cfg, fs, win_s=1.0):
         return np.moveaxis(sosfilt(so, x, axis=-1, zi=zi)[0], -1, axis)
 
     filt = _causal if cfg.zupt_causal else sosfiltfilt
-    sos = butter(4 * mult, cfg.zupt_band_hz, btype="bandpass", fs=fs, output="sos")
+    sos = butter(cfg.zupt_band_order, cfg.zupt_band_hz, btype="bandpass", fs=fs, output="sos")
     xb = filt(sos, np.linalg.norm(f, axis=-1), axis=-1)
     band_rms = np.sqrt(np.maximum(mov(xb * xb), 0.0))
-    lp = butter(2 * mult, 2.0, btype="lowpass", fs=fs, output="sos")
+    lp = butter(cfg.zupt_lp_order, 2.0, btype="lowpass", fs=fs, output="sos")
     fl = filt(lp, f, axis=-2)                                         # (B,N,3)
     var = sum(np.maximum(mov(fl[..., i] ** 2) - mov(fl[..., i]) ** 2, 0.0) for i in range(3))
     raw = (band_rms < cfg.zupt_band_rms) & (np.sqrt(var) < cfg.zupt_lowf_std)
