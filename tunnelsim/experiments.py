@@ -446,6 +446,9 @@ def _eskf_along(mv, t_out, p, C, P_pos, C_bp, r_b):
     return s, g
 
 
+LANDMARK_GATE = "eskf"     # v0.5.12 A/B: "eskf" (owner rule) or "none"
+
+
 def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None, eskf_cfg=None):
     """Run the 1D, 10-state and ESKF filters on one batch; along-track outputs on the ESKF time axis."""
     from .eskf import EskfConfig, run_eskf
@@ -460,6 +463,8 @@ def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None, eskf_
     # the 10-state curve landmark acts after the ESKF's "branch" decision only (owner 2026-10-26)
     dec, bt_ = oe.aux.get("branch_decision"), oe.aux.get("branch_time")
     gate = None if dec is None or getattr(mv, "s_div", None) is None else np.where(dec == 1, np.nan_to_num(bt_, nan=np.inf), np.inf)
+    if LANDMARK_GATE == "none":
+        gate = None
     o10 = run_ekf10(t, F, W, gnss, bt, bh, C_bp, r_b, road, branch_gate=gate)
     o1 = run_ekf1d(t, F, W, gnss, C_bp, r_b, road)
     ip = lambda tt, x: np.stack([np.interp(oe.t, tt, xb) for xb in x])
