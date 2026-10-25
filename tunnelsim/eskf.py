@@ -136,17 +136,25 @@ class EskfConfig:
                                        # (30 seeds: no effect, the ZUPT already holds there; reports/0.5.5)
     level_vmax: float = 0.0            # m/s; > 0: levelling only below this speed (crawl), 0 = any speed
     level_rate_gate: float = 0.3       # m/s²: skipped while the 1 s mean |ω_y,z|·v exceeds this (curves, grade changes)
-    # Pitch prior from the road geometry (owner 2026-10-25, v0.5.11 A/B; off by default): during an
-    # outage, below pitch_prior_vmax and only for the listed IMU classes, the body pitch is tied to
-    # the map's road grade, θ_b = γ(ŝ) ± σ, every pitch_prior_every_s. At low speed the NHC and the
-    # barometer see pitch only through v·δθ; the 1D baseline takes pitch from the map and holds S4
-    # low-end at 80 m. map grade off: γ = 0 (a map without grade).
-    pitch_prior: bool = False
-    pitch_prior_sigma: float = np.deg2rad(1.0)      # [ASSUMED] grade error + suspension pitch + mount
+    # Pitch prior from the road geometry (owner 2026-10-25, v0.5.11 A/B): during an outage and below
+    # pitch_prior_vmax, the body pitch is tied to the map's road grade through a constant offset
+    # state δγ (grade error, mount pitch, mean suspension pitch): z = θ̂_b − γ(ŝ) − δγ̂. The offset
+    # restarts at each outage with pitch_prior_offset_sigma, so the prior constrains the change of
+    # pitch (the gyro drift), not its absolute value. A profile field: sigma 0 = off.
+    # Why: folding the fast gyro-bias terms into white noise (v0.5.7) kept the filter consistent but
+    # made the attitude process noise so large (pitch spreads ~3.6°/√s on the MPU9250 profile)
+    # that at low speed, where NHC and barometer see pitch only through v·δθ, an outside source
+    # of pitch is needed; the road geometry is that source.
+    pitch_prior_sigma: float = 0.0                  # rad; 0 = off [ASSUMED when on]
+    pitch_prior_offset_sigma: float = np.deg2rad(1.0)   # δγ at the start of each outage [ASSUMED]
+    pitch_prior_offset_rw: float = np.deg2rad(0.2) / np.sqrt(300.0)   # rad/√s: 0.2° over 300 s [ASSUMED]
     pitch_prior_vmax: float = 10.0                  # m/s [ASSUMED]: S4 crawls at 8.3 m/s
-    pitch_prior_every_s: float = 1.0
-    pitch_prior_map_grade: bool = True
-    pitch_prior_classes: tuple = ("mpu9250",)
+    pitch_prior_every_s: float = 0.1
+    pitch_prior_map_grade: bool = True              # False: γ = 0 (a map without grade)
+    # ZUPT speed gate source (owner 2026-10-25, A/B): a stop the detector has held without a break for
+    # at least zupt_trust_s is applied whatever the filter speed; shorter claims keep the
+    # zupt_speed_max gate. 0 = off (gate always on).
+    zupt_trust_s: float = 0.0
     imu_class: str = "auto"
     imu_detect_s: float = 10.0
     imu_detect_th: float = 0.027      # rad/s per sample at 100 Hz ≈ ARW 2.7e-3 rad/√s: geometric mean of
@@ -313,7 +321,9 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         cfg = replace(cfg, **FILTER_PROFILES[cls_name])
     elif cfg.imu_class != "note10":
         cfg = replace(cfg, **FILTER_PROFILES[cfg.imu_class])
-    NA = NX + 5          # + speed clone / v_ref (NX), driver wander d (NX + 1), baro gradient g_h (NX + 2),
+    NA = NX + 6          # (+ pitch-prior offset δγ, NX + 5)
+    IP = NX + 5
+    # + speed clone / v_ref (NX), driver wander d (NX + 1), baro gradient g_h (NX + 2),
     ID = NX + 1          #   map lateral offset (NX + 3), map scale error (NX + 4)
     IG = NX + 2
     IM, IE = NX + 3, NX + 4
@@ -341,6 +351,10 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         still = zupt_detector(imu_t, f, cfg, fs)
     else:
         still = np.broadcast_to(zupt_mask, (B, N))
+    # time the detector has held "stopped" without a break, per sample [s]
+    _idx = np.arange(N)[None, :]
+    _last_off = np.maximum.accumulate(np.where(still, -1, _idx), axis=1)
+    still_run = (_idx - _last_off) / fs
     # --- schedules
     n_cov = max(1, int(round(fs / cfg.cov_rate_hz)))
     n_nhc = max(1, int(round(fs / cfg.nhc_rate_hz)))
@@ -358,7 +372,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     s_map = np.full(B, np.nan)              # map-matched along-track position (outage only)
     br_dec = np.zeros(B, int)               # branch decision: 0 none, +1 route (branch), -1 main
     psi_start = np.full(B, np.nan); s_start = np.full(B, np.nan); map_prev_out = np.zeros(B, bool)
-    m_hat = np.zeros(B); e_hat = np.zeros(B)  # map lateral offset [m], map scale error [-]
+    m_hat = np.zeros(B); e_hat = np.zeros(B); off_hat = np.zeros(B)   # + pitch-prior offset [rad]  # map lateral offset [m], map scale error [-]
     br_time = np.full(B, np.nan)              # time of the in-loop branch decision
     if use_map and road_map.s_div is not None:
         sg = np.arange(road_map.s_div, road_map.s_div + road_map.curve_len + 1.0, 0.5)
@@ -408,6 +422,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     Qc = np.zeros(NA)
     Qc[3:6] = cfg.accel_noise ** 2; Qc[6:9] = cfg.gyro_noise ** 2
     Qc[9:12] = cfg.accel_bias_rw ** 2; Qc[12:15] = cfg.gyro_bias_rw ** 2; Qc[15] = cfg.baro_bias_rw ** 2
+    Qc[IP] = cfg.pitch_prior_offset_rw ** 2
     fc = f[:, i0] - b_a
     a_k = np.einsum("bij,bj->bi", C, fc) + GRAVITY_N
     gi = int(np.searchsorted(g_idx, i0, side="right"))
@@ -560,7 +575,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             P[ok], x[ok] = Psub, xs
             bi += 1
         # ZUPT
-        st = still[:, kk] & (np.linalg.norm(v, axis=1) < cfg.zupt_speed_max)
+        st = still[:, kk] & ((np.linalg.norm(v, axis=1) < cfg.zupt_speed_max)
+                             | ((cfg.zupt_trust_s > 0) & (still_run[:, kk] >= cfg.zupt_trust_s)))
         if st.any():
             H = np.zeros((B, 3, NA)); H[:, :, 3:6] = np.eye(3)
             z = v - np.einsum("bij,bj->bi", H, x)
@@ -630,9 +646,9 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             new_m = out_m & ~map_prev_out
             br_dec = np.where(new_m, 0, br_dec); psi_start = np.where(new_m, np.nan, psi_start)
             if new_m.any():                       # a new tunnel: its map errors are unknown, independent
-                for j, sg_ in ((IM, cfg.map_offset_sigma), (IE, cfg.map_scale_sigma)):
+                for j, sg_ in ((IM, cfg.map_offset_sigma), (IE, cfg.map_scale_sigma), (IP, cfg.pitch_prior_offset_sigma)):
                     P[new_m, j, :] = 0.0; P[new_m, :, j] = 0.0; P[new_m, j, j] = sg_ ** 2
-                m_hat = np.where(new_m, 0.0, m_hat); e_hat = np.where(new_m, 0.0, e_hat)
+                m_hat = np.where(new_m, 0.0, m_hat); e_hat = np.where(new_m, 0.0, e_hat); off_hat = np.where(new_m, 0.0, off_hat)
             s_map = np.where(out_m, s_map, np.nan)
             map_prev_out = out_m
             if out_m.any():
@@ -727,8 +743,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     _update(xs, Psub, z[sel][:, rows], H[sel][:, rows], R[sel][:, rows, rows], None)
                     P[sel], x[sel] = Psub, xs
         # pitch prior from the road (v0.5.11 A/B): θ_b = asin(u_z), u = Ĉ C_pb e_x (body forward, nav);
-        # z = θ̂_b − γ(ŝ); ∂θ_b/∂δθ = [u_y, −u_x, 0]/cos θ_b (Ĉ = Exp(δθ)C), ∂/∂δp = −γ'(ŝ)·tᵀ
-        if (cfg.pitch_prior and use_map and cls_name in cfg.pitch_prior_classes
+        # z = θ̂_b − γ(ŝ) − δγ̂; ∂/∂δθ = [u_y, −u_x, 0]/cos θ_b (Ĉ = Exp(δθ)C), ∂/∂δp = −γ'(ŝ)·tᵀ, ∂/∂δγ = −1
+        if (cfg.pitch_prior_sigma > 0 and use_map
                 and (kk - i0) % max(1, int(round(cfg.pitch_prior_every_s * fs))) == 0):
             spd_p = np.linalg.norm(v, axis=1)
             sel = np.isfinite(s_map) & (spd_p < cfg.pitch_prior_vmax) & (imu_t[kk] - last_vel > cfg.cruise_no_gnss_s)
@@ -741,7 +757,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                 H = np.zeros((B, 1, NA))
                 H[:, 0, 6] = u[:, 1] / np.cos(th); H[:, 0, 7] = -u[:, 0] / np.cos(th)
                 H[:, 0, 0] = -gam_r * np.cos(psi_g); H[:, 0, 1] = -gam_r * np.sin(psi_g)
-                z = (th - gam)[:, None] - np.einsum("bij,bj->bi", H, x)
+                H[:, 0, IP] = -1.0
+                z = (th - gam - off_hat)[:, None] - np.einsum("bij,bj->bi", H, x)
                 R = np.full((B, 1, 1), cfg.pitch_prior_sigma ** 2)
                 Psub, xs = P[sel], x[sel]
                 _update(xs, Psub, z[sel], H[sel], R[sel], None)
@@ -780,7 +797,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             s_clone = s_clone - x[:, NX]
             d_hat = d_hat - x[:, ID]
             g_hat = g_hat - x[:, IG]
-            m_hat = m_hat - x[:, IM]; e_hat = e_hat - x[:, IE]
+            m_hat = m_hat - x[:, IM]; e_hat = e_hat - x[:, IE]; off_hat = off_hat - x[:, IP]
             fc = f[:, kk] - b_a
             a_k = np.einsum("bij,bj->bi", C, fc) + GRAVITY_N
         if reclone.any():
