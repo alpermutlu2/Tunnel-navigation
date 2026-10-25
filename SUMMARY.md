@@ -85,7 +85,9 @@ Ranges over four sets of 50 seeds (0–199):
 - **Callout.** Without the rule, 10–56 % of callouts come more than 1 s late; with k = 1, 11 of
   2000. k = 1.3 halves the late callouts (none on 0–199, 3 of 100 on S5 in validation), at
   0.3–0.9 s more advance.
-- **Exit branch.** Recognised in every run; when the car goes straight on, "main" in every run.
+- **Exit branch.** Recognised in every run that takes it. When the car goes straight on, "main"
+  is reported in 599 of 600 (one undecided). Such a car has no curve to correct it: on
+  stop-and-go, 14 % of straight-on runs are more than 100 m off at the exit, until GNSS returns.
 - **Exit.** The largest jump at the exit is under 6 m (p95).
 - **Validation on 100 untouched seeds** (run once, nothing changed after): inside the ranges,
   except one S4 run 110 m off. Its dead-reckoning error (−220 m, 2.4σ) put the turn outside the
@@ -161,7 +163,6 @@ The app runs all three and shows one (REPORT §4.12):
   - static Allan runs;
   - recordings in Istanbul tunnels with the portals as checkpoints;
   - measuring map polyline errors and tunnel pressure gradients;
-  - a causal stop detector;
   - the IMU class from the sensor name.
 
 ## AI usage

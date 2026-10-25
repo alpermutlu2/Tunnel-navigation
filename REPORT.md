@@ -136,8 +136,9 @@ ranges: the S1 diverge error was 12.1 m on 0–49 and 13.0–16.9 m on the other
 | largest exit step p95, worst set [m] | 4.3 | 6.0 | 4.2 | 4.0 | 4.6 | 4.1 | 4.1 | 4.4 | 4.9 | 4.3 |
 
 Cross-track error at the portal is 1.3–3 m (v0.5.10, 50 seeds), the map's own lateral uncertainty.
-The branch is reported in 800 of 800 runs; when the car goes straight on, "main" is reported in
-400 of 400 (S1, S4).
+Branch decision: the branch is reported in 800 of 800 runs that take it. When the car goes
+straight on, "main" is reported in 400 of 400 on 0–199 and in 199 of 200 in validation; one run
+stayed undecided and none reported the branch.
 
 - **Showing the car.**
   - Along the road, in a straight tunnel at steady speed: 12–18 m after 1.5–2 min, 25–50 m with
@@ -162,9 +163,14 @@ The branch is reported in 800 of 800 runs; when the car goes straight on, "main"
     distance rounded to 50 m.
 - **Branch.**
   - Car takes the branch: the in-loop decision reports it 2–3.5 s after the diverge.
-  - Car goes straight on (negative control, map with the branch): "main" every time. The portal
-    error then stays at the no-map value (S1 18–28 m, S4 51–78 m: no exit curve), which shows that
-    the map's along-track gain comes only from curves.
+  - Car goes straight on (negative control, map with the branch): "main" in 400 of 400. The
+    portal error then stays at the no-map value: S1 18–28 m rms, S4 51–78 m rms, because there is
+    no exit curve.
+  - **On S4, 28 of 200 straight-on runs are more than 100 m off at the portal** (3, 7, 8 and 10
+    per set; 10 of 100 in validation). One stop-and-go drive in seven stays in the main tunnel
+    and is shown more than 100 m off when it comes out. This is the measured cost of "the map's
+    along-track gain comes only from curves": with no curve before the exit, nothing corrects the
+    dead reckoning until GNSS returns, and then the exit follower.
 - **Recovery.** The largest step at the exit is ≤ 6 m (p95, worst set).
 
 **3.1 Validation on untouched seeds** (200–299, final configuration, run once;
@@ -187,8 +193,9 @@ The branch is reported in 800 of 800 runs; when the car goes straight on, "main"
     decision's window, so the branch is decided "main".
   - Re-association, which runs only on a decided branch, never starts. The portal error is
     −110 m with e/σ 2.0.
-  - The same seed going straight on is 323 m off with "main" reported correctly. One straight-on
-    run in 100 reported the branch.
+  - The same seed going straight on is 323 m off with "main" reported correctly.
+  - Straight-on control in validation: "main" in 199 of 200, one run undecided, none reporting
+    the branch. 10 of the 100 S4 straight-on runs are more than 100 m off at the portal (§3).
   - The structural limit: the along-track error can exceed the branch window. A window that grows
     with σ_s is the next step (§5).
 - **k = 1.3 is not "never late".** It gave 0 in 2000 on 0–199, but 3 of 100 on S5 here (k = 1:
@@ -344,7 +351,7 @@ the portal:
 | S6 speed wander | 12.4 / 9.2, 6.2 | 12.0 / 5.2, 0.77 | 13.3 / 6.1, 0.15 |
 | 5 km straight | 22.6 / 86.3, 133 | 20.3 / 18.6, 2.0 | 24.6 / 12.8, 0.22 |
 | exit step p95 | 2–106 m | 8–39 m | 3–5 m |
-| car goes straight on at the diverge | follows the branch | 147–439 m off at the portal | "main" in 500/500 |
+| car goes straight on at the diverge | follows the branch | 147–439 m off at the portal | "main" in 500/500 (v0.5.10, 50 seeds × 10 scenarios) |
 
 | Low-end IMU | 4 states | 10 states | 16 states (ESKF) |
 |---|---|---|---|
@@ -481,7 +488,10 @@ How the gate and the forms behave:
   If J(ŝ) − min J > χ²₁ 99.9 %, a position pseudo-measurement pulls ŝ to the best candidate, with
   R = max(5 m, σ_ψ,eff/|κ|)². In a curve the gyro-held yaw says where in the curve the car is;
   a linearisation at a wrong ŝ cannot. With it on, the gate no longer fires on nominal runs and
-  stays as a safety net.
+  stays as a safety net. Two simplifications err conservative:
+  - the prior enters twice, once in J and again through P in the update;
+  - the 5 m R floor stands in for the sideslip shift k·v² (3.4 m at 22 m/s), which a faster car
+    would exceed.
 - **v1 ran before the branch decision.** A car going straight on, matched to the branch
   hypothesis, was pulled back to the straight before the diverge every second; the straight-on
   control found it.
@@ -561,7 +571,8 @@ the first Doppler fix moved ŝ by up to 25 m. The branch decision always comes f
 - Exit step ≤ 1.2 m except the pressure gradient on S3 (6.8 m).
 
 Readings:
-- **Low-end S4 stays broken in the product configuration.** The 10-state filter has the
+- **Low-end S4 stays broken in the product configuration** (the low-end IMU; §4.9's 10-state S4 row,
+  22.7 / 25.2 m, is the Note10). The 10-state filter has the
   point-linearised heading update that re-association replaced in the ESKF, and fails in some
   sets.
 - **Why the monitor works where it does: the filters are not independent.**
@@ -625,7 +636,7 @@ Readings:
   - the gyro bias as a sum of Gauss–Markov terms (τ 5/50/500 s, as in the truth model) instead of
     a random walk;
   - the map-constrained filters of §4.9 (4 or 10 states, 80–94 m on low-end S4 against the ESKF's
-    868–894 m), selected by the supervisor of §4.11, or the pitch prior of §4.10;
+    868–894 m), selected by the supervisor of §4.12, or the pitch prior of §4.10;
   - Android's calibrated gyro stream, which removes the turn-on bias at stops but not the drift in
     the tunnel.
 - **A smaller filter** (built as a prototype, §4.9). The 10-state filter matches the ESKF at the
@@ -641,6 +652,9 @@ Readings:
   re-association (§4.11) is the first step, then the pitch prior (§4.10).
 - **The validation tier is one set of 100 seeds** (§3.1); claims on rarer failures (2 in 200 in
   §4.11) need more.
+- **A car that stays in the main tunnel has no curve to correct it.** On S4, 14 % of such runs are
+  more than 100 m off at the portal (§3). Only GNSS at the exit, through the follower, fixes it;
+  a map with features in the main tunnel (or a curve) would be needed.
 - **The branch decision's window** is fixed at 100 m before the diverge. A dead-reckoning error
   larger than that (S4, 1 in 100 validation runs) puts the turn outside it and decides "main";
   the window should grow with σ_s.
@@ -725,6 +739,9 @@ change. The author is ready to explain or change any of them:
 | "Removing the ZUPT gate costs the Note10 6 m": a 30-seed number compared with a 5-seed one | the agent, on re-measuring the same seeds (the gate changes nothing on the Note10) |
 | The display handed over to the ESKF after the exit, which on a low-end phone is the broken filter (253 m step) | the agent's first supervisor run |
 | `MapView.nearest` failed when an estimate ran past the end of the map; the same in the 10-state and 1D route grids | the pitch-prior A/B; a supervisor run |
+| "One callout in 500 more than 1 s late" (k = 1), measured on the development seeds 0–49; 11 in 2000 over 0–199 | the owner's request to re-run on new seeds (a selection effect) |
+| "One straight-on run in 100 reported the branch" (§3.1 draft); the run was undecided, none reported the branch | review v8 |
+| Straight-on S4 runs > 100 m off (28 of 200) left out of the report: the failure column counted the branch route only | review v8 |
 | Re-association v1 ran before the branch decision and pulled a car going straight on back to the straight (92–170 m) | the straight-on negative control |
 | Re-association v2 left the map's length error out of its R (S5 (e/σ)² 13 with a 2× map error); the first fix had the wrong sign and made it worse | the owner's failure-case request; the sign by comparison with the cross-track row |
 | The supervisor display started its follower at the first position fix, after the smaller filters had already re-locked on Doppler (25 m step) | a trace requested by the owner |

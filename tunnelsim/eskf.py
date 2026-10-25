@@ -685,6 +685,12 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     # only on a decided branch geometry: before the decision the route's branch is a
                     # hypothesis, and a car going straight on matched to it is pulled back to the
                     # straight before the diverge (negative control: 92-170 m in v0.5.11 A/B)
+                    # A "main" decision (br_dec == −1) is not re-associated either: the main tunnel is
+                    # straight in this study, so its heading carries no position (asymmetry noted in
+                    # review v8). The candidate cost J includes the prior term u², and the chosen s*
+                    # then enters a Kalman update weighted by P again: the prior counts twice, which
+                    # errs conservative ((e/σ)² ≤ 0.13 on S4); the R floor of 5 m is above the
+                    # sideslip shift k·v² (3.4 m at 22 m/s) at scenario speeds [ASSUMED].
                     ra = out_m & ((br_dec == 1) if road_map.s_div is not None else np.ones(B, bool))
                     if ra.any():
                         sm0 = np.nan_to_num(s_map)

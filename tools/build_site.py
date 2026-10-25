@@ -27,6 +27,7 @@ TABS = [
     ("S1-5km", "5 km", "S1-5km", [], True, False),
     ("S3-pressure30", "pressure gradient 30 Pa/km", "S3", ["baro_tunnel_30pa"], False, True),
     ("S1-lowend", "low-end IMU", "S1", ["imu_lowend"], False, True),
+    ("S4-lowend", "low-end stop-and-go", "S4", ["imu_lowend"], False, True),
 ]
 
 

@@ -9,6 +9,18 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
 
 ## v0.5.11 (2026-10-25): three filters, supervisor, map re-association, seed tiers
 
+Review v8 patch (same version, no metric changed):
+- Docs: the branch statement (one validation run stayed undecided, none reported the branch);
+  straight-on S4 runs > 100 m off at the portal (28 of 200, 10 of 100 in validation) added to §3
+  and §5; §5 points to §4.12; three §6.3 rows (v1 negative control, the scale-state sign, the
+  "1 in 500" selection effect); stale SUMMARY item removed.
+- Simulator note: the app error is along the map, the 16-state error along the true road; they
+  differ by the cross-track error's projection (≤ 1 m nominal, ~10 m under the pressure gradient).
+- Code comment on the re-association's `br_dec == 1` restriction and the double-counted prior.
+- Site: a low-end S4 (stop-and-go) tab.
+- Tests 191 → 195 (`tests/test_supervisor_reassoc.py`): S4 seed 63 fixed by re-association;
+  straight-on control unchanged with it on or off; monitor modes; display follower.
+
 - **Seed tiers.** Development 0–49 (all tuning so far), feature design 50–199, validation 200–299
   (final configuration, run once). Main results are now ranges over four sets of 50
   (`tools/eval_sets.py`); the development set gave the low end (S1 diverge 12.1 vs 13.0–16.9 m).
