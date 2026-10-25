@@ -49,6 +49,7 @@ CHI2_1_999 = 10.83
 @dataclass(frozen=True)
 class Ekf1dConfig:
     use_grade: bool = True            # map carries the grade γ(s); False: γ = 0 (map without grade)
+    grade_scale: float = 1.0          # map grade = scale × road grade (1.1: the map's grade 10 % too steep) [stress]
     curv_rate_hz: float = 1.0         # curvature-gyro update rate (adaptation 1)
     gyro_bi_note10: float = 2.0e-4    # rad/s, σ_BI in the curvature-gyro R [ASSUMED, ~Note10 gyro BI 1.6e-4 MEAS]
     gyro_bi_ratio: dict = None        # per class multiplier of gyro_bi (default: mpu9250 × 30.7, the BI ratio)
@@ -122,7 +123,7 @@ def run_ekf1d(imu_t, f, w, gnss, C_bp, r_b, road_map, cfg1d: Ekf1dConfig = Ekf1d
     def grade(s):
         if not have_grade:
             return np.zeros_like(s), np.zeros_like(s)
-        return road_map.grade(s), road_map.grade_rate(s)
+        return cfg1d.grade_scale * road_map.grade(s), cfg1d.grade_scale * road_map.grade_rate(s)
 
     # init at the first fix with position and velocity
     s = grid.nearest(gnss["pos"][:, k0, :2], np.full(B, np.nan), 0.0) - r_b[0]

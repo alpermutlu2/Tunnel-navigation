@@ -291,7 +291,7 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
 # v0.5.9: 1D map-constrained EKF baseline (tunnelsim/reference1d.py), scored like the ESKF
 # ---------------------------------------------------------------------------------------------
 def ekf1d_experiment(key, seeds=50, overrides=(), use_grade=True, mount_err_deg=None, keep_tracks=False,
-                     eskf_cfg=None, sim=None):
+                     eskf_cfg=None, sim=None, grade_scale=1.0):
     """Same sensors and seeds as eskf_experiment (simulate_run); along-track metrics only (the 1D
     filter has no cross-track). use_grade=False: the map has no grade. sim: a simulate_run tuple
     to reuse (the simulator page runs both filters on one batch)."""
@@ -304,7 +304,7 @@ def ekf1d_experiment(key, seeds=50, overrides=(), use_grade=True, mount_err_deg=
     if mount_err_deg is not None:
         from .frames import C_BP_NOMINAL, mount_rotation
         C_bp_filter = mount_rotation(*mount_err_deg) @ C_BP_NOMINAL.T @ tr.C_bp
-    out = run_ekf1d(t, F, W, gnss, C_bp_filter, tr.lever_arm_b, map_road, Ekf1dConfig(use_grade=use_grade),
+    out = run_ekf1d(t, F, W, gnss, C_bp_filter, tr.lever_arm_b, map_road, Ekf1dConfig(use_grade=use_grade, grade_scale=grade_scale),
                     eskf_cfg or EskfConfig())
     i_e = int(np.argmax(tr.in_tunnel))
     i_x = len(tr.in_tunnel) - int(np.argmax(tr.in_tunnel[::-1]))

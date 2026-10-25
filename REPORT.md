@@ -269,65 +269,134 @@ gain; at stops only it changes nothing (30 seeds), since the ZUPT already holds 
 reported accuracy; a 1–3° mount error (absorbed by the lumped accelerometer bias while the mount
 stays rigid); the shape of the bias model.
 
-**4.9 A 1D map-constrained filter, and what it does not see** (owner 2026-10-24,
-`tunnelsim/reference1d.py`, `tools/compare1d.py`). A common, simpler design for tunnel navigation
-uses four states: distance along the route s, speed v, a forward accelerometer bias and a yaw-rate
-bias. The map is a hard constraint and gives curvature κ(s) and grade γ(s):
-v̇ = f_x − b_a − g·sin γ(s), and the gyro measures ω_z = v·κ(s) + b_g. It was re-implemented here
-from its description as a baseline, with the same sensors, seeds, stop detector, GNSS R inflation,
-P0 and IMU-class profile as the ESKF. Two adaptations were needed on this simulator's sensors:
-- the curvature-gyro update runs at 1 Hz on the 1 s mean rate, with the gyro bias instability in R;
-  at 100 Hz on single samples it became over-confident;
-- κ(s) is the map's analytic curvature.
+**4.9 Three filter sizes: 4, 10 and 16 states** (owner 2026-10-24/25; `tunnelsim/reference1d.py`,
+`tunnelsim/ekf10.py`, `tools/compare_filters.py`, `reports/0.5.11/compare_filters_50.json`). Two
+smaller filters ran on the same sensor data and seeds as the ESKF, with the same stop detector,
+GNSS R inflation, P0 and IMU-class profile. Both treat the map as a hard constraint.
+- **4 states (1D):**
+  - states: s, v, a forward accelerometer bias, a yaw-gyro bias;
+  - pitch is read from the map's grade: v̇ = f_x − b_a − g·sin γ(s);
+  - the gyro gives speed in curves: ω_z = v·κ(s) + b_g, at 1 Hz on the 1 s mean rate, with the gyro
+    bias instability in R;
+  - a common design, re-implemented here from its description.
+- **10 states:**
+  - states: s, v, height, pitch, yaw, forward accelerometer bias, pitch and yaw gyro biases,
+    barometer offset, yaw-gyro scale;
+  - pitch is a state held by the barometer; the map grade is not used;
+  - map heading is matched globally along the arc (H_s = −κ);
+  - the curve-speed update carries sideslip and lane wander in R;
+  - built in a separate AI session from 8 states upwards, each addition from a trace (below).
 
-30 seeds, paired, causal stop detector for both (`reports/0.5.10/reference1d_30.json`). Along-track rms at
-the diverge / at the portal [m], and (e/σ)² at the portal:
+50 seeds, paired, causal stop detector. Along-track rms at the diverge / at the portal [m], (e/σ)² at
+the portal:
 
-| | 1D, map with grade | ESKF | 1D, low-end IMU | ESKF, low-end IMU |
-|---|---|---|---|---|
-| S1 straight | 10.1 / 8.6, 6.1 | 11.6 / 4.6, 0.09 | 11.2 / 12.6, 0.40 | 16.9 / 10.4, 0.16 |
-| S2 S-bend | 3.9 / 3.7, 6.3 | 3.1 / 4.1, 0.23 | 13.3 / 15.3, 0.96 | 14.1 / 13.4, 0.62 |
-| S3 V profile ±5 % | 5.4 / 5.0, 1.1 | 13.9 / 9.7, 0.20 | 6.1 / 19.4, 1.6 | 25.6 / 19.5, 0.52 |
-| S4 stop-and-go | 34.1 / 89.0, 818 | 33.7 / 4.7, 0.08 | 64.0 / 79.7, 15 | 638 / 894, 183 |
-| S5 braking | 17.1 / 4.8, 5.3 | 22.7 / 7.6, 0.28 | 15.2 / 9.8, 0.26 | 29.4 / 16.7, 0.55 |
-| S6 speed wander | 12.5 / 10.1, 7.4 | 13.3 / 5.7, 0.13 | 11.9 / 12.7, 0.37 | 20.0 / 19.3, 0.52 |
-| 5 km straight | 19.7 / 75.2, 101 | 21.1 / 13.5, 0.24 | 18.4 / 19.0, 0.46 | 24.9 / 24.9, 0.38 |
+| Note10 | 4 states | 10 states | 16 states (ESKF) |
+|---|---|---|---|
+| S1 straight | 10.8 / 8.6, 6.0 | 10.6 / 5.1, 0.77 | 12.1 / 5.6, 0.13 |
+| S2 S-bend | 3.9 / 3.7, 6.4 | 3.8 / 3.5, 1.1 | 3.5 / 4.1, 0.23 |
+| S3 V profile ±5 % | 5.1 / 4.7, 1.0 | 12.0 / 8.7, 0.45 | 12.1 / 9.0, 0.18 |
+| S4 stop-and-go | 35.2 / 94.3, 914 | 22.7 / 25.2, 8.8 | 34.7 / 5.8, 0.12 |
+| S5 braking | 18.5 / 5.5, 6.6 | 20.1 / 3.8, 0.92 | 25.0 / 7.5, 0.27 |
+| S6 speed wander | 12.4 / 9.2, 6.2 | 12.0 / 5.2, 0.77 | 13.3 / 6.2, 0.16 |
+| 5 km straight | 22.6 / 86.3, 133 | 20.3 / 18.6, 2.0 | 24.6 / 13.7, 0.25 |
+| exit step p95 | 2–106 m | 8–39 m | 3–5 m |
+| car goes straight on at the diverge | follows the branch | 147–439 m off at the portal | "main" in 500/500 |
 
-Map without grade, S3: 3.1 / 3.4 km. Filter's mount 2° off in pitch: within 2 m of the nominal 1D
-everywhere (the lumped bias absorbs it). Exit step p95: ESKF 3–5 m; 1D 2–76 m (this baseline has
-no step cap). Callouts > 1 s late: 0–3 % for both, except low-end S4 ESKF (97 %).
+| Low-end IMU | 4 states | 10 states | 16 states (ESKF) |
+|---|---|---|---|
+| S1 | 11.2 / 12.2, 0.36 | 10.9 / 9.9, 0.30 | 16.7 / 10.5, 0.19 |
+| S2 | 13.4 / 14.7, 0.86 | 12.0 / 11.3, 0.66 | 14.0 / 12.4, 0.58 |
+| S3 | 5.7 / 18.6, 1.5 | 16.2 / 16.8, 0.24 | 22.6 / 17.9, 0.47 |
+| S4 | 64.9 / 81.5, 16 | 64.2 / 93.8, 14 | 626 / 868, 162 |
+| S5 | 17.4 / 10.8, 0.31 | 15.8 / 7.4, 0.19 | 29.8 / 16.6, 0.53 |
+| S6 | 11.5 / 11.7, 0.32 | 11.2 / 9.0, 0.26 | 20.6 / 19.0, 0.58 |
+| 5 km | 20.7 / 19.8, 0.48 | 17.6 / 16.0, 0.47 | 29.3 / 25.8, 0.49 |
+
+The filter's mount pitched 2° wrong changes no filter by more than 2 m (lumped bias). The 4-state
+filter with a map grade 10 % too steep or too shallow, S3, 50 seeds: portal 117 / 85 m,
+(e/σ)² 710 / 290, and with the shallow grade every callout comes more than 1 s late
+(`reports/0.5.11/ekf1d_grade_error_50.json`); without any grade, 3.4 km.
 
 Readings:
-- **On the straight part the two agree.** At the diverge on S1, S6 and 5 km the difference is
-  ≤ 2 m. A known mount on a level road makes pitch free, and both reduce to an INS on the
-  GNSS-calibrated bias. The simple model is not wrong.
-- **It does not see suspension pitch.** On S4, launch squat and brake dive read as forward
-  acceleration: portal 89 m vs 4.7 m. With the suspension pitch turned off in the truth it is 4.9 m
-  (5 seeds).
-- **Its curve update is strongly non-linear.** A trace of 5 km seed 2 shows the mechanism:
-  - it reaches the exit curve 32 m ahead and expects the turn before the car turns;
-  - the linearised update puts the mismatch into speed (−1.3 m/s) instead of position, and σ_s
-    falls from 35 m to 0.3 m;
-  - the 1.2 km straight to the portal turns that speed error into −64 m.
-  The ESKF's map layer matches heading and cross-track instead, with the map errors as states.
-- **Its σ is optimistic on the Note10.** (e/σ)² is 5–7 on S1, S2, S5, S6, 101 on 5 km and 818 on
-  S4. The causes are the curve update above and the unmodelled suspension pitch. The ESKF stays at
-  0.08–0.28.
-- **It needs the grade in the map.** With the grade it is better on S3 (diverge 5.4 vs 13.9 m),
-  because it reads pitch instead of estimating it. Without the grade it is off by 3.4 km. The ESKF
-  bets that the tunnel grade in a navigation map is not reliable.
-- **On a low-end IMU it is the better filter.** It is better or equal at the diverge in every
-  scenario. On S4 it gives 64 / 80 m against the ESKF's 638 / 894 m, with (e/σ)² 15. It takes
-  pitch from the map, so the weak gyro cannot tilt it at crawling speed. Elsewhere its (e/σ)² is
-  0.3–1.6, because the large gyro R keeps the curve update weak. This is the measured case for the
-  fallback in §4.6: on a phone classed as low-end, a map-constrained 1D model at low speed.
+- **For the callout, accuracy does not separate them on a mid-range phone.** At the diverge, where
+  the callout is decided, the three agree within 2 m on S1, S2, S6 and 5 km. The 4-state filter is
+  better on S3 and S5, the 10-state one on S4.
+- **What the 16 states buy is independence from assumptions:**
+  - from the map's grade (4 states: 3.4 km without it, ~100 m with a 10 % error);
+  - from the vehicle model (4 states: suspension pitch, 94 m on S4; with the suspension pitch
+    turned off in the truth, 4.9 m);
+  - a σ that covers the error, which the k·σ callout rule needs (4 states: (e/σ)² up to 914);
+  - a branch hypothesis, map errors as states and a capped exit (the other two jump at the exit and
+    follow the wrong road when the car goes straight on).
+- **On a low-end IMU the order reverses.** The ESKF trusts its gyro for pitch and breaks at crawling
+  speed (§4.6); the smaller filters take pitch from the map (4 states) or hold it with the barometer
+  and a scalar speed (10 states). The 10-state filter is best or equal in six of seven scenarios.
+- **Why the 4-state filter loses in curves.** Its curvature-gyro update is local in s. In 5 km seed
+  2 it reaches the exit curve 32 m ahead and expects the turn too early. The linearised update puts
+  the mismatch into speed (−1.3 m/s), σ_s falls from 35 to 0.3 m, and the straight to the portal
+  turns that into −64 m. Matching the map heading instead is global along the arc and corrects
+  both ways; the ESKF's map layer and the 10-state filter do that.
+- **How the 10 states were found.** The prototype started at 8 states and was over-confident
+  ((e/σ)² 4–13). Each addition came from a trace:
+  1. sideslip at the clothoids, read as position: a k·v³·κ′ term in R (S1 portal 8.5 → 3.4 m);
+  2. the yaw-gyro scale error enters the speed from the curve: a state;
+  3. a real car wanders in its lane: an R floor, the counterpart of the ESKF's 1° map-heading σ
+     (5 km portal 23 → 7.5 m);
+  4. a filter ahead of the car leaves the clothoid early and loses the position information: yaw
+     and the global heading match (S4 portal 18.6 → 5.7 m, 4 seeds).
+  None of these is in the 4-state design; each is something the 16-state filter had already shown.
+- **The cost of the 16 states is not computation.** Order of magnitude [ASSUMED]: ESKF ~4·10⁵,
+  10 states ~5·10⁴, 1D ~10⁴ flop/s, all well under 10⁻³ of a phone core, and all read the same
+  sensors at the same rates. The cost is the tuning and verification surface: `EskfConfig` has 82
+  fields, and most defects found in this work (gate lock, sideslip in the NHC, the barometer lag, the
+  over-confident speed hold) are classes of error a 4-state filter cannot have.
 
-Computation does not separate the two. Order-of-magnitude estimates [ASSUMED]:
-- ESKF: covariance propagation of 21 states at 10 Hz, ~4·10⁵ flop/s;
-- 1D: ~10⁴ flop/s;
-- both are well under 10⁻³ of one phone core.
-Both read the same sensors at the same rates, and the sensors, not the filter, set the battery
-cost.
+**4.10 A pitch prior from the road for low-end phones** (owner 2026-10-25, A/B, off by default;
+`EskfConfig.pitch_prior_*`, `zupt_trust_s`; `reports/0.5.11/pitch_prior_ab_30.json`).
+
+Why it is needed: folding the fast gyro-bias terms into white noise (v0.5.7) kept the low-end filter
+consistent, but it made the attitude process noise so large that pitch spreads ~3.6°/√s. At low
+speed the NHC and the barometer see pitch only through v·δθ, so an outside source of pitch is
+needed, and the road geometry is that source.
+
+The prior is θ_b = γ(ŝ) ± σ, applied at 10 Hz below 10 m/s in the outage, with
+∂θ_b/∂δθ = [u_y, −u_x, 0]/cos θ_b (checked by finite differences).
+
+A trace of low-end S4 found a second mechanism. The speed is lost while crawling. When the car
+stops, the filter still believes it moves at ~5 m/s, and the ZUPT's speed gate ("filter speed
+< 2 m/s") then keeps the stop from correcting it: the gate relies on the very state it should
+correct. A new gate source fixes that: a stop the detector has held for ≥ 2 s is applied whatever
+the filter speed.
+
+Low-end S4, 30 seeds, diverge / portal [m], (e/σ)², callouts > 1 s late:
+
+| | low-end S4 |
+|---|---|
+| current | 638 / 894, 183, 100 % |
+| trusted-stop gate only | 625 / 876, 203, 97 % |
+| prior with an offset state δγ, σ 1° | 189 / 268, 50, 53 % |
+| absolute prior, σ 1°, + trusted-stop gate | 73 / 88, 18, 30 % |
+| 4-state 1D (reference) | 64 / 80, 15 |
+
+Other results:
+- **Other scenarios:** low-end S1, S2, S3, S5, S6 and 5 km are bit-identical in every variant (the
+  prior never fires above 10 m/s).
+- **Note10 S4:** the gate source changes nothing; with the prior, 33.7 / 4.7 → 36.1 / 6.7 m.
+- **Graded stop-and-go** (3 %, 30 km/h, 60 s stop): 1507 m today. With the absolute prior, 73 m with
+  the grade in the map and 648 m without it.
+- **Mount pitched 1° / 3° wrong:** the absolute prior gives 32 / 102 m.
+
+Readings:
+- **The absolute prior works** and brings the ESKF to the 1D baseline's level on low-end S4.
+- **It is not consistent** ((e/σ)² 18). The remaining over-confidence comes from the map layer's
+  curve matching at the exit, where σ_s collapses while the error is ~100 m: the 4-state filter's
+  curve mechanism again.
+- **It needs the map grade,** which the ESKF otherwise avoids.
+- **The offset state did not work as intended.** It restarts at each outage, and at low speed a slow
+  gyro drift and a constant offset are the same unobservable direction, so the drift goes into the
+  offset.
+- **Status:** the prior stays off. Next steps: learn the offset at the portal, where pitch is still
+  known from GNSS, and an innovation gate on the map rows (§5).
 
 ## 5. Limitations and next steps
 
@@ -362,27 +431,29 @@ cost.
   - static Allan runs to check §3 of `DESIGN.md`;
   - recordings in Istanbul tunnels, with the portals as checkpoints;
   - measuring the map's polyline error and the tunnels' pressure gradient;
-  - a causal stop detector;
   - the IMU class from the sensor name, and a low-end profile from a real phone's Allan run.
 - **Next, in the filter, for low-end IMUs** (not measured):
   - the barometer at 25 Hz with its own correlation model instead of the 1 s mean, to hold pitch
     more often;
   - the gyro bias as a sum of Gauss–Markov terms (τ 5/50/500 s, as in the truth model) instead of
     a random walk;
-  - the CV + map fallback of `DESIGN.md` §5.1 for stop-and-go and long tunnels, or the 1D
-    map-constrained filter of §4.9, which measured 80 m on low-end S4 against the ESKF's 894 m;
+  - the map-constrained filters of §4.9 (4 or 10 states, 80–94 m on low-end S4 against the ESKF's
+    868–894 m), selected by the supervisor of §4.11, or the pitch prior of §4.10;
   - Android's calibrated gyro stream, which removes the turn-on bias at stops but not the drift in
     the tunnel.
-- **A smaller filter** (not built). In the tunnel, 8 of the 16 core states are unobservable. A
-  ~9-state filter would treat the map as a hard constraint, with states s, v, height, pitch, yaw,
-  the forward accel bias, the pitch and yaw gyro biases and the barometer offset.
-  - It would keep what the 1D filter misses: pitch from the barometer and the vertical NHC.
-  - It was not built because a hard constraint cannot carry the branch decision or the map's own
-    errors through σ. The car taking the wrong branch, or a map offset or length error, would need
-    explicit hypotheses (two filters at the diverge) and the map-error states again, ~11–12 states
-    in practice.
-  - The 3D filter is still needed before the tunnel for calibration.
-  - The gain is computation, which is negligible on a phone (§4.9).
+- **A smaller filter** (built as a prototype, §4.9). The 10-state filter matches the ESKF at the
+  diverge on a mid-range phone and is the better filter on a low-end one. Before it could replace
+  the ESKF it needs:
+  - a second hypothesis at the diverge (today it follows the branch when the car goes straight on);
+  - a capped re-acquisition at the exit (8–39 m steps);
+  - consistency in stop-and-go ((e/σ)² 8.8 on S4), where the ESKF's speed-wander prior is the first
+    candidate;
+  - the map-error stress of §4.4.
+- **Next, for the pitch prior** (§4.10):
+  - learn the offset at the portal, where pitch is still known from GNSS, instead of restarting it
+    with σ 1°;
+  - an innovation (NIS) gate on the map heading and cross-track rows, so σ_s cannot collapse while
+    the along-track error is larger than the curve.
 
 ## 6. AI usage
 
@@ -415,6 +486,10 @@ cost.
 | Low-end IMU (review 11) | Chose which options to build: IMU class, profile, levelling A/B | CHANGELOG v0.5.5 |
 | Simulator | Set the requirements: one page with tabs, live re-runs, the driver's view, full screen, the results table, the sliders. Found the playback bug at 1–10× on GitHub Pages | CHANGELOG v0.5.4–0.5.6 |
 | Baseline (§4.9) | Asked for a 1D map-constrained filter as a measured reference against the ESKF. A comparison drafted with another AI model gave the design and the questions; the agent re-implemented it from that description and re-measured every number | CHANGELOG v0.5.9 |
+| Filter size (§4.9) | Read the 4-vs-16 comparison as "the 16 states buy independence from assumptions, not accuracy" and asked for the middle size. The 10-state filter was built in a separate AI session under his review (8 → 10 states, each addition from a trace); the agent brought it into the repository and re-measured it with 50 seeds, the exit step and the straight-on control | CHANGELOG v0.5.11 |
+| Stop detector (§5) | Chose causal and the conservative filter order 4 after the order A/B (order 3 sits next to a cliff) | CHANGELOG v0.5.10 |
+| Pitch prior (§4.10) | Proposed the road-grade prior for low-end phones. Diagnosed the ZUPT speed gate as circular and moved its source to the detector's own confidence. Proposed the offset state, which the measurement then rejected | CHANGELOG v0.5.11 |
+| Supervisor (§4.11) | Proposed a layer that selects among the three filters, and deciding before the tunnel while GNSS is good. Approved the class rule and the open-sky rehearsals | CHANGELOG v0.5.11 |
 | Low-end S4 mechanism | **Corrected the agent's diagnosis** (yaw drift at stops) from a trace: the filter loses speed while crawling, because pitch is weakly observable at low speed. Found that the in-browser page could not work on GitHub Pages because `*.zip` was git-ignored | §4.6, CHANGELOG v0.5.7 |
 
 ### 6.2 Choices the agent made
@@ -450,6 +525,9 @@ change. The author is ready to explain or change any of them:
 | `browser.html` published without its package (`*.zip` git-ignored) | the author |
 | Headline results used the offline (forward-backward) stop detector; the 0.5.3 results file recorded k = 1.65 in its main callout block while the report quoted its k = 1 row | an external AI comparison; measured, switched and re-run at v0.5.10 |
 | The causal stop detector at twice the order (to restore the offline engine rejection) took a 3 m/s crawl as a stop in 3 of 50 seeds: S4 portal 91 m | the agent's 50-seed re-run; the order A/B and the choice of the conservative order were the author's |
+| "Removing the ZUPT gate costs the Note10 6 m": a 30-seed number compared with a 5-seed one | the agent, on re-measuring the same seeds (the gate changes nothing on the Note10) |
+| The display handed over to the ESKF after the exit, which on a low-end phone is the broken filter (253 m step) | the agent's first supervisor run |
+| `MapView.nearest` failed when an estimate ran past the end of the map | the pitch-prior A/B (a graded stop-and-go) |
 | 1D baseline: re-lock after the tunnel started only on position fixes, so the gate locked out GNSS at the exit | the agent's event counts (230 rejections in 5 seeds) |
 
 **Process controls,** used because generated code can be confidently wrong:

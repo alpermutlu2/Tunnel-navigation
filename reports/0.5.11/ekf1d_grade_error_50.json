@@ -1,0 +1,24 @@
+{
+ "scenario": "S3",
+ "seeds": 50,
+ "runs": {
+  "1.0": {
+   "diverge": 5.147,
+   "portal": 4.693,
+   "nees": 0.988,
+   "late": 0.0
+  },
+  "1.1": {
+   "diverge": 18.44,
+   "portal": 116.7,
+   "nees": 711.324,
+   "late": 0.0
+  },
+  "0.9": {
+   "diverge": 70.54,
+   "portal": 84.6,
+   "nees": 292.542,
+   "late": 1.0
+  }
+ }
+}
