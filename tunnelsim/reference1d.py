@@ -85,6 +85,7 @@ class _MapGrid:
         for b in range(len(p_xy)):
             if np.isfinite(s_prev[b]):
                 a, e = np.searchsorted(self.s, [s_prev[b] - window, s_prev[b] + window + self.step])
+                a = min(a, len(self.s) - 1); e = max(e, a + 1)        # estimate past an end of the route
             else:
                 a, e = 0, len(self.s)
             d2 = ((self.xy[a:e] - p_xy[b]) ** 2).sum(1)
