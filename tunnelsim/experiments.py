@@ -424,7 +424,7 @@ def _eskf_along(mv, t_out, p, C, P_pos, C_bp, r_b):
     return s, g
 
 
-def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None):
+def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None, eskf_cfg=None):
     """Run the 1D, 10-state and ESKF filters on one batch; along-track outputs on the ESKF time axis."""
     from .eskf import EskfConfig, run_eskf
     from .ekf10 import run_ekf10
@@ -433,7 +433,7 @@ def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None):
         t, F, W = t[:k_end], F[:, :k_end], W[:, :k_end]
         m = bt <= t[-1]
         bt, bh = bt[m], bh[:, m]
-    oe = run_eskf(t, F, W, gnss, bt, bh, C_bp, r_b, EskfConfig(), road_map=mv)
+    oe = run_eskf(t, F, W, gnss, bt, bh, C_bp, r_b, eskf_cfg or EskfConfig(), road_map=mv)
     s_e, g_e = _eskf_along(mv, oe.t, oe.p, oe.C, oe.P_pos, C_bp, r_b)
     o10 = run_ekf10(t, F, W, gnss, bt, bh, C_bp, r_b, road)
     o1 = run_ekf1d(t, F, W, gnss, C_bp, r_b, road)
@@ -446,7 +446,7 @@ def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None):
 
 
 def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsal", "simplest"), sim=None,
-                          keep_tracks=False):
+                          keep_tracks=False, eskf_cfg=None, map_err=None):
     """The three filters, their open-sky rehearsals and the supervisor, scored against the truth.
     Metrics per filter and per selection rule (displayed track: selected filter in the tunnel,
     disagreement-inflated σ, ESKF handover after the exit)."""
@@ -455,9 +455,9 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
     seed_ids = np.arange(seeds) if np.isscalar(seeds) else np.asarray(seeds)
     sc, tr, t, F, W, gnss, bt, bh = sim if sim is not None else simulate_run(key, seed_ids, overrides)
     road = get_scenario(key, branch=True).road if sim is None else sc.road
-    mv = MapView(road)
+    mv = MapView(road, *(map_err or (0.0, 1.0)))
     C_bp, r_b = tr.C_bp, tr.lever_arm_b
-    oe, s, g, cls, vv = _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv)
+    oe, s, g, cls, vv = _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, eskf_cfg=eskf_cfg)
     B = len(seed_ids)
     # estimator side: outage start / GNSS back, from the fixes alone
     ok = np.isfinite(gnss["pos"][:, :, 0]) & (np.nan_to_num(gnss["acc_pos_h"], nan=1e9) <= 10.0)
@@ -477,7 +477,7 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
     if win and any(r_ != "class" for r_ in rules):
         gm = SV.mask_gnss(gnss, win)
         k_end = int(np.searchsorted(t, t_out.min() + 1.0))
-        _, s_sh, g_sh, _, _ = _three_filters(t, F, W, gm, bt, bh, C_bp, r_b, road, mv, k_end=k_end)
+        _, s_sh, g_sh, _, _ = _three_filters(t, F, W, gm, bt, bh, C_bp, r_b, road, mv, k_end=k_end, eskf_cfg=eskf_cfg)
         t_sh = oe.t[: s_sh["eskf"].shape[1]]
         s_fix = np.full(ok.shape, np.nan); sig_fix = np.full(ok.shape, np.nan)
         for j in range(len(gt)):
