@@ -399,3 +399,144 @@ def ekf10_experiment(key, seeds=50, overrides=(), mount_err_deg=None, cfg10=None
     if keep_tracks:
         res["_tracks"] = {"t": o.t, "e_s": e, "sig_s": o.sig_s, "s_hat": o.s, "v_hat": o.v, "t_entry": tr.t[i_e], "t_exit": t_x}
     return res
+
+
+# ---------------------------------------------------------------------------------------------
+# v0.5.11: supervisor over the three filters (tunnelsim/supervisor.py)
+# ---------------------------------------------------------------------------------------------
+def _eskf_along(mv, t_out, p, C, P_pos, C_bp, r_b):
+    """Estimator-side along-track position of the reference point and its σ from an ESKF output:
+    ŝ by a tangent-plane step from the previous epoch (one Newton step on the map polyline)."""
+    pR = p - np.einsum("bkij,j->bki", C @ C_bp.T, r_b)
+    B, K = pR.shape[:2]
+    s = np.empty((B, K)); g = np.empty((B, K))
+    s_prev = mv.nearest(pR[:, 0, :2], np.full(B, np.nan))
+    for k in range(K):
+        c, psi, _ = mv.at(s_prev)
+        tn = np.stack([np.cos(psi), np.sin(psi)], 1)
+        s_k = s_prev + np.einsum("bi,bi->b", pR[:, k, :2] - c, tn)
+        c, psi, _ = mv.at(s_k)
+        tn = np.stack([np.cos(psi), np.sin(psi)], 1)
+        s_k = s_k + np.einsum("bi,bi->b", pR[:, k, :2] - c, tn)
+        s[:, k] = s_k
+        g[:, k] = np.sqrt(np.einsum("bi,bij,bj->b", tn, P_pos[:, k, :2, :2], tn))
+        s_prev = s_k
+    return s, g
+
+
+def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None):
+    """Run the 1D, 10-state and ESKF filters on one batch; along-track outputs on the ESKF time axis."""
+    from .eskf import EskfConfig, run_eskf
+    from .ekf10 import run_ekf10
+    from .reference1d import run_ekf1d
+    if k_end is not None:
+        t, F, W = t[:k_end], F[:, :k_end], W[:, :k_end]
+        m = bt <= t[-1]
+        bt, bh = bt[m], bh[:, m]
+    oe = run_eskf(t, F, W, gnss, bt, bh, C_bp, r_b, EskfConfig(), road_map=mv)
+    s_e, g_e = _eskf_along(mv, oe.t, oe.p, oe.C, oe.P_pos, C_bp, r_b)
+    o10 = run_ekf10(t, F, W, gnss, bt, bh, C_bp, r_b, road)
+    o1 = run_ekf1d(t, F, W, gnss, C_bp, r_b, road)
+    ip = lambda tt, x: np.stack([np.interp(oe.t, tt, xb) for xb in x])
+    s = {"1d": ip(o1.t, o1.s), "ekf10": ip(o10.t, o10.s), "eskf": s_e}
+    g = {"1d": ip(o1.t, o1.sig_s), "ekf10": ip(o10.t, o10.sig_s), "eskf": g_e}
+    v = {"1d": ip(o1.t, o1.v), "ekf10": ip(o10.t, o10.v), "eskf": np.linalg.norm(oe.v, axis=-1)}
+    cls = oe.aux.get("imu_class")
+    return oe, s, g, cls, v
+
+
+def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsal", "simplest"), sim=None,
+                          keep_tracks=False):
+    """The three filters, their open-sky rehearsals and the supervisor, scored against the truth.
+    Metrics per filter and per selection rule (displayed track: selected filter in the tunnel,
+    disagreement-inflated σ, ESKF handover after the exit)."""
+    from . import supervisor as SV
+    from .mapview import MapView
+    seed_ids = np.arange(seeds) if np.isscalar(seeds) else np.asarray(seeds)
+    sc, tr, t, F, W, gnss, bt, bh = sim if sim is not None else simulate_run(key, seed_ids, overrides)
+    road = get_scenario(key, branch=True).road if sim is None else sc.road
+    mv = MapView(road)
+    C_bp, r_b = tr.C_bp, tr.lever_arm_b
+    oe, s, g, cls, vv = _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv)
+    B = len(seed_ids)
+    # estimator side: outage start / GNSS back, from the fixes alone
+    ok = np.isfinite(gnss["pos"][:, :, 0]) & (np.nan_to_num(gnss["acc_pos_h"], nan=1e9) <= 10.0)
+    gt = gnss["t"]
+    t_out = np.empty(B); t_back = np.empty(B)
+    for b in range(B):
+        ft = gt[ok[b]]
+        gap = np.nonzero(np.diff(ft) > 5.0)[0]
+        t_out[b], t_back[b] = (ft[gap[0]], ft[gap[0] + 1]) if len(gap) else (ft[-1], np.inf)
+    # rehearsals (shadow tunnels in open sky, before the real outage)
+    win = SV.rehearsal_windows(gt[np.nonzero(ok.all(0))[0][0]], float(t_out.min()))
+    scores = {}
+    if win:
+        gm = SV.mask_gnss(gnss, win)
+        k_end = int(np.searchsorted(t, t_out.min() + 1.0))
+        _, s_sh, g_sh, _, _ = _three_filters(t, F, W, gm, bt, bh, C_bp, r_b, road, mv, k_end=k_end)
+        t_sh = oe.t[: s_sh["eskf"].shape[1]]
+        s_fix = np.full(ok.shape, np.nan); sig_fix = np.full(ok.shape, np.nan)
+        for j in range(len(gt)):
+            if gt[j] > t_out.min():
+                break
+            okj = ok[:, j]
+            if okj.any():
+                s_fix[okj, j] = mv.nearest(gnss["pos"][okj, j, :2], np.full(int(okj.sum()), np.nan)) - r_b[0]
+                sig_fix[okj, j] = gnss["acc_pos_h"][okj, j]
+        for n in SV.FILTERS:
+            # the shadow ESKF output grid is a prefix of the full one (same start, same rate)
+            K = s_sh[n].shape[1]
+            scores[n] = SV.rehearsal_scores(t_sh[:K], s_sh[n], g_sh[n], win, gt, s_fix, sig_fix)
+    idx = np.clip(np.round((oe.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
+    s_true = tr.s[idx]
+    i_x = len(tr.in_tunnel) - int(np.argmax(tr.in_tunnel[::-1]))
+    t_x = tr.t[min(i_x, len(tr.t) - 1)]
+    kx = int(np.argmin(np.abs(oe.t - (t_x - 0.05))))
+    ex = sc.road.exits[0]
+    k_div = int(np.argmax(s_true >= ex.s))
+    s_call = ex.s - CALLOUT_LEAD_M
+    k_ct = int(np.argmax(s_true >= s_call))
+    in_t = (oe.t >= tr.t[int(np.argmax(tr.in_tunnel))]) & (oe.t <= t_x)
+
+    def metrics(s_d, g_d, dmax=None):
+        e = s_d - s_true[None]
+        m = (s_d + CALLOUT_K * g_d) >= s_call
+        k_hat = np.where(m.any(1), np.argmax(m, 1), m.shape[1] - 1)
+        dc = oe.t[k_hat] - oe.t[k_ct]
+        w = (oe.t >= t_x) & (oe.t <= t_x + 60.0)
+        jumps = np.abs(np.diff(s_d[:, w], axis=1) - np.diff(s_true[w])[None]).max(axis=1)
+        r = {"diverge": stats(e[:, k_div])["rmse"], "portal": stats(e[:, kx])["rmse"],
+             "portal_p95": stats(e[:, kx])["p95_abs"],
+             "nees": round(float(np.mean((e[:, kx] / g_d[:, kx]) ** 2)), 3),
+             "callout_mean_s": round(float(dc.mean()), 2), "late_gt_1s": round(float(np.mean(dc > CALLOUT_LATE_S)), 3),
+             "early_gt_5s": round(float(np.mean(dc < -5.0)), 3),
+             "exit_step_p95": stats(jumps)["p95_abs"]}
+        if dmax is not None:
+            r["alarm_time_frac"] = round(float(np.mean(dmax[:, in_t] > SV.ALARM_D)), 3)
+            r["alarm_runs_frac"] = round(float(np.mean((dmax[:, in_t] > SV.ALARM_D).any(axis=1))), 3)
+        return r
+
+    res = {"scenario": key, "seeds": [int(seed_ids[0]), int(seed_ids[-1])], "overrides": list(overrides),
+           "rehearsal_windows": [list(map(float, w_)) for w_ in win], "filters": {}, "rules": {}}
+    for n in SV.FILTERS:
+        res["filters"][n] = metrics(s[n], g[n])
+        if n in scores:
+            res["filters"][n]["rehearsal_rms_median"] = round(float(np.median(scores[n][0])), 2)
+            res["filters"][n]["rehearsal_nees_median"] = round(float(np.median(scores[n][1])), 2)
+    tracks = {}
+    for rule in rules:
+        sel = SV.select(rule, cls if cls is not None else np.full(B, "note10"), scores or None)
+        g_i = np.stack([g[n][b] for b, n in enumerate(sel)])
+        r = {"selected": {n: int((sel == n).sum()) for n in SV.FILTERS}}
+        for mode in ("none", "any", "majority"):
+            s_i, g_disp, dmax = SV.monitor(sel, s, g, "any" if mode == "none" else mode)
+            v_i = np.stack([vv[n][b] for b, n in enumerate(sel)])
+            s_disp = SV.display(oe.t, s_i, v_i, t_back)
+            r[mode] = metrics(s_disp, g_i, dmax) if mode == "none" else metrics(s_disp, g_disp, dmax)
+            tracks[f"{rule}/{mode}"] = {"sel": sel, "s_disp": s_disp, "sig_disp": g_i if mode == "none" else g_disp,
+                                        "dmax": dmax}
+        res["rules"][rule] = r
+    if keep_tracks:
+        res["_tracks"] = {"t": oe.t, "s_true": s_true, "s": s, "sig": g, "rules": tracks, "t_back": t_back,
+                          "scores": scores, "imu_class": cls, "oe": oe}
+    return res
