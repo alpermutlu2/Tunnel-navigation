@@ -1,8 +1,9 @@
 # Through the Tunnel: summary
 
 Short version of [`REPORT.md`](REPORT.md), which has the full results, mechanisms and sources.
-All numbers come from simulation, 50 seeds per scenario (`reports/0.5.10/`, low-end IMU
-`reports/0.5.5/`). Every parameter is tagged [MEAS] (measured, cited), [SPEC] (datasheet) or
+All numbers come from simulation. The main results are ranges over four independent sets of 50
+seeds; tuning was done on seeds 0–49, and a further 100 seeds (200–299) were run once on the final
+configuration for validation (`reports/0.5.11/`). Every parameter is tagged [MEAS] (measured, cited), [SPEC] (datasheet) or
 [ASSUMED] (chosen here).
 
 ## Problem
@@ -70,33 +71,56 @@ sees truth.
 
 ## Results (Note10)
 
+Ranges over four sets of 50 seeds (0–199):
+
 | | straight, steady (S1, S6) | stop-and-go, braking (S4, S5) | S-bend (S2) | 5 km |
 |---|---|---|---|---|
-| along-track error at the exit branch, rms | 12–13 m | 25–35 m | 3.5 m | 25 m |
-| along-track error at the portal, rms | 5.6–6.2 m | 5.6–7.5 m | 4.1 m | 14 m |
+| along-track error at the exit branch, rms | 12–18 m | 25–50 m | 3.5–4.6 m | 25–32 m |
+| along-track error at the portal, rms | 5.5–7.8 m | 4.7–8.1 m | 4.1–5.4 m | 12–16 m |
 | cross-track error at the portal, rms | 1.5 m | 1.3–1.9 m | 3.2 m | 2.1 m |
-| callout as announced: mean, share > 1 s late | 0.8 s early, 0 % | 0.8–2.3 s early, 0–2 % | 0.3 s early, 0 % | 1.6 s early, 0 % |
+| callouts more than 1 s late (k = 1), of 200 | 0 | 1 (S4), 10 (S5) | 0 | 0 |
 
-- **Consistent.** The filter's own uncertainty covers its error everywhere: mean (e/σ)² 0.12–0.27,
-  conservative.
-- **Exit branch.** The branch is recognised in 500 of 500 runs. When the car goes straight on
-  instead, "main" is reported in 500 of 500.
+- **Consistent.** The filter's own uncertainty covers its error everywhere: mean (e/σ)² ≤ 0.39 in
+  every set, conservative.
+- **Callout.** Without the rule (k = 1), 10–56 % of callouts come more than 1 s late. With k = 1.3,
+  none of 2000 are late, at 0.3–0.9 s more advance.
+- **Exit branch.** Recognised in every run; when the car goes straight on, "main" in every run.
 - **Exit.** The largest jump at the exit is under 6 m (p95).
-- **Callout rule.** Without it, 30–40 % of callouts on S4 and S5 came more than 1 s late.
+- **Seed tiers.** The development set (0–49) gave the low end of the ranges: S1 12 m on it,
+  13–17 m on the other sets. A callout claim of "1 in 500 late" made on 0–49 became 11 in 2000.
+- **A failure found on new seeds and fixed.**
+  - Found: in 2 of 200 runs on S4 the filter ended ~600 m off with a small σ. It reached the exit
+    curve far behind the car, and the map update at the wrong point wrote the curve into yaw.
+  - Fixed: re-association along the arc (the yaw says where in the curve the car is). It removes
+    those failures (0 in 200, S4 portal p95 11 m) and keeps the straight-on control and the
+    known-failure cases unchanged.
+  - An innovation gate stays as a safety net. On its own it had traded the two failures for three
+    smaller ones.
 
-## Against a simpler filter
+## Three filter sizes
 
-A 4-state 1D filter (distance, speed, two biases; the map gives curvature and grade) was run on the
-same sensors and seeds as a baseline (REPORT §4.9):
-- **Straight part:** it agrees with the ESKF within 2 m at the diverge.
-- **What it misses on the Note10:**
-  - suspension pitch: 89 m vs 5 m at the portal on S4;
-  - a non-linear exit-curve update: 75 m vs 14 m on 5 km;
-  - an optimistic σ, with (e/σ)² 5–820.
-- **What it needs:** a map without grade puts it 3.4 km off on S3. With the grade it is better
-  there (diverge 5 vs 14 m).
-- **On a low-end IMU** it is the better filter: S4 80 m vs 894 m, since it takes pitch from the
-  map. That is the measured case for a 1D fallback on low-end phones at low speed.
+A 4-state (1D), a 10-state and the 16-state ESKF ran on the same data (REPORT §4.9):
+- **At the exit branch** on a mid-range phone, the three agree within ~2 m, so accuracy does not
+  separate them.
+- **What the 16 states buy is independence from assumptions:**
+  - the map's grade: the 4-state filter is 3.4 km off without it and ~100 m off with a 10 % error;
+  - the vehicle model: suspension pitch, 94 m on S4;
+  - a σ that covers the error, which the callout rule needs;
+  - a branch hypothesis and a capped exit.
+- **On a low-end IMU the smaller filters win,** because they do not trust the gyro for pitch.
+- **The cost of 16 states** is the tuning and verification surface (82 config fields), not
+  computation.
+
+## Supervisor
+
+The app runs all three and shows one (REPORT §4.12):
+- **Class rule:** ESKF on a Note10-class phone, 10-state on a low-end one.
+- **Majority monitor:** raises the shown σ when the selected filter disagrees with both others.
+- **Follower at the exit:** no jump on the screen.
+- **Rehearsing short outages in open sky could not tell the filters apart** and was dropped.
+- **What the monitor can and cannot see:** it catches failures where the models differ (a tunnel
+  pressure gradient, suspension pitch), late. It cannot see one in a part they share.
+- **Open in this configuration:** low-end stop-and-go, 89–335 m.
 
 ## Where it breaks
 
@@ -114,10 +138,10 @@ same sensors and seeds as a baseline (REPORT §4.9):
    terms treated as white noise and a looser cruise test:
    - 10–25 m at the portal in steady and long tunnels;
    - consistent ((e/σ)² 0.2–0.6) and no late callouts;
-   - stop-and-go still fails (~1 km). At crawling speed the vehicle constraints see a pitch error
-     only through v·δθ, so the cheap gyro's tilt leaks gravity into the speed. The app should not
-     trust σ at low speed and should fall back to a different model there; the 1D baseline
-     measured 80 m there.
+   - stop-and-go fails for the ESKF (~0.9 km). At crawling speed the vehicle constraints see a pitch
+     error only through v·δθ, so the cheap gyro's tilt leaks gravity into the speed. The supervisor
+     selects the 10-state filter there (89–335 m); a road-grade pitch prior brought the ESKF to 88 m
+     but stays off (not consistent, needs the map grade).
 6. **Levelling from gravity** (an extra update) was tried and left off: it helps one scenario and
    hurts five.
 
@@ -153,6 +177,11 @@ same sensors and seeds as a baseline (REPORT §4.9):
   - **Map layer:** its design, with map errors as states.
   - **Callout:** overruled the agent's k = 1.65 in favour of k = 1.
   - **Simulator:** set its requirements and found its playback bug.
+  - **Filter size and supervisor:** read 4 vs 16 states as a question of assumptions, asked for
+    the middle size (built in a separate AI session) and the supervisor.
+  - **Seeds:** read the 200-seed result as a selection effect and asked for an untouched
+    validation tier.
+  - **Re-association:** proposed it, and required the failure cases before it became the default.
 - **Detail:** REPORT §6 lists every intervention and the choices the agent made. It also lists
   the AI-side errors and what caught them: the author, AI reviews, the agent's own tests, or the
   consistency metric.

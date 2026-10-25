@@ -51,9 +51,12 @@ along- and cross-track error and (e/σ)² at the portal, callout timing (with th
 sliders), the constant-velocity reference and the 1D EKF baseline. Without the server it uses the pre-run drives; in
 live mode "Re-run every tab with the live settings" fills it from new runs (~70 s for all tabs).
 
-**1D EKF baseline.** A simpler 4-state filter (distance, speed, two biases; the map gives
-curvature and grade) runs on the same sensor data and is drawn in teal on the map and in the
-error and speed plots, for comparison only (REPORT §4.9).
+**Three filters and the app.** The 4-state 1D EKF (teal), the 10-state map-constrained filter
+(amber) and the 16-state ESKF (orange) run on the same sensor data. The app (pink) shows the one
+the supervisor selects (ESKF on a Note10-class IMU, 10-state on a low-end one), with its σ raised
+when it disagrees with both others, and a rate-limited follower after the exit. "Show" boxes
+switch each trace on and off; the banner marks ZUPTs, the ESKF's map re-associations and filter
+disagreement (REPORT §4.9, §4.11, §4.12).
 
 **Driver's view.** Next to the map, a phone-shaped panel shows what the navigation app would show
 from the estimate alone: heading-up, the car snapped to the road, the maneuver banner with the
@@ -121,7 +124,10 @@ changes).
 ```bash
 python tools/evaluate.py                 # Monte Carlo, 50 seeds per scenario (~1 h on 2 cores)
 python tools/evaluate.py --seeds 20 S1 S4 --negative   # subset + car-goes-straight control
-python tools/compare1d.py               # 1D map-constrained EKF vs ESKF, 30 seeds, Note10 + low-end
+python tools/eval_sets.py               # ESKF on four sets of 50 seeds (0-199); --validation: 200-299 once
+python tools/compare_filters.py         # 4-, 10- and 16-state filters, 50 seeds, Note10 + low-end
+python tools/supervisor_eval.py sets:0-100   # supervisor (class rule, monitor) on seed ranges
+python tools/failure_cases.py           # pressure gradient and 2x map error under the gate / re-association
 python -m pytest -q tests                # ~150 tests (+2 slow: --runslow)
 python tools/snapshot.py                 # reports/<version>/metrics.json (tests, truth, sensors, INS, budget, ESKF)
 python tools/snapshot.py --diff 0.4.0 0.5.0
@@ -134,7 +140,8 @@ Other tools: `tools/budget.py` (INS error budget, v0.4), `tools/allan_scatter.py
 
 - `tunnelsim/`: truth generator (`truth.py`, `scenario.py`), sensor models (`sensors.py`,
   `profiles.py`), strapdown INS (`ins.py`), ESKF (`eskf.py`), 1D map-constrained EKF baseline
-  (`reference1d.py`), branch check (`branch.py`),
+  (`reference1d.py`), 10-state map-constrained filter (`ekf10.py`), supervisor (`supervisor.py`),
+  branch check (`branch.py`),
   experiments and metrics (`experiments.py`, `budget.py`). The estimator side never imports the
   truth objects (`docs/contracts.md`).
 - `DESIGN.md`: assumptions, sensor models, error budget, estimator roadmap, decision log.

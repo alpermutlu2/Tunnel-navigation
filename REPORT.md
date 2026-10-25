@@ -600,11 +600,16 @@ Readings:
   - consistency in stop-and-go ((e/σ)² 8.8 on S4), where the ESKF's speed-wander prior is the first
     candidate;
   - the map-error stress of §4.4.
+- **The product configuration's open failure is low-end stop-and-go** (§4.12: 89–335 m). The
+  10-state filter still has the point-linearised heading update; giving it the ESKF's
+  re-association (§4.11) is the first step, then the pitch prior (§4.10).
+- **The validation tier is one set of 100 seeds** (§3.1); claims on rarer failures (2 in 200 in
+  §4.11) need more.
 - **Next, for the pitch prior** (§4.10):
   - learn the offset at the portal, where pitch is still known from GNSS, instead of restarting it
     with σ 1°;
-  - an innovation (NIS) gate on the map heading and cross-track rows, so σ_s cannot collapse while
-    the along-track error is larger than the curve.
+  - the map re-association of §4.11, now in the ESKF, removes the exit-curve collapse that made
+    the prior inconsistent; the A/B should be repeated with it.
 
 ## 6. AI usage
 
@@ -639,8 +644,10 @@ Readings:
 | Baseline (§4.9) | Asked for a 1D map-constrained filter as a measured reference against the ESKF. A comparison drafted with another AI model gave the design and the questions; the agent re-implemented it from that description and re-measured every number | CHANGELOG v0.5.9 |
 | Filter size (§4.9) | Read the 4-vs-16 comparison as "the 16 states buy independence from assumptions, not accuracy" and asked for the middle size. The 10-state filter was built in a separate AI session under his review (8 → 10 states, each addition from a trace); the agent brought it into the repository and re-measured it with 50 seeds, the exit step and the straight-on control | CHANGELOG v0.5.11 |
 | Stop detector (§5) | Chose causal and the conservative filter order 4 after the order A/B (order 3 sits next to a cliff) | CHANGELOG v0.5.10 |
+| Seed discipline (§3, §4.11) | Read the 200-seed result as a selection effect, not luck: every tuning was done on 0–49. Asked for failure counts next to rms, for the most-worsened seed, and for an untouched validation tier (200–299) run once | CHANGELOG v0.5.11 |
+| Map re-association (§4.11) | Read seed 63's mechanism, predicted that the NIS gate would also reject useful innovations (it did), and proposed re-association along the arc. Required the failure cases (wrong branch, map error 2×) before it became the default | CHANGELOG v0.5.11 |
 | Pitch prior (§4.10) | Proposed the road-grade prior for low-end phones. Diagnosed the ZUPT speed gate as circular and moved its source to the detector's own confidence. Proposed the offset state, which the measurement then rejected | CHANGELOG v0.5.11 |
-| Supervisor (§4.11) | Proposed a layer that selects among the three filters, and deciding before the tunnel while GNSS is good. Approved the class rule and the open-sky rehearsals | CHANGELOG v0.5.11 |
+| Supervisor (§4.12) | Proposed a layer that selects among the three filters, and deciding before the tunnel while GNSS is good. Approved the class rule and the open-sky rehearsals | CHANGELOG v0.5.11 |
 | Low-end S4 mechanism | **Corrected the agent's diagnosis** (yaw drift at stops) from a trace: the filter loses speed while crawling, because pitch is weakly observable at low speed. Found that the in-browser page could not work on GitHub Pages because `*.zip` was git-ignored | §4.6, CHANGELOG v0.5.7 |
 
 ### 6.2 Choices the agent made
@@ -678,7 +685,10 @@ change. The author is ready to explain or change any of them:
 | The causal stop detector at twice the order (to restore the offline engine rejection) took a 3 m/s crawl as a stop in 3 of 50 seeds: S4 portal 91 m | the agent's 50-seed re-run; the order A/B and the choice of the conservative order were the author's |
 | "Removing the ZUPT gate costs the Note10 6 m": a 30-seed number compared with a 5-seed one | the agent, on re-measuring the same seeds (the gate changes nothing on the Note10) |
 | The display handed over to the ESKF after the exit, which on a low-end phone is the broken filter (253 m step) | the agent's first supervisor run |
-| `MapView.nearest` failed when an estimate ran past the end of the map | the pitch-prior A/B (a graded stop-and-go) |
+| `MapView.nearest` failed when an estimate ran past the end of the map; the same in the 10-state and 1D route grids | the pitch-prior A/B; a supervisor run |
+| Re-association v1 ran before the branch decision and pulled a car going straight on back to the straight (92–170 m) | the straight-on negative control |
+| Re-association v2 left the map's length error out of its R (S5 (e/σ)² 13 with a 2× map error); the first fix had the wrong sign and made it worse | the owner's failure-case request; the sign by comparison with the cross-track row |
+| The supervisor display started its follower at the first position fix, after the smaller filters had already re-locked on Doppler (25 m step) | a trace requested by the owner |
 | 1D baseline: re-lock after the tunnel started only on position fixes, so the gate locked out GNSS at the exit | the agent's event counts (230 rejections in 5 seeds) |
 
 **Process controls,** used because generated code can be confidently wrong:

@@ -7,6 +7,39 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.11 (2026-10-25): three filters, supervisor, map re-association, seed tiers
+
+- **Seed tiers.** Development 0–49 (all tuning so far), feature design 50–199, validation 200–299
+  (final configuration, run once). Main results are now ranges over four sets of 50
+  (`tools/eval_sets.py`); the development set gave the low end (S1 diverge 12.1 vs 13.0–16.9 m).
+  The callout claim "1 in 500 late" (k = 1, 0–49) is 11 in 2000 over 200 seeds (S5 0–10 % per
+  set); with k = 1.3 none (k unchanged, row added).
+- **Map NIS gate** (`map_nis_gate`, default on, owner). χ² 99.9 % on the map heading/cross-track
+  rows. On its own: S4 failures 2 → 3 (−694/−571 m → +104/+117/+121 m), worst (e/σ)² 44 → 1.2.
+  Branch deferral (σ_s > clothoid length) rejected: branch decided in 18 %, portal ~33 m.
+- **Map re-association** (`map_reassoc`, default on, owner's proposal). Candidates in ŝ ± 3σ_s
+  scored by the heading residual; an along-track pseudo-measurement to the best one; only on a
+  decided branch (v1 broke the straight-on control: 92–170 m); with the map length-error state
+  (v2 was over-confident with a 2× map error). Four sets: S4 failures 0, portal 4.7–6.0 m, p95
+  ≤ 11 m, (e/σ)² ≤ 0.13; S5 portal 7.5–9.7 → 6.5–8.1 m; 5 km 13.7–17.1 → 12.3–16.1 m; no
+  scenario worse; straight-on control unchanged. Failure cases (`failure_cases_100.json`):
+  pressure gradient unchanged from the gate (no re-association on a "main" decision), 2× map error
+  18–27 m with (e/σ)² 1.6–2.4. Per seed (`perseed_*.json`): most worsened S4 seed 1, 1.1 → 12.5 m.
+- **10-state filter** (`tunnelsim/ekf10.py`, built in a separate AI session under the owner's
+  review; harness in `experiments.ekf10_experiment`, tests). Three-filter comparison
+  (`tools/compare_filters.py`).
+- **1D baseline:** map-grade error stress (`grade_scale`): 10 % off → S3 portal 85–117 m,
+  (e/σ)² 290–710.
+- **Pitch prior** for low-end IMUs (`pitch_prior_*`, off) and the trusted-stop ZUPT gate
+  (`zupt_trust_s`, off): A/B in `reports/0.5.11/pitch_prior_ab_30.json` (REPORT §4.10).
+- **Supervisor** (`tunnelsim/supervisor.py`): class rule, majority disagreement monitor, display
+  follower; open-sky rehearsals measured and dropped (`supervisor_{dev,heldout}.json`,
+  `supervisor_sets_*.json`).
+- **Fixes:** route-grid search windows past the end of the route (MapView, 10-state, 1D).
+- **Simulator:** 4-, 10- and 16-state traces and the app's selected filter with show toggles;
+  re-association and disagreement in the banner; results-table rows for each.
+- **Docs:** REPORT §3, §4.9–4.12, §5, §6; SUMMARY; README; deck.
+
 ## v0.5.10 (2026-10-25): causal stop detector by default; evaluation re-run
 
 - `EskfConfig.zupt_causal` False → True (owner 2026-10-25): the stop detector no longer filters
