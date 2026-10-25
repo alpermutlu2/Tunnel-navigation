@@ -343,3 +343,59 @@ def ekf1d_experiment(key, seeds=50, overrides=(), use_grade=True, mount_err_deg=
         res["_tracks"] = {"t": out.t, "e_s": e_s, "sig_s": sig_s, "s_hat": out.s, "v_hat": out.v,
                           "t_entry": t_e, "t_exit": t_x}
     return res
+
+
+# ---------------------------------------------------------------------------------------------
+# v0.5.11: 10-state map-constrained filter (tunnelsim/ekf10.py), scored like the 1D baseline
+# ---------------------------------------------------------------------------------------------
+def ekf10_experiment(key, seeds=50, overrides=(), mount_err_deg=None, cfg10=None, eskf_cfg=None, sim=None,
+                     branch=True, keep_tracks=False):
+    """Along-track metrics at the diverge and the portal, consistency, callout timing (k = 0, 1),
+    exit step. branch=False: negative control (the car goes straight on, the filter's route takes
+    the branch; the 10-state filter has no second hypothesis), scored as the horizontal distance
+    between the displayed position on the route and the car at the portal."""
+    from .eskf import EskfConfig
+    from .ekf10 import Ekf10Config, run_ekf10
+    from .frames import C_BP_NOMINAL, mount_rotation
+    seed_ids = np.arange(seeds) if np.isscalar(seeds) else np.asarray(seeds)
+    sc, tr, t, F, W, gnss, bt, bh = sim if sim is not None else simulate_run(key, seed_ids, overrides, branch=branch)
+    road = get_scenario(key, branch=True).road
+    C_bp_f = tr.C_bp if mount_err_deg is None else mount_rotation(*mount_err_deg) @ C_BP_NOMINAL.T @ tr.C_bp
+    o = run_ekf10(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, road, cfg10 or Ekf10Config(), eskf_cfg or EskfConfig())
+    kt = np.clip(np.round((o.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
+    s_true = tr.s[kt]
+    e = o.s - s_true[None]
+    i_e = int(np.argmax(tr.in_tunnel))
+    i_x = len(tr.in_tunnel) - int(np.argmax(tr.in_tunnel[::-1]))
+    t_x = tr.t[min(i_x, len(tr.t) - 1)]
+    k_x = int(np.argmin(np.abs(o.t - (t_x - 0.05))))
+    res = {"scenario": key, "filter": "10-state map-constrained", "seeds": int(len(seed_ids)),
+           "overrides": list(overrides), "events": o.events,
+           "imu_class_detected": {str(c): int(n) for c, n in zip(*np.unique(o.imu_class, return_counts=True))}}
+    if not branch:
+        disp = road.position(o.s[:, k_x])[:, :2]
+        res["portal_horizontal_m"] = stats(np.linalg.norm(disp - tr.pos_n[kt[k_x], :2][None], axis=1))
+        return res
+    z = e[:, k_x] / o.sig_s[:, k_x]
+    res["real_exit"] = stats(e[:, k_x])
+    res["consistency_real_exit"] = {"frac_within_2sigma": round(float(np.mean(np.abs(z) < 2)), 3),
+                                    "mean_norm_sq": round(float(np.mean(z * z)), 3),
+                                    "sigma_s_mean_m": round(float(o.sig_s[:, k_x].mean()), 2)}
+    ex = sc.road.exits[0]
+    s_call = ex.s - CALLOUT_LEAD_M
+    k_div = int(np.argmax(s_true >= ex.s)); k_ct = int(np.argmax(s_true >= s_call))
+    res["at_diverge"] = stats(e[:, k_div])
+    res["callout_k"] = {}
+    for kk_ in (0.0, CALLOUT_K):
+        m = (o.s + kk_ * o.sig_s) >= s_call
+        k_hat = np.where(m.any(1), np.argmax(m, 1), m.shape[1] - 1)
+        d = o.t[k_hat] - o.t[k_ct]
+        res["callout_k"][str(kk_)] = {"rmse_s": round(float(np.sqrt(np.mean(d ** 2))), 2), "mean_s": round(float(d.mean()), 2),
+                                      "late_frac": round(float(np.mean(d > 0)), 3),
+                                      "late_gt_1s_frac": round(float(np.mean(d > CALLOUT_LATE_S)), 3)}
+    win = (o.t >= t_x) & (o.t <= t_x + 60.0)
+    jumps = np.abs(np.diff(o.s[:, win], axis=1) - np.diff(s_true[win])[None])
+    res["recovery"] = {"max_step_jump_m": stats(jumps.max(axis=1))}
+    if keep_tracks:
+        res["_tracks"] = {"t": o.t, "e_s": e, "sig_s": o.sig_s, "s_hat": o.s, "v_hat": o.v, "t_entry": tr.t[i_e], "t_exit": t_x}
+    return res
