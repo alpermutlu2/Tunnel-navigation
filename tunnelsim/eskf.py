@@ -72,7 +72,7 @@ class EskfConfig:
     # 1 dof for the cross-track row alone), so a filter far along-track from the car cannot write a
     # wrong curve into yaw and position (S4, 2 runs in 200: −478 m); defer the branch decision while
     # σ_s exceeds the branch's clothoid length, read from the map's curvature profile.
-    map_nis_gate: bool = False
+    map_nis_gate: bool = True              # default since v0.5.11 (owner): fixes the two −500 m runs, costs three +110 m overshoots in 200 (S4)
     map_branch_defer: bool = False
     # map errors as states, constant per tunnel, reset at each outage (owner, 2026-10-20): lateral
     # offset of the polyline and a length (scale) error; the curve-matching gain is then bounded
