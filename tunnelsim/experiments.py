@@ -104,7 +104,7 @@ def calibration_experiment(key, seeds=100, imu_overrides=(), zupt_oracle=False) 
 # v0.5: ESKF experiments
 # ---------------------------------------------------------------------------------------------
 CALLOUT_LEAD_M = 300.0      # [ASSUMED] the app announces the exit 300 m before the ramp
-CALLOUT_K_SWEEP = (0.0, 1.0, 1.65, 2.0)
+CALLOUT_K_SWEEP = (0.0, 1.0, 1.3, 1.65, 2.0)
 CALLOUT_K = 1.0             # owner 2026-10-21: announce when ŝ + k·σ_s reaches the callout point (errs early);
                             # σ_s is ~2× conservative ((e/σ)² 0.1–0.3), so k = 1 is in effect ~2σ; re-select k on real data
 CALLOUT_LATE_S = 1.0        # [ASSUMED] a callout more than 1 s late counts as a late warning (review 6)
@@ -466,11 +466,15 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
     for b in range(B):
         ft = gt[ok[b]]
         gap = np.nonzero(np.diff(ft) > 5.0)[0]
-        t_out[b], t_back[b] = (ft[gap[0]], ft[gap[0] + 1]) if len(gap) else (ft[-1], np.inf)
+        t_out[b] = ft[gap[0]] if len(gap) else ft[-1]
+        # GNSS is back at the first fix of any kind after the outage: Doppler velocity arrives before
+        # position at the exit, and the smaller filters re-lock on it (a 25 m step on low-end S3)
+        anyf = gt[(np.isfinite(gnss["pos"][b, :, 0]) | np.isfinite(gnss["vel"][b, :, 0])) & (gt > t_out[b] + 5.0)]
+        t_back[b] = anyf[0] if len(anyf) else np.inf
     # rehearsals (shadow tunnels in open sky, before the real outage)
     win = SV.rehearsal_windows(gt[np.nonzero(ok.all(0))[0][0]], float(t_out.min()))
     scores = {}
-    if win:
+    if win and any(r_ != "class" for r_ in rules):
         gm = SV.mask_gnss(gnss, win)
         k_end = int(np.searchsorted(t, t_out.min() + 1.0))
         _, s_sh, g_sh, _, _ = _three_filters(t, F, W, gm, bt, bh, C_bp, r_b, road, mv, k_end=k_end)

@@ -30,6 +30,7 @@ from .ins import so3_exp_batch
 NX = 16
 CHI2_3_999 = 16.27
 CHI2_2_999 = 13.82
+CHI2_1_999 = 10.83
 
 
 @dataclass(frozen=True)
@@ -66,6 +67,13 @@ class EskfConfig:
     map_window_m: float = 300.0                  # ŝ searched within ±window of the last ŝ
     map_pre_m: float = 100.0                     # pause starts this far before the diverge
     map_branch_deg: float = 5.0                  # branch decision threshold (as branch.py)
+    # Map-row innovation gate and branch deferral (owner 2026-10-25, v0.5.11 A/B; thresholds chosen
+    # before the runs): reject the heading/cross-track update when its NIS exceeds χ² 99.9 % (2 dof,
+    # 1 dof for the cross-track row alone), so a filter far along-track from the car cannot write a
+    # wrong curve into yaw and position (S4, 2 runs in 200: −478 m); defer the branch decision while
+    # σ_s exceeds the branch's clothoid length, read from the map's curvature profile.
+    map_nis_gate: bool = False
+    map_branch_defer: bool = False
     # map errors as states, constant per tunnel, reset at each outage (owner, 2026-10-20): lateral
     # offset of the polyline and a length (scale) error; the curve-matching gain is then bounded
     # by the map's own uncertainty instead of being taken as exact
@@ -378,6 +386,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         sg = np.arange(road_map.s_div, road_map.s_div + road_map.curve_len + 1.0, 0.5)
         _, psg, _ = road_map.at(sg)
         s_thr5 = sg[int(np.argmax(np.abs(psg - psg[0]) >= np.deg2rad(cfg.map_branch_deg)))]
+        _, _, _, kg = road_map.at(sg, with_kappa=True)
+        L_clothoid = float(sg[int(np.argmax(np.abs(kg) >= 0.99 * np.abs(kg).max()))] - sg[0])   # 0 -> |κ| max
     outage_prev = np.zeros(B, bool)
     d_acc = np.zeros(B)                     # distance travelled in the current outage (gradient lever)
     n_rej = np.zeros(B, int)                # consecutive open-sky GNSS rejections (pos or vel)
@@ -675,8 +685,9 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                         r_b_ = dpsi - (ps1 - ps0); r_m = dpsi
                         t2 = np.stack([np.cos(ps1), np.sin(ps1)], 1)
                         sig_s = np.sqrt(np.einsum("bi,bij,bj->b", t2, P[:, 0:2, 0:2], t2))
-                        go_b = inwin & (np.abs(r_m) > thr) & (np.abs(r_b_) < np.abs(r_m))
-                        go_m = inwin & ~go_b & (np.abs(r_b_) > thr) & (np.abs(r_m) < np.abs(r_b_)) & (s_map - 2 * sig_s >= s_thr5)
+                        ready = (sig_s <= L_clothoid) if cfg.map_branch_defer else np.ones(B, bool)
+                        go_b = inwin & ready & (np.abs(r_m) > thr) & (np.abs(r_b_) < np.abs(r_m))
+                        go_m = inwin & ready & ~go_b & (np.abs(r_b_) > thr) & (np.abs(r_m) < np.abs(r_b_)) & (s_map - 2 * sig_s >= s_thr5)
                         br_dec = np.where(go_b, 1, np.where(go_m, -1, br_dec))
                         br_time = np.where(go_b | go_m, tk, br_time)
                         ev["map_branch"] += int(go_b.sum()); ev["map_main"] += int(go_m.sum())
@@ -707,11 +718,13 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     R = np.zeros((B, 2, 2)); R[:, 0, 0] = cfg.map_heading_sigma ** 2; R[:, 1, 1] = cfg.map_lateral_sigma ** 2
                     w_b = np.einsum("ij,bj->bi", C_bp, w[:, kk] - b_g)
                     turning = np.abs(w_b[:, 2]) * np.linalg.norm(v, axis=1) > cfg.nhc_turn_gate if cfg.nhc_turn_gate > 0 else np.zeros(B, bool)
-                    for ss, rows in ((sel & ~turning, slice(0, 2)), (sel & turning, slice(1, 2))):   # heading off in turns (sideslip)
+                    for ss, rows, gate in ((sel & ~turning, slice(0, 2), CHI2_2_999), (sel & turning, slice(1, 2), CHI2_1_999)):   # heading off in turns (sideslip)
                         if ss.any():
                             Psub, xs = P[ss], x[ss]
-                            _update(xs, Psub, z[ss][:, rows], H[ss][:, rows], R[ss][:, rows, rows], None)
+                            acc_m, _ = _update(xs, Psub, z[ss][:, rows], H[ss][:, rows], R[ss][:, rows, rows],
+                                               gate if cfg.map_nis_gate else None)
                             P[ss], x[ss] = Psub, xs
+                            ev["map_rejected"] = ev.get("map_rejected", 0) + int((~acc_m).sum())
                     ev["map_updates"] += int(sel.sum())
         # NHC (body y, z velocity at R = 0)
         if (kk - i0) % n_nhc == 0:

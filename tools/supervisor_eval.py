@@ -25,20 +25,23 @@ OV = {"note10": (), "lowend": ("imu_lowend",), "pressure30": ("baro_tunnel_30pa"
 
 
 def one(args):
-    key, imu, lo, hi = args
+    key, imu, lo, hi, rules = args
     from tunnelsim.experiments import supervisor_experiment
-    r = supervisor_experiment(key, np.arange(lo, hi), OV[imu])
-    return f"{key}/{imu}", r
+    r = supervisor_experiment(key, np.arange(lo, hi), OV[imu], rules=rules)
+    return f"{key}/{imu}/{lo}", r
 
 
 if __name__ == "__main__":
     part = sys.argv[1] if len(sys.argv) > 1 else "dev"
-    lo, hi = {"dev": (0, 50), "heldout": (50, 100), "smoke": (0, 2)}[part]
-    res = {"version": tunnelsim.__version__, "seeds": [lo, hi - 1], "runs": {}}
+    # "sets": the class rule only (no rehearsals) on four independent sets of 50 seeds
+    spans = {"dev": [(0, 50)], "heldout": [(50, 100)], "smoke": [(0, 2)],
+             "sets": [(0, 50), (50, 100), (100, 150), (150, 200)]}[part]
+    rules = ("class",) if part == "sets" else ("class", "rehearsal", "simplest")
+    res = {"version": tunnelsim.__version__, "spans": spans, "rules": rules, "runs": {}}
     d = ROOT / "reports" / tunnelsim.__version__
     d.mkdir(parents=True, exist_ok=True)
     with ProcessPoolExecutor(2) as ex:
-        for tag, r in ex.map(one, [(k, i, lo, hi) for k, i in CASES]):
+        for tag, r in ex.map(one, [(k, i, lo, hi, rules) for lo, hi in spans for k, i in CASES]):
             res["runs"][tag] = r
             (d / f"supervisor_{part}.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
             print(tag, json.dumps({n: {m: (v.get("portal", v) if isinstance(v, dict) else v)

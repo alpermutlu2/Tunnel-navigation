@@ -97,7 +97,9 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
     s_i, g_app, d_app = SV.monitor(sel_, S_, G_, "majority")
     okf = np.isfinite(gnss["pos"][0][:, 0]) & (np.nan_to_num(gnss["acc_pos_h"][0], nan=1e9) <= 10.0)
     ft = gnss["t"][okf]; gap = np.nonzero(np.diff(ft) > 5.0)[0]
-    t_back = np.array([ft[gap[0] + 1] if len(gap) else np.inf])
+    t_o = ft[gap[0]] if len(gap) else ft[-1]
+    anyf = gnss["t"][(np.isfinite(gnss["pos"][0][:, 0]) | np.isfinite(gnss["vel"][0][:, 0])) & (gnss["t"] > t_o + 5.0)]
+    t_back = np.array([anyf[0] if len(anyf) else np.inf])
     s_app = SV.display(out.t, s_i, V_[sel_[0]], t_back)[0]
     idx = np.clip(np.round((out.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
     tn = _tangent(tr, idx)

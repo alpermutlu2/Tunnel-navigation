@@ -1,0 +1,57 @@
+"""ESKF on four independent seed sets (v0.5.11, owner 2026-10-25): development 0-49 (every tuning
+in this repository was done on these), validation 50-199. Variants of the map-row NIS gate and the
+branch deferral (thresholds fixed before the runs).
+
+    python tools/eval_sets.py          -> reports/<version>/eval_sets_200.json
+"""
+import json
+import sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+import tunnelsim  # noqa: E402
+
+SETS = (0, 50, 100, 150)
+KEYS = ("S1", "S2", "S3", "S4", "S5", "S6s", "S6", "S6L", "S1-1km", "S1-5km")
+VARIANTS = {"base": {}, "gate": {"map_nis_gate": True}, "gate+defer": {"map_nis_gate": True, "map_branch_defer": True}}
+FAIL_M = 100.0     # a run whose portal error exceeds this counts as a failure
+
+
+def one(args):
+    var, key, lo, branch = args
+    from tunnelsim.eskf import EskfConfig
+    from tunnelsim.experiments import eskf_experiment
+    r = eskf_experiment(key, np.arange(lo, lo + 50), eskf_cfg=EskfConfig(**VARIANTS[var]), branch=branch, keep_tracks=True)
+    T = r["_tracks"]
+    kx = int(np.argmin(np.abs(T["t"] - (T["t_exit"] - 0.05))))
+    e = T["e_s"][:, kx]
+    ok = np.abs(e) <= FAIL_M
+    out = {"diverge_rmse": r["at_diverge"]["rmse"], "diverge_p95": r["at_diverge"]["p95_abs"],
+           "portal_rmse": r["real_exit"]["rmse"], "portal_p95": r["real_exit"]["p95_abs"],
+           "portal_rmse_without_failures": round(float(np.sqrt(np.mean(e[ok] ** 2))), 3) if ok.any() else None,
+           "failures": int((~ok).sum()), "nees": r["consistency_real_exit"]["mean_norm_sq"],
+           "exit_step_p95": r["recovery"]["max_step_jump_m"]["p95_abs"],
+           "branch": r["branch_confirm"]["branch_reported_frac"], "main": r["branch_confirm"]["main_reported_frac"],
+           "map_rejected": r["events"].get("map_rejected", 0)}
+    for k_, v in r.get("callout_k", {}).items():
+        out[f"late_gt_1s_k{k_}"] = v["late_gt_1s_frac"]
+        out[f"mean_s_k{k_}"] = v["mean_s"]
+    return f"{var}/{key}{'' if branch else '_straight_on'}/{lo}", out
+
+
+if __name__ == "__main__":
+    jobs = [(v, k, lo, True) for v in VARIANTS for lo in SETS for k in KEYS] + \
+           [(v, k, lo, False) for v in VARIANTS for lo in SETS for k in ("S1", "S4")]
+    res = {"version": tunnelsim.__version__, "sets": SETS, "seeds_per_set": 50, "fail_m": FAIL_M, "runs": {}}
+    d = ROOT / "reports" / tunnelsim.__version__
+    d.mkdir(parents=True, exist_ok=True)
+    with ProcessPoolExecutor(2) as ex:
+        for tag, out in ex.map(one, jobs):
+            res["runs"][tag] = out
+            print(tag, out["diverge_rmse"], out["portal_rmse"], out["failures"], out["nees"], flush=True)
+            (d / "eval_sets_200.json").write_text(json.dumps(res, indent=1) + "\n")
