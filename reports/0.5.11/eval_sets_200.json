@@ -77,6 +77,29 @@
    "mean_s_k1.65": -1.54,
    "late_gt_1s_k2.0": 0.0,
    "mean_s_k2.0": -1.9
+  },
+  "base/S4/0": {
+   "diverge_rmse": 34.73,
+   "diverge_p95": 65.52,
+   "portal_rmse": 5.783,
+   "portal_p95": 11.1,
+   "portal_rmse_without_failures": 5.783,
+   "failures": 0,
+   "nees": 0.118,
+   "exit_step_p95": 4.003,
+   "branch": 1.0,
+   "main": 0.0,
+   "map_rejected": 0,
+   "late_gt_1s_k0.0": 0.42,
+   "mean_s_k0.0": 0.65,
+   "late_gt_1s_k1.0": 0.0,
+   "mean_s_k1.0": -2.29,
+   "late_gt_1s_k1.3": 0.0,
+   "mean_s_k1.3": -3.12,
+   "late_gt_1s_k1.65": 0.0,
+   "mean_s_k1.65": -4.07,
+   "late_gt_1s_k2.0": 0.0,
+   "mean_s_k2.0": -4.99
   }
  }
 }
