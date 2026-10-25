@@ -41,13 +41,17 @@ if __name__ == "__main__":
     # "sets": the class rule only (no rehearsals) on four independent sets of 50 seeds
     spans = {"dev": [(0, 50)], "heldout": [(50, 100)], "smoke": [(0, 2)],
              "sets": [(0, 50), (50, 100), (100, 150), (150, 200)],
-             "validation": [(200, 250), (250, 300)]}.get(part) or globals()["_SPANS"]
+             "validation": [(300, 350), (350, 400)]}.get(part) or globals()["_SPANS"]
     rules = ("class",) if part.startswith(("sets", "validation")) else ("class", "rehearsal", "simplest")
     res = {"version": tunnelsim.__version__, "spans": spans, "rules": rules, "runs": {}}
     d = ROOT / "reports" / tunnelsim.__version__
     d.mkdir(parents=True, exist_ok=True)
+    jobs = [(k, i, lo, hi, rules) for lo, hi in spans for k, i in CASES]
+    if (d / f"supervisor_{part}.json").exists():           # resume
+        res["runs"].update(json.loads((d / f"supervisor_{part}.json").read_text())["runs"])
+        jobs = [j for j in jobs if f"{j[0]}/{j[1]}/{j[2]}" not in res["runs"]]
     with ProcessPoolExecutor(2) as ex:
-        for tag, r in ex.map(one, [(k, i, lo, hi, rules) for lo, hi in spans for k, i in CASES]):
+        for tag, r in ex.map(one, jobs):
             res["runs"][tag] = r
             (d / f"supervisor_{part}.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
             print(tag, json.dumps({n: {m: (v.get("portal", v) if isinstance(v, dict) else v)

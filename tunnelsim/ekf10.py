@@ -91,8 +91,8 @@ class Ekf10Config:
     #     which is the wrong model over 12 s). C = ARW²·min(t_i,t_j) + Σ_GM(τ≤50 s) + P_bgz·t_i t_j
     #     + diag(sideslip k·v·|w| and map heading)². Fires only when |Δψ_g| > landmark_min_deg (a turn was
     #     seen) and, if given, after a "branch" decision (run_ekf10(branch_gate=)); one update per T.
-    curve_s_guard: bool = False
-    landmark: bool = False
+    curve_s_guard: bool = True            # default since v0.5.12 (owner); (a) alone: consistent but worse
+    landmark: bool = True                 # default since v0.5.12 (owner): low-end S4 35 → 6 runs > 100 m in 300
     landmark_T: float = 12.0              # s [ASSUMED] (owner: 10-15 s, one curve)
     landmark_min_deg: float = 5.0         # [ASSUMED] (owner)
     landmark_n: int = 121
