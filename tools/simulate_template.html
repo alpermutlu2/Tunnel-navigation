@@ -8,13 +8,13 @@
 :root {
   --bg: #f6f5f1; --panel: #ffffff; --ink: #1d232b; --muted: #6b7380; --line: #d9d6cf;
   --road: #b9b4aa; --tunnel: #3d434d; --true: #1d232b; --est: #c2410c; --band: rgba(194,65,12,.18);
-  --cv: #2563eb; --gnss: #16a34a; --exit: #7c3aed; --ref: #0f766e;
+  --cv: #2563eb; --gnss: #16a34a; --exit: #7c3aed; --ref: #0f766e; --e10: #a16207; --app: #db2777;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #12151a; --panel: #1a1f26; --ink: #e8e6e1; --muted: #98a0ab; --line: #2c333d;
     --road: #4a515c; --tunnel: #8a93a0; --true: #f2f0eb; --est: #fb923c; --band: rgba(251,146,60,.22);
-    --cv: #60a5fa; --gnss: #4ade80; --exit: #c4b5fd; --ref: #2dd4bf;
+    --cv: #60a5fa; --gnss: #4ade80; --exit: #c4b5fd; --ref: #2dd4bf; --e10: #facc15; --app: #f472b6;
   }
 }
 * { box-sizing: border-box; }
@@ -150,11 +150,20 @@ input[type=range] { flex: 1; min-width: 140px; }
       <canvas id="map"></canvas>
       <div class="legend">
         <span><span class="sw" style="background:var(--true)"></span>true car (ground truth)</span>
-        <span><span class="sw" style="background:var(--est)"></span>estimated car (ESKF)</span>
+        <span><span class="sw" style="background:var(--app)"></span>app: selected filter (<b id="appName">–</b>)</span>
+        <span><span class="sw" style="background:var(--est)"></span>16-state ESKF</span>
+        <span><span class="sw" style="background:var(--e10)"></span>10-state</span>
+        <span><span class="sw" style="background:var(--ref)"></span>4-state 1D</span>
         <span><span class="sw" style="background:var(--cv)"></span>constant-velocity reference</span>
-        <span><span class="sw" style="background:var(--ref)"></span>1D map-constrained EKF (baseline)</span>
         <span><span class="sw" style="background:var(--gnss)"></span>GNSS fix</span>
         <span><span class="sw" style="background:var(--exit)"></span>exit ramp</span>
+      </div>
+      <div class="legend" id="showRow">show:
+        <label><input type="checkbox" data-f="app" checked> app</label>
+        <label><input type="checkbox" data-f="eskf" checked> 16-state</label>
+        <label><input type="checkbox" data-f="e10" checked> 10-state</label>
+        <label><input type="checkbox" data-f="ref" checked> 4-state</label>
+        <label><input type="checkbox" data-f="cv" checked> CV</label>
       </div>
       <div class="controls">
         <button id="play">Play</button>
@@ -168,7 +177,7 @@ input[type=range] { flex: 1; min-width: 140px; }
     <div class="card" style="margin-top:14px">
       <h2>Along the road (whole route)</h2>
       <canvas id="strip"></canvas>
-      <div class="note">Dark band: tunnel. Orange bar: ESKF estimate ± 2σ along the road.</div>
+      <div class="note">Dark band: tunnel. Pink bar: the app's estimate ± 2σ along the road (orange tick: 16-state ESKF).</div>
     </div>
     <div class="card" style="margin-top:14px">
       <h2>Phone sensors (what the app records)</h2>
@@ -196,12 +205,14 @@ input[type=range] { flex: 1; min-width: 140px; }
         <div class="stat"><div class="k">2σ along-track</div><div class="v" id="s_sig">–</div></div>
         <div class="stat"><div class="k">along-track error (CV)</div><div class="v" id="s_cv">–</div></div>
         <div class="stat"><div class="k">along-track error (1D EKF)</div><div class="v" id="s_1d">–</div></div>
+        <div class="stat"><div class="k">along-track error (10-state)</div><div class="v" id="s_10">–</div></div>
+        <div class="stat"><div class="k">app: error / 2σ shown</div><div class="v" id="s_app">–</div></div>
         <div class="stat"><div class="k">speed true / est</div><div class="v" id="s_v">–</div></div>
         <div class="stat"><div class="k">cross-track error (ESKF)</div><div class="v" id="s_lat">–</div></div>
       </div>
     </div>
     <div class="card" style="margin-top:14px">
-      <h2>Along-track error [m] <span class="hint">ESKF with 2σ band · CV · 1D EKF; clipped to the ESKF's range</span></h2>
+      <h2>Along-track error [m] <span class="hint">app's 2σ band (selected filter, disagreement-inflated) · each filter; clipped to that range</span></h2>
       <canvas id="err"></canvas>
     </div>
     <div class="card" style="margin-top:14px">
@@ -221,7 +232,7 @@ input[type=range] { flex: 1; min-width: 140px; }
     </div>
     <div class="rwrap"><table class="rtable" id="resTable"></table></div>
     <div class="note">One drive per scenario (seed shown above), so single numbers scatter. "–" in live mode: press the re-run button for these settings; the 50-seed statistics are in REPORT.md §3.
-      Along-track error is estimate − truth (+ ahead). The diverge is where the exit branch leaves the main tunnel; the portal is where the car leaves the tunnel. The 1D EKF is a simple baseline (state: distance, speed, two biases; the map gives curvature and grade); it is shown for comparison only and is not what the app uses.
+      Along-track error is estimate − truth (+ ahead). The diverge is where the exit branch leaves the main tunnel; the portal is where the car leaves the tunnel. Three filters run on the same phone data: the 4-state 1D EKF (distance, speed, two biases; the map gives curvature and grade), the 10-state map-constrained filter (adds height, pitch, yaw and gyro terms; no map grade) and the 16-state ESKF. The app shows the selected one (class rule: ESKF on a Note10-class IMU, 10-state on a low-end one), with its σ raised when it disagrees with both others, and a rate-limited follower after the exit.
       Callout: + late, − early, with the k·σ margin and callout distance from the sliders; red when more than 1 s late.
       Highlighted columns were re-run live with the LIVE settings; the others are the pre-run drives (map switch applies).</div>
   </div>
@@ -250,14 +261,15 @@ function derive() {
   N = D.t.length; scrub.max = N - 1;
   if (callKs === null) callKs = D.callout_k || 0;
   cvErr = D.t.map((_, i) => { const c = cvS(i); return c === null ? null : c - D.s_true[i]; });
-  errBand = { lo: D.e_s.map((e, i) => -2 * D.sig_s[i]), hi: D.e_s.map((e, i) => 2 * D.sig_s[i]) };
-  errLim = (() => { let m = 5; for (let i = 0; i < N; i++) m = Math.max(m, Math.abs(D.e_s[i]), 2 * D.sig_s[i]); m *= 1.15; return [-m, m]; })();
+  const eA = D.e_app || D.e_s;
+  errBand = { lo: eA.map((e, i) => e - 2 * appSig(i)), hi: eA.map((e, i) => e + 2 * appSig(i)) };
+  errLim = (() => { let m = 5; for (let i = 0; i < N; i++) m = Math.max(m, Math.abs(eA[i]) + 2 * appSig(i)); m *= 1.15; return [-m, m]; })();
   callout();
   header();
 }
 function callout() {             // ŝ + k·σ_s reaches the callout point: errs early (k from the slider)
   for (const e of D.exits) e.call_s = e.s - callLead;
-  callK = D.exits.length ? D.s_hat.findIndex((s, i) => s + callKs * D.sig_s[i] >= D.exits[0].call_s) : -1;
+  callK = D.exits.length ? D.t.findIndex((_, i) => appS(i) + callKs * appSig(i) >= D.exits[0].call_s) : -1;
   trueCallK = D.exits.length ? D.s_true.findIndex(s => s >= D.exits[0].call_s) : -1;
   const st = document.getElementById("callStat");
   if (st) { const dt = callK >= 0 && trueCallK >= 0 ? D.t[callK] - D.t[trueCallK] : null;
@@ -265,7 +277,7 @@ function callout() {             // ŝ + k·σ_s reaches the callout point: errs
 }
 // what the voice says at the callout: the distance to the exit from the estimate, rounded to 50 m
 // (as navigation apps do), so it matches the banner; the true distance is shown next to it
-function spokenDist() { return Math.max(50, Math.round((D.exits[0].s - D.s_hat[callK]) / 50) * 50); }
+function spokenDist() { return Math.max(50, Math.round((D.exits[0].s - appS(callK)) / 50) * 50); }
 function header() {
 document.getElementById("title").textContent = D.title;
 document.getElementById("desc").textContent = D.description;
@@ -286,6 +298,8 @@ function setup(c) {
   c.width = Math.max(1, r.width * dpr); c.height = Math.max(1, r.height * dpr);
   const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); return [g, r.width, r.height];
 }
+const SHOW = { app: true, eskf: true, e10: true, ref: true, cv: true };
+const appS = i => (D.s_app ? D.s_app[i] : D.s_hat[i]), appSig = i => (D.sig_app ? D.sig_app[i] : D.sig_s[i]);
 function cvS(i) {
   const t = D.t[i];
   if (t < D.cv.t0 || t > D.cv.t1) return null;
@@ -326,8 +340,8 @@ function drawMap() {
     g.fillStyle = css("--exit"); g.beginPath(); g.arc(X(e.xy[0]), Y(e.xy[1]), 6, 0, 7); g.fill();
     g.font = "12px system-ui"; g.fillText(e.name, X(e.xy[0]) + 9, Y(e.xy[1]) - 9);
   }
-  // ESKF 2-sigma along-track bar
-  const sh = D.s_hat[k], sg = 2 * D.sig_s[k];
+  // app 2-sigma along-track bar (selected filter, disagreement-inflated σ)
+  const sh = appS(k), sg = 2 * appSig(k);
   g.strokeStyle = css("--band"); g.lineWidth = Math.max(10, 14 * z); g.beginPath();
   for (let s = sh - sg; s <= sh + sg; s += Math.max(2, sg / 40)) { const [x, y] = sToXY(s); s === sh - sg ? g.moveTo(X(x), Y(y)) : g.lineTo(X(x), Y(y)); }
   g.stroke();
@@ -343,10 +357,12 @@ function drawMap() {
     const tx = X(x) - g.measureText(label).width / 2, ty = Y(y) + dy;
     g.strokeStyle = css("--panel"); g.lineWidth = 3; g.strokeText(label, tx, ty); g.fillText(label, tx, ty);
   };
-  const c = cvS(k); if (c !== null) { const [x, y] = sToXY(c); drawCar(x, y, D.heading[k], css("--cv"), "CV", 0.55, -Wc / 2 - 20); }
-  if (D.s_1d) { const [x, y] = sToXY(D.s_1d[k]); drawCar(x, y, headingAt(D.s_1d[k]), css("--ref"), "1D", 0.6, -Wc / 2 - 33); }
+  const c = cvS(k); if (SHOW.cv && c !== null) { const [x, y] = sToXY(c); drawCar(x, y, D.heading[k], css("--cv"), "CV", 0.55, -Wc / 2 - 20); }
+  if (SHOW.ref && D.s_1d) { const [x, y] = sToXY(D.s_1d[k]); drawCar(x, y, headingAt(D.s_1d[k]), css("--ref"), "4", 0.6, -Wc / 2 - 33); }
+  if (SHOW.e10 && D.s_10) { const [x, y] = sToXY(D.s_10[k]); drawCar(x, y, headingAt(D.s_10[k]), css("--e10"), "10", 0.6, -Wc / 2 - 46); }
+  if (SHOW.app && D.s_app) { const [x, y] = sToXY(D.s_app[k]); drawCar(x, y, headingAt(D.s_app[k]), css("--app"), "app", 0.85, -Wc / 2 - 59); }
   const eh = isFinite(D.est_heading[k]) ? D.est_heading[k] : D.heading[k];
-  drawCar(D.est_xy[k][0], D.est_xy[k][1], eh, css("--est"), "estimate", 0.9, -Wc / 2 - 7);
+  if (SHOW.eskf) drawCar(D.est_xy[k][0], D.est_xy[k][1], eh, css("--est"), "16", 0.9, -Wc / 2 - 7);
   drawCar(cx, cy, D.heading[k], css("--true"), "true car", 1, Wc / 2 + 15);
   g.fillStyle = css("--muted"); g.font = "12px system-ui";
   const inT = D.t[k] >= D.t_entry && D.t[k] <= D.t_exit;
@@ -365,9 +381,10 @@ function drawStrip() {
     if (t && a === null) a = i; if (!t && a !== null) { g.fillStyle = css("--tunnel"); g.fillRect(X(a * 10), H / 2 - 6, X(i * 10) - X(a * 10), 12); a = null; }
   }
   for (const e of D.exits) { g.fillStyle = css("--exit"); g.fillRect(X(e.s) - 1, H / 2 - 14, 2, 28); g.fillRect(X(e.call_s) - 1, H / 2 - 10, 1, 20); }
-  const sh = D.s_hat[k], sg = 2 * D.sig_s[k];
+  const sh = appS(k), sg = 2 * appSig(k);
   g.fillStyle = css("--band"); g.fillRect(X(sh - sg), H / 2 - 12, Math.max(2, X(sh + sg) - X(sh - sg)), 24);
-  g.fillStyle = css("--est"); g.fillRect(X(sh) - 2, H / 2 - 12, 4, 24);
+  g.fillStyle = css("--app"); g.fillRect(X(sh) - 2, H / 2 - 12, 4, 24);
+  if (SHOW.eskf) { g.fillStyle = css("--est"); g.fillRect(X(D.s_hat[k]) - 1, H / 2 - 9, 2, 18); }
   const c = cvS(k); if (c !== null) { g.fillStyle = css("--cv"); g.fillRect(X(c) - 1.5, H / 2 - 9, 3, 18); }
   g.fillStyle = css("--true"); g.beginPath(); g.arc(X(D.s_true[k]), H / 2, 5, 0, 7); g.fill();
 }
@@ -388,7 +405,7 @@ function plot(id, series, yfmt, band, lim) {
   for (let j = 0; j <= 4; j++) { const v = lo + (hi - lo) * j / 4; g.beginPath(); g.moveTo(l, Y(v)); g.lineTo(W - r, Y(v)); g.stroke(); g.fillText(yfmt(v), 4, Y(v) + 4); }
   if (band) { const c = v => Y(Math.max(lo, Math.min(hi, v))); g.fillStyle = css("--band"); g.beginPath(); for (let i = 0; i < N; i++) g.lineTo(X(i), c(band.hi[i])); for (let i = N - 1; i >= 0; i--) g.lineTo(X(i), c(band.lo[i])); g.fill(); }
   for (const s of series) {
-    g.strokeStyle = s.c; g.lineWidth = 1.6; g.beginPath(); let on = false;
+    g.strokeStyle = s.c; g.lineWidth = s.w || 1.6; g.beginPath(); let on = false;
     for (let i = 0; i < N; i++) { let v = s.y[i]; if (v === null) { on = false; continue; } v = Math.max(lo, Math.min(hi, v)); on ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)); on = true; }
     g.stroke();
   }
@@ -401,7 +418,7 @@ function roundDist(d) { return d >= 1000 ? `${(d / 1000).toFixed(1)} km` : `${Ma
 function headingAt(s) { const [x0, y0] = sToXY(s - 5), [x1, y1] = sToXY(s + 5); return Math.atan2(y1 - y0, x1 - x0); }
 function drawNav() {
   const cv = document.getElementById("nav"); const [g, W, H] = setup(cv);
-  const sh = D.s_hat[k], [ex, ey] = sToXY(sh), psi = headingAt(sh);
+  const sh = appS(k), [ex, ey] = sToXY(sh), psi = headingAt(sh);
   const scale = Math.min(W, H) / 380;                       // px per metre: ~380 m across the short side
   const cx = W / 2, cy = H * 0.72;
   const T = (x, y) => { const dx = x - ex, dy = y - ey, c = Math.cos(psi - Math.PI / 2), s_ = Math.sin(psi - Math.PI / 2);
@@ -429,7 +446,7 @@ function drawNav() {
   g.beginPath(); g.moveTo(0, -16); g.lineTo(11, 12); g.lineTo(0, 6); g.lineTo(-11, 12); g.closePath(); g.fill(); g.stroke(); g.restore();
   // top maneuver banner
   const bh = Math.max(64, H * 0.13), ex0 = D.exits[0];
-  const called = callK >= 0 && k >= callK, branchK = D.exits.length ? D.s_hat.findIndex(s => s >= ex0.s + 40) : -1;
+  const called = callK >= 0 && k >= callK, branchK = D.exits.length ? D.t.findIndex((_, i) => appS(i) >= ex0.s + 40) : -1;
   g.fillStyle = "#1f6f4a"; g.fillRect(0, 0, W, bh);
   g.fillStyle = "#ffffff"; g.textBaseline = "middle";
   if (ex0 && sh < ex0.s + 40) {
@@ -453,7 +470,7 @@ function drawNav() {
   g.fillStyle = "#fff"; g.font = `700 ${Math.round(fb * 0.42)}px system-ui`; g.fillText(`${Math.round(D.v_est[k] * 3.6)}`, 18, H - fb / 2);
   const sw = g.measureText(`${Math.round(D.v_est[k] * 3.6)}`).width; g.font = `500 ${Math.round(fb * 0.2)}px system-ui`; g.fillStyle = "#9aa4b2";
   g.fillText("km/h", 24 + sw, H - fb / 2 + 2);
-  const gpsTxt = inT ? `No GPS · estimated ±${Math.round(2 * D.sig_s[k])} m` : "GPS";
+  const gpsTxt = inT ? `No GPS · estimated ±${Math.round(2 * appSig(k))} m` : "GPS";
   g.font = `600 ${Math.round(fb * 0.22)}px system-ui`; const gw = g.measureText(gpsTxt).width + 20;
   g.fillStyle = inT ? "#8a5a00" : "#1f6f4a"; g.beginPath(); g.roundRect(W - gw - 14, H - fb / 2 - 13, gw, 26, 13); g.fill();
   g.fillStyle = "#fff"; g.fillText(gpsTxt, W - gw - 4, H - fb / 2 + 1);
@@ -461,20 +478,26 @@ function drawNav() {
 
 function render() {
   drawMap(); drawStrip(); drawNav();
-  plot("err", [{ y: D.e_s, c: css("--est") }, { y: cvErr, c: css("--cv") }, ...(D.e_1d ? [{ y: D.e_1d, c: css("--ref") }] : [])], v => v.toFixed(0), errBand, errLim);
+  plot("err", [...(SHOW.eskf ? [{ y: D.e_s, c: css("--est") }] : []), ...(SHOW.cv ? [{ y: cvErr, c: css("--cv") }] : []),
+               ...(SHOW.ref && D.e_1d ? [{ y: D.e_1d, c: css("--ref") }] : []), ...(SHOW.e10 && D.e_10 ? [{ y: D.e_10, c: css("--e10") }] : []),
+               ...(SHOW.app && D.e_app ? [{ y: D.e_app, c: css("--app"), w: 2.6 }] : [])], v => v.toFixed(0), SHOW.app ? errBand : null, errLim);
   const S = D.sensors, xyz = [css("--est"), css("--cv"), css("--gnss")];
   plot("acc", S.acc.map((y, j) => ({ y, c: xyz[j] })), v => v.toFixed(1));
   plot("gyr", S.gyro.map((y, j) => ({ y, c: xyz[j] })), v => v.toFixed(1));
   plot("bar", [{ y: S.baro, c: css("--ink") }], v => v.toFixed(1));
   plot("gsp", [{ y: D.v_true.map(v => v * 3.6), c: css("--line") }, { y: S.gnss_kmh, c: css("--gnss") }], v => v.toFixed(0));
-  plot("spd", [{ y: D.v_true.map(v => v * 3.6), c: css("--true") }, { y: D.v_est.map(v => v * 3.6), c: css("--est") },
-               ...(D.v_1d ? [{ y: D.v_1d.map(v => v * 3.6), c: css("--ref") }] : [])], v => v.toFixed(0));
+  plot("spd", [{ y: D.v_true.map(v => v * 3.6), c: css("--true") }, ...(SHOW.eskf ? [{ y: D.v_est.map(v => v * 3.6), c: css("--est") }] : []),
+               ...(SHOW.ref && D.v_1d ? [{ y: D.v_1d.map(v => v * 3.6), c: css("--ref") }] : []),
+               ...(SHOW.e10 && D.v_10 ? [{ y: D.v_10.map(v => v * 3.6), c: css("--e10") }] : [])], v => v.toFixed(0));
   document.getElementById("clock").textContent = `${D.t[k].toFixed(1)} s`;
   document.getElementById("s_err").textContent = `${D.e_s[k].toFixed(1)} m`;
   document.getElementById("s_sig").textContent = `${(2 * D.sig_s[k]).toFixed(1)} m`;
   document.getElementById("s_lat").textContent = `${D.e_lat[k].toFixed(1)} m`;
   document.getElementById("s_cv").textContent = cvErr[k] === null ? "–" : `${cvErr[k].toFixed(1)} m`;
   document.getElementById("s_1d").textContent = D.e_1d ? `${D.e_1d[k].toFixed(1)} m` : "–";
+  document.getElementById("s_10").textContent = D.e_10 ? `${D.e_10[k].toFixed(1)} m` : "–";
+  document.getElementById("s_app").textContent = D.e_app ? `${D.e_app[k].toFixed(1)} / ${(2 * appSig(k)).toFixed(0)} m` : "–";
+  document.getElementById("appName").textContent = D.app_filter ? `${D.app_filter}${D.imu_class ? ", " + D.imu_class + " IMU" : ""}` : "16-state ESKF";
   document.getElementById("s_v").textContent = `${(D.v_true[k] * 3.6).toFixed(0)} / ${(D.v_est[k] * 3.6).toFixed(0)} km/h`;
   let msg = "";
   if (callK >= 0 && k >= callK && k < callK + 12) {
@@ -482,6 +505,7 @@ function render() {
     msg = `Callout: "In ${spokenDist()} m, take ${D.exits[0].name}" (${D.exits[0].s >= D.s_true[callK] ? `true distance ${Math.round(D.exits[0].s - D.s_true[callK])} m` : `the car passed the exit ${Math.round(D.s_true[callK] - D.exits[0].s)} m ago`}; ${Math.abs(dt).toFixed(1)} s ${dt > 0 ? "late" : "early"} vs the right moment)`;
   }
   if (D.zupt_on[k]) msg += (msg ? " · " : "") + "stopped: zero-velocity update";
+  if (D.alarm && D.alarm[k]) msg += (msg ? " · " : "") + "filters disagree: uncertainty raised";
   document.getElementById("banner").textContent = msg;
   scrub.value = k;
   const fsS = document.getElementById("fs_scrub"); fsS.max = N - 1; fsS.value = k;
@@ -522,6 +546,7 @@ document.addEventListener("keydown", e => {
 });
 document.getElementById("zoom").oninput = render;
 document.getElementById("ghost").onchange = render;
+for (const el of document.querySelectorAll("#showRow input[data-f]")) el.onchange = () => { SHOW[el.dataset.f] = el.checked; render(); };
 // double-click any panel (map, road strip, sensors, driver's view, Now, plots) for full screen; the
 // playback bar moves into the full-screen panel, and Space / ← → / Shift+← → work everywhere
 function toggleFs(el, e) {
@@ -591,29 +616,41 @@ function drvMetrics(d) {
   const v = (arr, i) => Number.isFinite(i) ? arr[i] : NaN;
   let call = NaN;
   if (ex) {
-    const cs = ex.s - callLead, a = d.s_hat.findIndex((s, i) => s + callKs * d.sig_s[i] >= cs), b = d.s_true.findIndex(s => s >= cs);
+    const aS = i => (d.s_app ? d.s_app[i] : d.s_hat[i]), aG = i => (d.sig_app ? d.sig_app[i] : d.sig_s[i]);
+    const cs = ex.s - callLead, a = d.t.findIndex((_, i) => aS(i) + callKs * aG(i) >= cs), b = d.s_true.findIndex(s => s >= cs);
     if (a >= 0 && b >= 0) call = d.t[a] - d.t[b];
   }
   let cv = NaN;
   if (Number.isFinite(iDiv) && d.cv && d.t[iDiv] >= d.cv.t0 && d.t[iDiv] <= d.cv.t1) cv = d.cv.s0 + d.cv.v * (d.t[iDiv] - d.cv.t0) - d.s_true[iDiv];
   const eP = v(d.e_s, iPor), sP = v(d.sig_s, iPor);
   const r1 = d.e_1d ? { div1: v(d.e_1d, iDiv), por1: v(d.e_1d, iPor), cons1: (v(d.e_1d, iPor) / v(d.sig_1d, iPor)) ** 2 } : {};
+  if (d.e_10) Object.assign(r1, { div10: v(d.e_10, iDiv), por10: v(d.e_10, iPor), cons10: (v(d.e_10, iPor) / v(d.sig_10, iPor)) ** 2 });
+  if (d.e_app) Object.assign(r1, { appf: d.app_filter, divA: v(d.e_app, iDiv), porA: v(d.e_app, iPor), consA: (v(d.e_app, iPor) / v(d.sig_app, iPor)) ** 2,
+                                   alarmA: d.alarm.filter((x, i) => x && d.t[i] >= d.t_entry && d.t[i] <= d.t_exit).length / Math.max(1, d.t.filter(t => t >= d.t_entry && t <= d.t_exit).length) });
   return { div: v(d.e_s, iDiv), div2s: 2 * v(d.sig_s, iDiv), max: mx, por: eP, lat: v(d.e_lat, iPor), cons: (eP / sP) ** 2, call, cv,
            tun: d.t_exit - d.t_entry, ...r1 };
 }
 const RES_ROWS = [
+  ["app: selected filter", "appf", x => x, null, true],
+  ["app: error at the diverge [m]", "divA", x => x.toFixed(1)],
+  ["app: error at the portal [m]", "porA", x => x.toFixed(1)],
+  ["app: (e/σ)² at the portal (σ shown)", "consA", x => x.toFixed(2), x => x > 4],
+  ["app: tunnel time with filters disagreeing", "alarmA", x => `${Math.round(100 * x)} %`],
   ["tunnel time [s]", "tun", x => x.toFixed(0)],
-  ["along-track error at the diverge [m]", "div", x => x.toFixed(1)],
+  ["16-state error at the diverge [m]", "div", x => x.toFixed(1)],
   ["2σ along-track at the diverge [m]", "div2s", x => x.toFixed(1)],
   ["largest |along-track error| in the tunnel [m]", "max", x => x.toFixed(1)],
-  ["along-track error at the portal [m]", "por", x => x.toFixed(1)],
+  ["16-state error at the portal [m]", "por", x => x.toFixed(1)],
   ["cross-track error at the portal [m]", "lat", x => x.toFixed(1)],
   ["(e/σ)² at the portal", "cons", x => x.toFixed(2)],
-  ["callout timing [s] (+ late)", "call", x => (x > 0 ? "+" : "") + x.toFixed(1), x => x > 1.0],
+  ["app callout timing [s] (+ late)", "call", x => (x > 0 ? "+" : "") + x.toFixed(1), x => x > 1.0],
   ["constant-velocity error at the diverge [m]", "cv", x => x.toFixed(1)],
   ["1D EKF error at the diverge [m]", "div1", x => x.toFixed(1)],
   ["1D EKF error at the portal [m]", "por1", x => x.toFixed(1)],
   ["1D EKF (e/σ)² at the portal", "cons1", x => x.toFixed(2), x => x > 4],
+  ["10-state error at the diverge [m]", "div10", x => x.toFixed(1)],
+  ["10-state error at the portal [m]", "por10", x => x.toFixed(1)],
+  ["10-state (e/σ)² at the portal", "cons10", x => x.toFixed(2), x => x > 4],
 ];
 function resKeys() { return [...ALL.order, ...(CUSTOM ? ["custom"] : [])]; }
 function resData(key) {
@@ -628,11 +665,11 @@ function renderResults() {
   const keys = resKeys(), cols = keys.map(key => { const [d, live] = resData(key); return { key, d, live, m: d ? drvMetrics(d) : null }; });
   const label = key => key === "custom" ? "Custom" : ALL.runs[key].label;
   let h = "<thead><tr><th></th>" + cols.map(c => `<th>${label(c.key)}</th>`).join("") + "</tr></thead><tbody>";
-  for (const [name, f, fmt, bad] of RES_ROWS) {
+  for (const [name, f, fmt, bad, txt] of RES_ROWS) {
     h += `<tr><td>${name}</td>` + cols.map(c => {
       if (!c.m) return `<td class="pending">–</td>`;
       const x = c.m[f], cls = [c.live ? "relive" : "", bad && Number.isFinite(x) && bad(x) ? "bad" : ""].join(" ").trim();
-      return `<td class="${cls}">${Number.isFinite(x) ? fmt(x) : "–"}</td>`;
+      return `<td class="${cls}">${txt ? (x || "–") : Number.isFinite(x) ? fmt(x) : "–"}</td>`;
     }).join("") + "</tr>";
   }
   document.getElementById("resTable").innerHTML = h + "</tbody>";

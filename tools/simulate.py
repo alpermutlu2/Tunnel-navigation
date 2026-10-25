@@ -74,11 +74,31 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
         from tunnelsim.frames import C_BP_NOMINAL, mount_rotation
         C_bp_f = mount_rotation(*mount_err) @ C_BP_NOMINAL.T @ tr.C_bp
     from tunnelsim.mapview import MapView
+    mv_f = MapView(get_scenario(key).road, *(map_err or (0.0, 1.0)))
     out = run_eskf(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, _eskf_config(eskf), zupt_mask=zmask,
-                   road_map=MapView(get_scenario(key).road, *(map_err or (0.0, 1.0))))
+                   road_map=mv_f)
     # 1D map-constrained EKF baseline on the same sensor data (v0.5.9); its map has the grade
     from tunnelsim.reference1d import Ekf1dConfig, run_ekf1d
     o1 = run_ekf1d(t, F, W, gnss, C_bp_f, tr.lever_arm_b, sc.road, Ekf1dConfig(), _eskf_config(eskf), zupt_mask=zmask)
+    # 10-state map-constrained filter (v0.5.11) and the supervisor: class rule, majority disagreement
+    # monitor, display follower after the exit (tunnelsim/supervisor.py); all estimator side
+    from tunnelsim import supervisor as SV
+    from tunnelsim.ekf10 import Ekf10Config, run_ekf10
+    from tunnelsim.experiments import _eskf_along
+    o10 = run_ekf10(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, sc.road, Ekf10Config(), _eskf_config(eskf))
+    s_e16, g_e16 = _eskf_along(mv_f, out.t, out.p, out.C, out.P_pos, C_bp_f, tr.lever_arm_b)
+    ipo = lambda tt, x: np.interp(out.t, tt, x)[None]
+    S_ = {"1d": ipo(o1.t, o1.s[0]), "ekf10": ipo(o10.t, o10.s[0]), "eskf": s_e16}
+    G_ = {"1d": ipo(o1.t, o1.sig_s[0]), "ekf10": ipo(o10.t, o10.sig_s[0]), "eskf": g_e16}
+    V_ = {"1d": ipo(o1.t, o1.v[0]), "ekf10": ipo(o10.t, o10.v[0]), "eskf": np.linalg.norm(out.v, axis=-1)}
+    cls_ = out.aux.get("imu_class")
+    cls_ = cls_ if cls_ is not None else np.array(["note10"])
+    sel_ = SV.select("class", cls_)
+    s_i, g_app, d_app = SV.monitor(sel_, S_, G_, "majority")
+    okf = np.isfinite(gnss["pos"][0][:, 0]) & (np.nan_to_num(gnss["acc_pos_h"][0], nan=1e9) <= 10.0)
+    ft = gnss["t"][okf]; gap = np.nonzero(np.diff(ft) > 5.0)[0]
+    t_back = np.array([ft[gap[0] + 1] if len(gap) else np.inf])
+    s_app = SV.display(out.t, s_i, V_[sel_[0]], t_back)[0]
     idx = np.clip(np.round((out.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
     tn = _tangent(tr, idx)
     pR = out.p[0] - np.einsum("kij,j->ki", out.C[0] @ tr.C_bp.T, tr.lever_arm_b)
@@ -143,6 +163,16 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
         "e_1d": (np.interp(out.t[sel], o1.t, o1.s[0]) - tr.s[idx[sel]]).round(2).tolist(),
         "sig_1d": np.interp(out.t[sel], o1.t, o1.sig_s[0]).round(2).tolist(),
         "v_1d": np.interp(out.t[sel], o1.t, o1.v[0]).round(3).tolist(),
+        "s_10": S_["ekf10"][0, sel].round(2).tolist(),
+        "e_10": (S_["ekf10"][0, sel] - tr.s[idx[sel]]).round(2).tolist(),
+        "sig_10": G_["ekf10"][0, sel].round(2).tolist(),
+        "v_10": V_["ekf10"][0, sel].round(3).tolist(),
+        "s_app": s_app[sel].round(2).tolist(),
+        "e_app": (s_app[sel] - tr.s[idx[sel]]).round(2).tolist(),
+        "sig_app": g_app[0, sel].round(2).tolist(),
+        "alarm": (d_app[0, sel] > SV.ALARM_D).tolist(),
+        "app_filter": {"1d": "4-state 1D", "ekf10": "10-state", "eskf": "16-state ESKF"}[sel_[0]],
+        "imu_class": str(cls_[0]),
         "callout_k": CALLOUT_K,
         "v_true": tr.v[idx[sel]].round(3).tolist(),
         "v_est": np.linalg.norm(out.v[0, sel], axis=1).round(3).tolist(),

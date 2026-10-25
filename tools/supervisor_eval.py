@@ -33,13 +33,14 @@ def one(args):
 
 if __name__ == "__main__":
     part = sys.argv[1] if len(sys.argv) > 1 else "dev"
-    lo, hi = (0, 50) if part == "dev" else (50, 100)
+    lo, hi = {"dev": (0, 50), "heldout": (50, 100), "smoke": (0, 2)}[part]
     res = {"version": tunnelsim.__version__, "seeds": [lo, hi - 1], "runs": {}}
+    d = ROOT / "reports" / tunnelsim.__version__
+    d.mkdir(parents=True, exist_ok=True)
     with ProcessPoolExecutor(2) as ex:
         for tag, r in ex.map(one, [(k, i, lo, hi) for k, i in CASES]):
             res["runs"][tag] = r
-            print(tag, json.dumps({n: {m: r["rules"][n][m]["portal"] if isinstance(r["rules"][n][m], dict) else r["rules"][n][m]
-                                       for m in r["rules"][n]} for n in r["rules"]}), flush=True)
-    d = ROOT / "reports" / tunnelsim.__version__
-    d.mkdir(parents=True, exist_ok=True)
+            (d / f"supervisor_{part}.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
+            print(tag, json.dumps({n: {m: (v.get("portal", v) if isinstance(v, dict) else v)
+                                       for m, v in r["rules"][n].items()} for n in r["rules"]}), flush=True)
     (d / f"supervisor_{part}.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
