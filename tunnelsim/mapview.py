@@ -55,6 +55,8 @@ class MapView:
         for b in range(len(p_xy)):
             if np.isfinite(s_prev[b]):
                 a, e = np.searchsorted(self.s, [s_prev[b] - window, s_prev[b] + window + self.step])
+                # an estimate beyond either end of the map: search the nearest window inside it
+                a = min(a, len(self.s) - 1); e = max(e, a + 1)
             else:
                 a, e = 0, len(self.s)
             d2 = ((self.xy[a:e] - p_xy[b]) ** 2).sum(1)

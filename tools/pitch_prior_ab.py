@@ -50,7 +50,15 @@ def run(seeds=30):
     sid = np.arange(seeds)
     res = {"version": tunnelsim.__version__, "seeds": seeds, "runs": {}}
 
+    done = {}
+    part = ROOT / "reports" / tunnelsim.__version__ / f"pitch_prior_ab_{seeds}.partial.json"
+    if part.exists():
+        done = json.loads(part.read_text())
+        res["runs"].update(done)
+
     def go(tag, key, ov, kw, **extra):
+        if tag in done:
+            return
         r = eskf_experiment(key, sid, ov, eskf_cfg=EskfConfig(**kw), **extra)
         res["runs"][tag] = pick(r)
         print(tag, res["runs"][tag], flush=True)
