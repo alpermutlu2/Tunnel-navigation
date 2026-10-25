@@ -680,7 +680,10 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     s_new = np.where(br_dec == -1, np.maximum(s_main, road_map.s_div), s_new)
                 s_map = np.where(out_m, s_new, np.nan)
                 if cfg.map_reassoc:
-                    ra = out_m & (br_dec != -1)
+                    # only on a decided branch geometry: before the decision the route's branch is a
+                    # hypothesis, and a car going straight on matched to it is pulled back to the
+                    # straight before the diverge (negative control: 92-170 m in v0.5.11 A/B)
+                    ra = out_m & ((br_dec == 1) if road_map.s_div is not None else np.ones(B, bool))
                     if ra.any():
                         sm0 = np.nan_to_num(s_map)
                         _, ps0_, _ = road_map.at(sm0)
