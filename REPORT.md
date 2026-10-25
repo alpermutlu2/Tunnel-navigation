@@ -488,6 +488,67 @@ Readings:
 - The lesson is the same one the callout claim taught ("1 in 500" on 0–49, 0–10 % per set over
   200): tune on one set and report on another.
 
+**4.12 A supervisor over the three filters** (owner 2026-10-25; `tunnelsim/supervisor.py`,
+`tools/supervisor_eval.py`; `reports/0.5.11/supervisor_{dev,heldout}.json`,
+`supervisor_sets_{0-99,100-199}.json`). All three filters run on the same phone data; the
+supervisor decides what the app shows. It sees only estimator-side outputs.
+
+*Selection, decided once before the tunnel.*
+- **Class rule (approved):** ESKF on a Note10-class IMU, 10-state on a low-end one.
+- **Open-sky rehearsals (measured, rejected):** shadow copies of each filter ran without GNSS for
+  30 s, three times on the approach, and were scored against the next fix.
+  - The three filters scored alike (rms ~4 m, (e/σ)² ~0.4). Dead reckoning differs only after
+    ~100 s, and 30 s of it is hidden in the GNSS's own 3–4 m.
+  - A rule picking the best rehearsal chose the 1D filter in 55–60 % of runs: Note10 S4 portal
+    66–92 m, 5 km 29–86 m (held-out seeds).
+  - The rehearsals may still serve as a health check for gross faults (a wrong mount, a broken
+    IMU); that was not measured.
+
+*Display.* Inside the tunnel the selected filter. From the first GNSS fix of any kind after the
+outage, a follower that moves with the selected filter's speed and closes the gap to its re-locked
+ŝ at ≤ 2 m/s: exit step ≤ 1.1 m p95 on nominal runs. Without it, the smaller filters' re-lock on
+the first Doppler fix moved ŝ by up to 25 m. The branch decision always comes from the ESKF.
+
+*Disagreement monitor* (does not switch filters):
+- σ_disp² = σ_i² + max(0, agg_j[(ŝ_i − ŝ_j)² − σ_i² − σ_j²]), alarm while agg_j d_ij > 9.
+- "**any**" (agg = max) is captive to the worst filter. On Note10 S4 it raised an alarm in 76 % of
+  runs, because of the 1D filter's error, and made 100 % of low-end callouts > 5 s early.
+- "**majority**" (agg = min, the default) needs the selected filter to disagree with both others.
+
+*Class rule with the majority monitor, four sets (0–199)*, app's along-track error:
+
+| | diverge rms | portal rms | (e/σ)² worst set, without / with monitor | > 1 s late | runs with an alarm |
+|---|---|---|---|---|---|
+| Note10, S1–S6, 1 and 5 km | 3.5–31.8 m | 4.3–16.4 m | ≤ 0.43 / ≤ 0.38 | ≤ 10 % (S5) | ≤ 10 % |
+| low-end, S1, S2, S3, S5, S6, 5 km | 10.9–25.1 m | 7.4–23.8 m | ≤ 0.80 / ≤ 0.80 | ≤ 2 % | 0 % |
+| low-end S4 | 40–229 m | 89–335 m | 59 / 10.4 | 6 % | 36 % |
+| pressure 30 Pa/km, S1 / S3 | 105–153 m | 96–106 m | 13.3 / 1.9, 8.5 / 1.05 | 0 % | 32 % / 68 % |
+
+Readings:
+- **Low-end S4 stays broken in the product configuration.** The 10-state filter has the
+  point-linearised heading update that re-association replaced in the ESKF, and fails in some
+  sets.
+- **Why the monitor works where it does: the filters are not independent.**
+
+  | shared input | 1D | 10-state | ESKF |
+  |---|---|---|---|
+  | IMU, stop detector, GNSS | yes | yes | yes |
+  | barometer | – | yes | yes |
+  | map heading along the route | – (curvature only) | yes | yes |
+  | map grade | yes | – | – |
+
+  "Majority" is in practice two correlated filters plus one. The monitor catches failures where the
+  models differ:
+  - a pressure gradient (the 1D filter ignores the barometer);
+  - suspension pitch (the 1D filter alone);
+  - one filter's map-layer failure.
+
+  It cannot catch failures in a shared part: a false stop, an IMU scale error.
+- **The pressure gradient shows the limit.** For the first two minutes the ESKF and the 10-state
+  filter drift together (+100 m at t+120 s) and the monitor is silent. It fires only when they
+  split, the ESKF taking the wrong branch (−120 m) and the 10-state continuing (+200 m). The
+  monitor then makes σ honest ((e/σ)² ~1–2), late.
+
 ## 5. Limitations and next steps
 
 - **Simulation only.** The IMU noise terms are measured. The time shape of the noise, vibration,
