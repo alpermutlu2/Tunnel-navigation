@@ -387,6 +387,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     s_map = np.full(B, np.nan)              # map-matched along-track position (outage only)
     br_dec = np.zeros(B, int)               # branch decision: 0 none, +1 route (branch), -1 main
     psi_start = np.full(B, np.nan); s_start = np.full(B, np.nan); map_prev_out = np.zeros(B, bool)
+    ra_flag = np.zeros(B, bool)             # re-association applied since the last output epoch
     m_hat = np.zeros(B); e_hat = np.zeros(B); off_hat = np.zeros(B)   # + pitch-prior offset [rad]  # map lateral offset [m], map scale error [-]
     br_time = np.full(B, np.nan)              # time of the in-loop branch decision
     if use_map and road_map.s_div is not None:
@@ -711,6 +712,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                             _update(xs, Psub, zr[go], Hr[go], Rr[go], None)
                             P[go], x[go] = Psub, xs
                             s_map = np.where(go, s_star, s_map)
+                            ra_flag |= go
                             ev["map_reassoc"] = ev.get("map_reassoc", 0) + int(go.sum())
                 paused = np.zeros(B, bool)
                 if road_map.s_div is not None:
@@ -889,9 +891,10 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         if do_cov:
             out_t.append(imu_t[kk]); out_p.append(p.copy()); out_v.append(v.copy()); out_C.append(C.copy())
             out_P.append(P[:, 0:3, 0:3].copy()); out_ba.append(b_a.copy()); out_z.append(st.copy())
-            out_aux.append(np.stack([b_h, g_hat, cruise_on.astype(float), np.sqrt(P[:, IG, IG])], 1))
+            out_aux.append(np.stack([b_h, g_hat, cruise_on.astype(float), np.sqrt(P[:, IG, IG]), ra_flag.astype(float)], 1))
+            ra_flag[:] = False
     return EskfOutput(t=np.array(out_t), p=np.stack(out_p, 1), v=np.stack(out_v, 1), C=np.stack(out_C, 1),
                       P_pos=np.stack(out_P, 1), b_a=np.stack(out_ba, 1), zupt=np.stack(out_z, 1), events=ev,
-                      aux={**dict(zip(("b_h", "g_h", "cruise", "sigma_g"), np.moveaxis(np.stack(out_aux, 1), -1, 0))),
+                      aux={**dict(zip(("b_h", "g_h", "cruise", "sigma_g", "reassoc"), np.moveaxis(np.stack(out_aux, 1), -1, 0))),
                            "branch_decision": br_dec.copy(), "branch_time": br_time.copy(),
                            "imu_class": imu_classes, "imu_sigma": imu_sig})

@@ -409,6 +409,7 @@ function plot(id, series, yfmt, band, lim) {
     for (let i = 0; i < N; i++) { let v = s.y[i]; if (v === null) { on = false; continue; } v = Math.max(lo, Math.min(hi, v)); on ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)); on = true; }
     g.stroke();
   }
+  if (id === "err" && D.reassoc) { g.fillStyle = css("--est"); for (let i = 0; i < N; i++) if (D.reassoc[i]) { g.beginPath(); g.moveTo(X(i), t); g.lineTo(X(i) - 4, t + 8); g.lineTo(X(i) + 4, t + 8); g.fill(); } }
   g.strokeStyle = css("--ink"); g.beginPath(); g.moveTo(X(k), t); g.lineTo(X(k), H - b); g.stroke();
   g.fillStyle = css("--muted"); g.fillText("time [s]", W - 60, H - 6);
 }
@@ -505,6 +506,7 @@ function render() {
     msg = `Callout: "In ${spokenDist()} m, take ${D.exits[0].name}" (${D.exits[0].s >= D.s_true[callK] ? `true distance ${Math.round(D.exits[0].s - D.s_true[callK])} m` : `the car passed the exit ${Math.round(D.s_true[callK] - D.exits[0].s)} m ago`}; ${Math.abs(dt).toFixed(1)} s ${dt > 0 ? "late" : "early"} vs the right moment)`;
   }
   if (D.zupt_on[k]) msg += (msg ? " · " : "") + "stopped: zero-velocity update";
+  if (D.reassoc && D.reassoc.slice(Math.max(0, k - 4), k + 1).some(Boolean)) msg += (msg ? " · " : "") + "16-state: position re-associated along the curve";
   if (D.alarm && D.alarm[k]) msg += (msg ? " · " : "") + "filters disagree: uncertainty raised";
   document.getElementById("banner").textContent = msg;
   scrub.value = k;

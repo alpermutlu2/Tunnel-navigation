@@ -179,6 +179,8 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
         "v_true": tr.v[idx[sel]].round(3).tolist(),
         "v_est": np.linalg.norm(out.v[0, sel], axis=1).round(3).tolist(),
         "zupt_on": out.zupt[0, sel].tolist(),
+        # re-association events (16-state), marked at the nearest page epoch
+        "reassoc": [bool(out.aux["reassoc"][0, max(0, i - step + 1):i + 1].any()) for i in sel] if "reassoc" in out.aux else None,
         "cv": {"t0": t_fix, "t1": t_back, "s0": s_cv0, "v": vh},
         "gnss": [[round(float(tt), 1), round(float(x), 1), round(float(y), 1)]
                  for tt, (x, y) in zip(gnss["t"], gnss["pos"][0][:, :2]) if np.isfinite(x)],
