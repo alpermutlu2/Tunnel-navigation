@@ -560,18 +560,27 @@ decision is right in 98–100 % of runs per set; the ESKF's, shown until v0.5.11
 
 *Class rule with the majority monitor, six sets (0–299), v0.5.12*, app's along-track error:
 
-| | diverge rms | portal rms | (e/σ)² worst set, without / with monitor | > 1 s late | runs with an alarm |
-|---|---|---|---|---|---|
-| Note10, S1–S6, 5 km | 3.5–38.5 m | 4.1–16.5 m | ≤ 0.43 / ≤ 0.38 | ≤ 12 % (S5) | ≤ 10 % |
-| low-end, S1, S2, S3, S5, S6, 5 km | 11.0–30.7 m | 7.4–22.1 m | ≤ 0.73 / ≤ 0.73 | ≤ 4 % | 0 % |
-| low-end S4 | 54–139 m | 20–24 m in five sets, 225 m in one | 24 / 0.70 | ≤ 2 % | 26–46 % |
-| low-end S4, v0.5.11 (0–299) | 40–229 m | 89–335 m | 59 / 12.9 | 6 % | 36 % |
-| pressure 30 Pa/km, S1 / S3 | 105–154 m | 96–106 m | 13.3 / 2.0, 8.5 / 1.05 | 0 % | 32 % / 70 % |
+| | diverge rms | portal rms | (e/σ)² worst set, without / with monitor | > 1 s late | > 5 s early | runs with an alarm |
+|---|---|---|---|---|---|---|
+| Note10, S1–S6, 5 km | 3.5–38.5 m | 4.1–16.5 m | ≤ 0.43 / ≤ 0.38 | ≤ 12 % (S5) | ≤ 8 % (S4) | ≤ 10 % |
+| low-end, S1, S2, S3, S5, S6, 5 km | 11.0–30.7 m | 7.4–22.1 m | ≤ 0.73 / ≤ 0.73 | ≤ 4 % | 0 % | 0 % |
+| low-end S4 | 54–139 m | 20–24 m in five sets, 225 m in one | 24 / 0.70 | ≤ 2 % | 60–74 % (mean 6–8 s early) | 26–46 % |
+| low-end S4, v0.5.11 (0–299) | 40–229 m | 89–335 m | 59 / 12.9 | 6 % | ≤ 86 % | 36 % |
+| pressure 30 Pa/km, S1 / S3 | 105–154 m | 96–106 m | 13.3 / 2.0, 8.5 / 1.05 | 0 % | 4 % / 100 % | 32 % / 70 % |
+
+On low-end S4 the "err early" rule has a measured price: two callouts in three come more than 5 s
+early. At crawling speed 6 s is ~15 m, so in practice harmless, but it is what a σ that covers the
+error costs there.
+
+The straight-on control was run at filter level (ESKF `eval_sets`, 10-state `ekf10_sets`), not
+through the supervisor. The selection is by IMU class and each filter's branch decision is its
+own, so no difference is expected; it was not measured.
 
 *Validation, seeds 300–399* (`supervisor_validation.json`, run once): the same picture.
 - Note10: portal 4.5–14.3 m, (e/σ)² ≤ 0.38.
 - Low-end except S4: 8.4–22.1 m, (e/σ)² ≤ 0.74.
-- Low-end S4: 19.6 / 19.2 m, (e/σ)² 1.31 → 0.38 with the monitor.
+- Low-end S4: 19.6 / 19.2 m, (e/σ)² 1.31 → 0.29 and 0.98 → 0.38 with the monitor (the two sets);
+  callouts more than 5 s early in 68 % and 74 %.
 - Pressure gradient: (e/σ)² 8.4–12.7 → 1.06–1.9.
 - Exit step ≤ 1.1 m except the pressure gradient on S3 (6.8 m).
 
@@ -596,7 +605,10 @@ Readings:
   - suspension pitch (the 1D filter alone);
   - one filter's map-layer failure.
 
-  It cannot catch failures in a shared part: a false stop, an IMU scale error.
+  It cannot catch failures in a shared part: a false stop, an IMU scale error. It is a consistency
+  warning, not a vote of three independent sources and not an accuracy guarantee: raising σ_disp
+  does not move the estimate. When σ stays large, telling the driver so ("position uncertain") is
+  a product decision this work did not make.
 - **The pressure gradient shows the limit.** For the first two minutes the ESKF and the 10-state
   filter drift together (+100 m at t+120 s) and the monitor is silent. It fires only when they
   split, the ESKF taking the wrong branch (−120 m) and the 10-state continuing (+200 m). The
@@ -631,6 +643,15 @@ starts max(100 m, 2σ_s) before the diverge instead of 100 m.
   car that goes straight on has left the route and the app will re-route; 13 s at 38 m is the
   measured cost of that state, recorded and not engineered away. A car that takes the branch is
   "not yet" for 2.8 s (S1) and 3.7 s (S4), with the shown point ≤ 0.5 m from the road.
+
+  The table is the ESKF's (Note10). **On a low-end phone the cost is larger.** The 10-state
+  filter's own decision (below) stays "not yet" through the whole tunnel in 299 of 300
+  straight-on S4 runs, so the screen draws the car on the branch until GNSS returns, and the
+  s-guard lets s run free meanwhile: at the portal the shown point is 302–439 m rms from the car
+  per set (p95 ~580 m; validation 342 / 390 m), against 193–381 m in v0.5.11. The landmark never
+  fires there. The costs are asymmetric: a car that takes the branch gets its decision in seconds,
+  one that goes straight on a low-end phone never does. Showing the car on the main tunnel instead
+  while "not yet" would trade them; not measured (§5).
 
 *The 10-state filter's open failure, low-end stop-and-go.* Two attempts that did not fire, then
 what worked.
@@ -763,9 +784,22 @@ sets: every per-seed error identical. At scenario speeds k·v² ≤ 3.4 m stays 
   - consistency in stop-and-go ((e/σ)² 5.1 on low-end S4, 4.8 on Note10 S4 in validation);
   - the map-error stress of §4.4.
 - **Low-end stop-and-go, what is left** (§4.13): 2 runs of 300 more than 100 m off in the 10-state
-  filter (seed 232, unexplained; seed 200, made worse by the speed constraint). The constraint is
-  a limit: the crawl pitch error that drives the speed negative is still the pitch prior's job
-  (§4.10).
+  filter (seed 232, unexplained; seed 200, made worse by the speed constraint). For both the
+  likely cause is the crawl pitch error and the likely cure the pitch prior (§4.10); the constraint
+  is a limit, not that cure. Seed 232 should be diagnosed before "low-end works" is claimed: one
+  time plot of true and estimated speed, pitch, b_a, σ_s, the ZUPT state and the map updates.
+- **Low-end, a car that goes straight on** (§4.13): the 10-state decision never leaves "not yet"
+  and the car is drawn on the branch through the tunnel, 302–439 m off at the portal. Next step,
+  not measured: while "not yet", show the car on the main tunnel instead of the route.
+- **Recovery is measured as the largest step, not as the time to be right.** The follower closes
+  a gap at ≤ 2 m/s, so a 100 m gap would take ~50 s. The ESKF's own track gets under 10 m in a
+  median ≤ 1.8 s after the exit (7.3 s at 5 km; Note10, 20 seeds, `metrics.json`); the displayed
+  track's time under 10 m and 5 m, and the error shown meanwhile, are not measured yet.
+- **Coverage, not only the mean of (e/σ)².** (e/σ)² is the along-track scalar, not the full-state
+  NEES, and a small mean does not show that rare large errors are covered. At the portal 100 % of
+  Note10 runs are within 2σ (20 seeds); P(|e| ≤ σ) and P(|e| ≤ 2σ) over time before the diverge,
+  and separately for the nominal, 2× map error and pressure-gradient cases and for the
+  supervisor's σ_disp, are the next check.
 - **The one-way assumption** (§4.13): a car does not reverse in a one-way tunnel [ASSUMED]. It is
   weaker than the hard map constraint, but a two-way tunnel or a car backing out of a jam breaks it.
 - **The main tunnel after the diverge is straight in every scenario** and straight in the map object.

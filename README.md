@@ -16,6 +16,10 @@ python tools/serve.py                # live simulator: open http://localhost:800
 python tools/simulate.py S1          # or a single self-contained page: sim_S1_seed0.html
 ```
 
+**For a demo:** `tools/serve.py` is the main path (a changed parameter re-runs truth → sensors →
+estimators); the pre-run static page is the fallback; the in-browser Pyodide mode is experimental and
+nothing should depend on it.
+
 **One page, two modes.** [`docs/sim/index.html`](docs/sim/index.html) holds every scenario as a
 tab (pre-run drives, seed 0), a map-layer on/off switch and sliders for the callout margin k·σ and
 the callout distance, all evaluated in the browser. Opened as a file or from GitHub Pages

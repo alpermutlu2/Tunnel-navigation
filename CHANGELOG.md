@@ -48,6 +48,10 @@ How the numbers moved:
 - Snapshot (`metrics.json`, Note10 ESKF): only S4 moves, by the speed constraint: portal 4.86 →
   4.79 m, diverge 30.58 → 30.68 m, (e/σ)² 0.082 → 0.080.
 - Tests 195 → 200 (`tests/test_v0512.py`).
+- Closing review (v9), documents only: the low-end straight-on cost (10-state "not yet" through the
+  tunnel, 302–439 m at the portal) in §4.13 and §5; the supervisor's straight-on control stated as
+  filter-level only; the "> 5 s early" column in §4.12 (low-end S4 60–74 %); the monitor as a
+  consistency warning; recovery time and coverage as next checks (§5).
 
 ## v0.5.11 (2026-10-25): three filters, supervisor, map re-association, seed tiers
 
