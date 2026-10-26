@@ -92,7 +92,7 @@ input[type=range] { flex: 1; min-width: 140px; }
   border: 8px solid var(--ink); overflow: hidden; background: #0e1116; cursor: zoom-in; }
 .navwrap:fullscreen { max-width: none; width: 100vw; height: 100vh; border: 0; border-radius: 0; aspect-ratio: auto; cursor: zoom-out; }
 #nav { width: 100%; height: 100%; display: block; }
-.navopts { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.navopts { display: flex; justify-content: flex-start; gap: 6px 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -196,7 +196,12 @@ input[type=range] { flex: 1; min-width: 140px; }
     <div class="card">
       <h2>Driver's view (what the app shows)</h2>
       <div class="navwrap" id="navwrap" title="double-click: full screen"><canvas id="nav"></canvas></div>
-      <div class="navopts"><label><input type="checkbox" id="ghost"> show the true car</label><span>heading-up, position snapped to the road</span></div>
+      <div class="navopts"><label><input type="checkbox" id="ghost"> show the true car</label>
+        <label><input type="checkbox" class="navf" data-n="eskf"> 16-state</label>
+        <label><input type="checkbox" class="navf" data-n="e10"> 10-state</label>
+        <label><input type="checkbox" class="navf" data-n="ref"> 4-state</label>
+        <label><input type="checkbox" class="navf" data-n="cv"> constant speed</label>
+        <span>heading-up, position snapped to the road; the others as dots, at the screen edge with their distance when out of view</span></div>
     </div>
     <div class="card" style="margin-top:14px">
       <h2>Now</h2>
@@ -299,6 +304,7 @@ function setup(c) {
   const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); return [g, r.width, r.height];
 }
 const SHOW = { app: true, eskf: true, e10: true, ref: true, cv: true };
+const NAV = { eskf: false, e10: false, ref: false, cv: false };         // the driver's view shows the app only by default
 const appS = i => (D.s_app ? D.s_app[i] : D.s_hat[i]), appSig = i => (D.sig_app ? D.sig_app[i] : D.sig_s[i]);
 function cvS(i) {
   const t = D.t[i];
@@ -438,10 +444,37 @@ function drawNav() {
   stroke(ahead, 4.2 * scale, "#4f8df5");
   if (inT) { g.fillStyle = "#c98a2b"; g.font = `600 ${Math.round(Math.max(11, Math.min(W, H) * 0.03))}px system-ui`; g.textBaseline = "middle";
     g.fillText("TUNNEL", 14, H * 0.2 + 30); }
-  if (document.getElementById("ghost").checked) {
-    const [tu, tv] = T(D.true_xy[k][0], D.true_xy[k][1]); g.globalAlpha = .55; g.fillStyle = "#ffffff";
-    g.beginPath(); g.arc(tu, tv, 7, 0, 7); g.fill(); g.globalAlpha = 1;
-  }
+  // the other estimators (nav-view checkboxes): a dot on the road, or an edge marker with the gap
+  const others = [];
+  if (NAV.cv) { const c = cvS(k); if (c !== null) others.push(["CV", css("--cv"), sToXY(c), c]); }
+  if (NAV.ref && D.s_1d) others.push(["4", css("--ref"), sToXY(D.s_1d[k]), D.s_1d[k]]);
+  if (NAV.e10 && D.s_10) others.push(["10", css("--e10"), sToXY(D.s_10[k]), D.s_10[k]]);
+  if (NAV.eskf) others.push(["16", css("--est"), D.est_xy[k], D.s_hat[k]]);
+  if (document.getElementById("ghost").checked) others.push(["true", "#ffffff", D.true_xy[k], null]);
+  const fs = Math.round(Math.max(11, Math.min(W, H) * 0.028)), topM = Math.max(64, H * 0.13) + 6, botM = Math.max(56, H * 0.1) + 6;
+  const ahead_ = [], behind_ = [];
+  others.forEach(([lab, col, xy, sv], i) => {
+    const [u, v] = T(xy[0], xy[1]);
+    if (u < 8 || u > W - 8 || v < topM || v > H - botM) { (v < H / 2 ? ahead_ : behind_).push([lab, col, sv === null ? null : sv - sh]); return; }
+    g.fillStyle = col; g.strokeStyle = "#0e1116"; g.lineWidth = 2.5;
+    g.beginPath(); g.arc(u, v, 7, 0, 7); g.fill(); g.stroke();
+    g.font = `600 ${fs}px system-ui`; g.textBaseline = "middle";
+    const ty = v + (i % 2 ? 10 : -10), tx = Math.min(W - g.measureText(lab).width - 4, u + 12);
+    g.lineWidth = 3; g.strokeStyle = "#0e1116"; g.strokeText(lab, tx, ty); g.fillStyle = col; g.fillText(lab, tx, ty);
+  });
+  // out of view: pills under the banner (ahead) and above the bottom bar (behind), with the gap to the app
+  const pills = (list, y) => {
+    let x = 10; g.font = `600 ${fs}px system-ui`; g.textBaseline = "middle";
+    for (const [lab, col, d] of list) {
+      const txt = `${lab} ${d === null ? "" : (d > 0 ? "+" : "−") + Math.abs(Math.round(d)) + " m"} ${y < H / 2 ? "▲" : "▼"}`;
+      const w = g.measureText(txt).width + 26;
+      if (x + w > W - 6) break;
+      g.fillStyle = "rgba(14,17,22,.88)"; g.beginPath(); g.roundRect(x, y - 12, w, 24, 12); g.fill();
+      g.fillStyle = col; g.beginPath(); g.arc(x + 11, y, 5, 0, 7); g.fill();
+      g.fillStyle = "#e8ecf1"; g.fillText(txt, x + 20, y + 1); x += w + 6;
+    }
+  };
+  pills(ahead_, topM + 12); pills(behind_, H - botM - 12);
   // car chevron
   g.save(); g.translate(cx, cy); g.fillStyle = "#ffffff"; g.strokeStyle = "#4f8df5"; g.lineWidth = 3;
   g.beginPath(); g.moveTo(0, -16); g.lineTo(11, 12); g.lineTo(0, 6); g.lineTo(-11, 12); g.closePath(); g.fill(); g.stroke(); g.restore();
@@ -468,8 +501,9 @@ function drawNav() {
   }
   // bottom bar: speed, GPS state
   const fb = Math.max(56, H * 0.1); g.fillStyle = "rgba(14,17,22,.92)"; g.fillRect(0, H - fb, W, fb);
-  g.fillStyle = "#fff"; g.font = `700 ${Math.round(fb * 0.42)}px system-ui`; g.fillText(`${Math.round(D.v_est[k] * 3.6)}`, 18, H - fb / 2);
-  const sw = g.measureText(`${Math.round(D.v_est[k] * 3.6)}`).width; g.font = `500 ${Math.round(fb * 0.2)}px system-ui`; g.fillStyle = "#9aa4b2";
+  const vApp = Math.round(Math.max(0, (D.v_app || D.v_est)[k]) * 3.6);
+  g.fillStyle = "#fff"; g.font = `700 ${Math.round(fb * 0.42)}px system-ui`; g.fillText(`${vApp}`, 18, H - fb / 2);
+  const sw = g.measureText(`${vApp}`).width; g.font = `500 ${Math.round(fb * 0.2)}px system-ui`; g.fillStyle = "#9aa4b2";
   g.fillText("km/h", 24 + sw, H - fb / 2 + 2);
   const gpsTxt = inT ? `No GPS · estimated ±${Math.round(2 * appSig(k))} m` : "GPS";
   g.font = `600 ${Math.round(fb * 0.22)}px system-ui`; const gw = g.measureText(gpsTxt).width + 20;
@@ -548,6 +582,7 @@ document.addEventListener("keydown", e => {
 });
 document.getElementById("zoom").oninput = render;
 document.getElementById("ghost").onchange = render;
+for (const el of document.querySelectorAll(".navf")) el.onchange = () => { NAV[el.dataset.n] = el.checked; render(); };
 for (const el of document.querySelectorAll("#showRow input[data-f]")) el.onchange = () => { SHOW[el.dataset.f] = el.checked; render(); };
 // double-click any panel (map, road strip, sensors, driver's view, Now, plots) for full screen; the
 // playback bar moves into the full-screen panel, and Space / ← → / Shift+← → work everywhere

@@ -172,6 +172,7 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
         "s_app": s_app[sel].round(2).tolist(),
         "e_app": (s_app[sel] - tr.s[idx[sel]]).round(2).tolist(),
         "sig_app": g_app[0, sel].round(2).tolist(),
+        "v_app": V_[sel_[0]][0, sel].round(3).tolist(),     # the selected filter's speed (driver's view)
         "alarm": (d_app[0, sel] > SV.ALARM_D).tolist(),
         "app_filter": {"1d": "4-state 1D", "ekf10": "10-state", "eskf": "16-state ESKF"}[sel_[0]],
         "imu_class": str(cls_[0]),
