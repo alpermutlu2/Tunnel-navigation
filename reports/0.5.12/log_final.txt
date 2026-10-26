@@ -5,3 +5,270 @@ default/S4/0 34.86 4.68 0 0.077
 default/S5/0 25.01 6.498 0 0.206
 default/S6s/0 13.37 5.824 0 0.143
 default/S6/0 13.32 6.07 0 0.153
+default/S6L/0 13.21 5.634 0 0.128
+default/S1-1km/0 4.785 2.517 0 0.219
+default/S1-5km/0 24.64 12.94 0 0.224
+default/S1/50 16.86 6.652 0 0.19
+default/S2/50 4.127 4.903 0 0.331
+default/S3/50 13.97 11.21 0 0.26
+default/S4/50 39.41 5.874 0 0.12
+default/S5/50 31.19 7.455 0 0.272
+default/S6s/50 17.56 7.128 0 0.216
+default/S6/50 18.32 7.304 0 0.222
+default/S6L/50 18.09 7.526 0 0.23
+default/S1-1km/50 4.956 2.874 0 0.286
+default/S1-5km/50 30.32 16.07 0 0.345
+default/S1/100 13.0 6.69 0 0.191
+default/S2/100 4.04 4.357 0 0.263
+default/S3/100 15.24 9.958 0 0.203
+default/S4/100 38.49 5.45 0 0.103
+default/S5/100 28.36 8.097 0 0.322
+default/S6s/100 14.15 7.348 0 0.228
+default/S6/100 14.57 7.76 0 0.25
+default/S6L/100 14.45 7.831 0 0.248
+default/S1-1km/100 4.458 2.727 0 0.257
+default/S1-5km/100 26.5 12.27 0 0.2
+default/S1/150 13.95 5.619 0 0.135
+default/S2/150 4.603 5.355 0 0.394
+default/S3/150 13.78 8.205 0 0.148
+default/S4/150 50.33 6.101 0 0.129
+default/S5/150 28.86 6.857 0 0.231
+default/S6s/150 15.53 6.212 0 0.163
+default/S6/150 15.48 6.1 0 0.155
+default/S6L/150 14.37 6.203 0 0.155
+default/S1-1km/150 4.597 2.647 0 0.24
+default/S1-5km/150 31.61 14.28 0 0.27
+default/S1/200 11.36 6.848 0 0.2
+default/S2/200 3.986 4.119 0 0.234
+default/S3/200 12.18 9.421 0 0.186
+default/S4/200 45.01 6.057 0 0.126
+default/S5/200 29.05 6.107 0 0.182
+default/S6s/200 11.71 7.152 0 0.214
+default/S6/200 11.45 7.555 0 0.235
+default/S6L/200 11.09 7.36 0 0.218
+default/S1-1km/200 4.097 2.575 0 0.229
+default/S1-5km/200 28.79 14.39 0 0.278
+default/S1/250 14.6 6.906 0 0.204
+default/S2/250 4.602 4.94 0 0.337
+default/S3/250 15.01 11.13 0 0.251
+default/S4/250 41.64 5.051 0 0.087
+default/S5/250 35.72 8.571 0 0.36
+default/S6s/250 14.73 7.279 0 0.224
+default/S6/250 14.86 7.59 0 0.238
+default/S6L/250 15.34 7.359 0 0.219
+default/S1-1km/250 5.364 3.103 0 0.334
+default/S1-5km/250 38.22 16.17 0 0.35
+default/S1_straight_on/0 12.14 18.4 0 0.239
+default/S4_straight_on/0 34.86 51.49 4 0.314
+default/S1_straight_on/50 16.86 28.03 0 0.548
+default/S4_straight_on/50 39.41 60.4 7 0.388
+default/S1_straight_on/100 13.0 20.56 0 0.297
+default/S4_straight_on/100 38.49 56.62 8 0.364
+default/S1_straight_on/150 13.95 21.64 0 0.334
+default/S4_straight_on/150 50.33 78.62 10 0.554
+default/S1_straight_on/200 11.36 17.91 0 0.232
+default/S4_straight_on/200 45.01 64.0 3 0.386
+default/S1_straight_on/250 14.6 22.89 0 0.369
+default/S4_straight_on/250 41.64 61.33 7 0.398
+S1/note10/0 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 5.62, "any": 5.62, "majority": 5.62, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1/lowend/0 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.851, "any": 9.851, "majority": 9.851, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S2/note10/0 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 4.3, "any": 4.3, "majority": 4.3, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S2/lowend/0 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 11.33, "any": 11.33, "majority": 11.33, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/note10/0 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 9.309, "any": 9.309, "majority": 9.309, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/lowend/0 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 17.23, "any": 17.23, "majority": 17.23, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.96, "ekf10_branch": 1.0}}}
+S4/note10/0 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 4.687, "any": 4.687, "majority": 4.687, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 0.96}}}
+S4/lowend/0 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 23.88, "any": 23.88, "majority": 23.88, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.2, "ekf10_branch": 1.0}}}
+S5/note10/0 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 6.844, "any": 6.844, "majority": 6.844, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S5/lowend/0 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 7.491, "any": 7.491, "majority": 7.491, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S6/note10/0 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 6.26, "any": 6.26, "majority": 6.26, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S6/lowend/0 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 8.994, "any": 8.994, "majority": 8.994, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/note10/0 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 13.21, "any": 13.21, "majority": 13.21, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/lowend/0 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 19.74, "any": 19.74, "majority": 19.74, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.98, "ekf10_branch": 1.0}}}
+S3/pressure30/0 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 99.45, "any": 99.45, "majority": 99.45, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+S1/pressure30/0 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 103.8, "any": 103.8, "majority": 103.8, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+S1/note10/50 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 6.95, "any": 6.95, "majority": 6.95, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1/lowend/50 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.078, "any": 9.078, "majority": 9.078, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.98, "ekf10_branch": 1.0}}}
+S2/note10/50 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 5.131, "any": 5.131, "majority": 5.131, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S2/lowend/50 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.902, "any": 9.902, "majority": 9.902, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/note10/50 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 11.46, "any": 11.46, "majority": 11.46, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/lowend/50 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 22.1, "any": 22.1, "majority": 22.1, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.94, "ekf10_branch": 1.0}}}
+S4/note10/50 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 5.877, "any": 5.877, "majority": 5.877, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S4/lowend/50 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 20.36, "any": 20.36, "majority": 20.36, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.06, "ekf10_branch": 1.0}}}
+S5/note10/50 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 7.838, "any": 7.838, "majority": 7.838, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S5/lowend/50 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 8.902, "any": 8.902, "majority": 8.902, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S6/note10/50 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 7.578, "any": 7.578, "majority": 7.578, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S6/lowend/50 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 8.189, "any": 8.189, "majority": 8.189, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/note10/50 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 16.44, "any": 16.44, "majority": 16.44, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/lowend/50 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 18.4, "any": 18.4, "majority": 18.4, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/pressure30/50 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 106.2, "any": 106.2, "majority": 106.2, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+S1/pressure30/50 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 96.39, "any": 96.39, "majority": 96.39, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+S1/note10/100 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 6.995, "any": 6.995, "majority": 6.995, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1/lowend/100 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.559, "any": 9.559, "majority": 9.559, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S2/note10/100 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 4.499, "any": 4.499, "majority": 4.499, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S2/lowend/100 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 10.82, "any": 10.82, "majority": 10.82, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.96, "ekf10_branch": 1.0}}}
+S3/note10/100 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 10.27, "any": 10.27, "majority": 10.27, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/lowend/100 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 21.0, "any": 21.0, "majority": 21.0, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.98, "ekf10_branch": 1.0}}}
+S4/note10/100 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 5.337, "any": 5.337, "majority": 5.337, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 0.96}}}
+S4/lowend/100 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 22.81, "any": 22.81, "majority": 22.81, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.28, "ekf10_branch": 1.0}}}
+S5/note10/100 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 8.458, "any": 8.458, "majority": 8.458, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S5/lowend/100 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 7.377, "any": 7.377, "majority": 7.377, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S6/note10/100 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 8.093, "any": 8.093, "majority": 8.093, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S6/lowend/100 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.429, "any": 9.429, "majority": 9.429, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/note10/100 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 12.58, "any": 12.58, "majority": 12.58, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/lowend/100 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 17.6, "any": 17.6, "majority": 17.6, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/pressure30/100 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 100.7, "any": 100.7, "majority": 100.7, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+S1/pressure30/100 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 97.43, "any": 97.43, "majority": 97.43, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+S1/note10/150 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 5.812, "any": 5.812, "majority": 5.812, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 0.98}}}
+S1/lowend/150 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.326, "any": 9.326, "majority": 9.326, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.98, "ekf10_branch": 1.0}}}
+S2/note10/150 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 5.579, "any": 5.579, "majority": 5.579, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S2/lowend/150 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 11.58, "any": 11.58, "majority": 11.58, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.94, "ekf10_branch": 1.0}}}
+S3/note10/150 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 8.51, "any": 8.51, "majority": 8.51, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/lowend/150 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 18.73, "any": 18.73, "majority": 18.73, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.94, "ekf10_branch": 1.0}}}
+S4/note10/150 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 6.147, "any": 6.147, "majority": 6.147, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 0.96}}}
+S4/lowend/150 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 21.31, "any": 21.31, "majority": 21.31, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.1, "ekf10_branch": 1.0}}}
+S5/note10/150 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 7.229, "any": 7.229, "majority": 7.229, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S5/lowend/150 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.136, "any": 9.136, "majority": 9.136, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.96, "ekf10_branch": 1.0}}}
+S6/note10/150 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 6.376, "any": 6.376, "majority": 6.376, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S6/lowend/150 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.693, "any": 9.693, "majority": 9.693, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/note10/150 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 14.67, "any": 14.67, "majority": 14.67, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/lowend/150 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 17.88, "any": 17.88, "majority": 17.88, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/pressure30/150 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 105.0, "any": 105.0, "majority": 105.0, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+S1/pressure30/150 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 103.0, "any": 103.0, "majority": 103.0, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+S1/note10/200 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 7.067, "any": 7.067, "majority": 7.067, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1/lowend/200 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.424, "any": 9.424, "majority": 9.424, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.98, "ekf10_branch": 1.0}}}
+S2/note10/200 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 4.139, "any": 4.139, "majority": 4.139, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S2/lowend/200 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 11.64, "any": 11.64, "majority": 11.64, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.94, "ekf10_branch": 1.0}}}
+S3/note10/200 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 9.672, "any": 9.672, "majority": 9.672, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/lowend/200 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 19.08, "any": 19.08, "majority": 19.08, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.94, "ekf10_branch": 1.0}}}
+S4/note10/200 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 6.012, "any": 6.012, "majority": 6.012, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 0.9}}}
+S4/lowend/200 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 224.7, "any": 224.7, "majority": 224.7, "branch_shown": {"branch": 0.98, "main": 0.0, "none": 0.02, "eskf_branch": 0.12, "ekf10_branch": 0.98}}}
+S5/note10/200 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 6.493, "any": 6.493, "majority": 6.493, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S5/lowend/200 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.013, "any": 9.013, "majority": 9.013, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.96, "ekf10_branch": 1.0}}}
+S6/note10/200 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 7.83, "any": 7.83, "majority": 7.83, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S6/lowend/200 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 8.752, "any": 8.752, "majority": 8.752, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.94, "ekf10_branch": 1.0}}}
+S1-5km/note10/200 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 14.75, "any": 14.75, "majority": 14.75, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/lowend/200 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 18.4, "any": 18.4, "majority": 18.4, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/pressure30/200 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 106.1, "any": 106.1, "majority": 106.1, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+S1/pressure30/200 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 101.1, "any": 101.1, "majority": 101.1, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+S1/note10/250 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 7.195, "any": 7.195, "majority": 7.195, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1/lowend/250 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.594, "any": 9.594, "majority": 9.594, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S2/note10/250 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 5.081, "any": 5.081, "majority": 5.081, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S2/lowend/250 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 11.54, "any": 11.54, "majority": 11.54, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.96, "ekf10_branch": 1.0}}}
+S3/note10/250 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 11.4, "any": 11.4, "majority": 11.4, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/lowend/250 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 18.02, "any": 18.02, "majority": 18.02, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.96, "ekf10_branch": 1.0}}}
+S4/note10/250 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 5.068, "any": 5.068, "majority": 5.068, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 0.94}}}
+S4/lowend/250 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 23.16, "any": 23.16, "majority": 23.16, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.12, "ekf10_branch": 1.0}}}
+S5/note10/250 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 8.994, "any": 8.994, "majority": 8.994, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S5/lowend/250 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.883, "any": 9.883, "majority": 9.883, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.96, "ekf10_branch": 1.0}}}
+S6/note10/250 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 7.868, "any": 7.868, "majority": 7.868, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S6/lowend/250 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 8.931, "any": 8.931, "majority": 8.931, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/note10/250 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 16.54, "any": 16.54, "majority": 16.54, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/lowend/250 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 15.67, "any": 15.67, "majority": 15.67, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/pressure30/250 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 102.0, "any": 102.0, "majority": 102.0, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+S1/pressure30/250 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 98.88, "any": 98.88, "majority": 98.88, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+=== VALIDATION 300-399 ===
+default/S1/300 16.35 6.642 0 0.188
+default/S2/300 4.376 5.078 0 0.357
+default/S3/300 15.18 9.142 0 0.172
+default/S4/300 40.07 5.859 0 0.121
+default/S5/300 30.34 7.52 0 0.277
+default/S6s/300 16.66 6.627 0 0.185
+default/S6/300 17.84 7.118 0 0.21
+default/S6L/300 16.76 7.368 0 0.22
+default/S1-1km/300 5.138 2.953 0 0.303
+default/S1-5km/300 33.19 13.44 0 0.242
+default/S1/350 15.22 6.813 0 0.199
+default/S2/350 3.642 4.271 0 0.253
+default/S3/350 12.99 8.534 0 0.152
+default/S4/350 55.64 6.417 0 0.143
+default/S5/350 30.48 8.311 0 0.338
+default/S6s/350 15.66 7.267 0 0.223
+default/S6/350 15.35 7.237 0 0.217
+default/S6L/350 14.7 7.143 0 0.206
+default/S1-1km/350 5.243 2.93 0 0.299
+default/S1-5km/350 33.63 13.9 0 0.259
+default/S1_straight_on/300 16.35 25.88 0 0.472
+default/S4_straight_on/300 40.07 61.26 3 0.426
+default/S1_straight_on/350 15.22 23.35 0 0.388
+default/S4_straight_on/350 55.64 84.68 8 0.625
+note10/S1/300 {'v0.5.11': (4.78, 0, 0.68), 'turn': (4.726, 0, 0.669), 'own': (4.726, 0, 0.669), 'own+norev': (4.726, 0, 0.669), 'own+norev0.5': (4.726, 0, 0.669)}
+note10/S2/300 {'v0.5.11': (3.74, 0, 1.27), 'turn': (3.74, 0, 1.27), 'own': (3.74, 0, 1.27), 'own+norev': (3.74, 0, 1.27), 'own+norev0.5': (3.74, 0, 1.27)}
+note10/S3/300 {'v0.5.11': (11.9, 0, 0.82), 'turn': (10.6, 0, 0.665), 'own': (10.6, 0, 0.665), 'own+norev': (10.6, 0, 0.665), 'own+norev0.5': (10.6, 0, 0.665)}
+note10/S4/300 {'v0.5.11': (22.78, 0, 7.079), 'turn': (16.18, 0, 3.233), 'own': (16.64, 0, 3.316), 'own+norev': (15.07, 0, 2.768), 'own+norev0.5': (16.65, 0, 3.321)}
+note10/S5/300 {'v0.5.11': (7.19, 0, 3.105), 'turn': (3.425, 0, 0.76), 'own': (3.425, 0, 0.76), 'own+norev': (3.425, 0, 0.76), 'own+norev0.5': (3.425, 0, 0.76)}
+note10/S6s/300 {'v0.5.11': (4.299, 0, 0.558), 'turn': (4.328, 0, 0.565), 'own': (4.328, 0, 0.565), 'own+norev': (4.328, 0, 0.565), 'own+norev0.5': (4.328, 0, 0.565)}
+note10/S6/300 {'v0.5.11': (4.836, 0, 0.656), 'turn': (4.796, 0, 0.65), 'own': (4.796, 0, 0.65), 'own+norev': (4.796, 0, 0.65), 'own+norev0.5': (4.796, 0, 0.65)}
+note10/S6L/300 {'v0.5.11': (4.046, 0, 0.473), 'turn': (4.0, 0, 0.465), 'own': (4.0, 0, 0.465), 'own+norev': (4.0, 0, 0.465), 'own+norev0.5': (4.0, 0, 0.465)}
+note10/S1-1km/300 {'v0.5.11': (1.832, 0, 0.661), 'turn': (1.832, 0, 0.661), 'own': (1.832, 0, 0.661), 'own+norev': (1.832, 0, 0.661), 'own+norev0.5': (1.832, 0, 0.661)}
+note10/S1-5km/300 {'v0.5.11': (22.74, 0, 2.798), 'turn': (10.36, 0, 0.706), 'own': (10.36, 0, 0.706), 'own+norev': (10.36, 0, 0.706), 'own+norev0.5': (10.36, 0, 0.706)}
+note10/S1/350 {'v0.5.11': (4.589, 0, 0.629), 'turn': (4.553, 0, 0.621), 'own': (4.553, 0, 0.621), 'own+norev': (4.553, 0, 0.621), 'own+norev0.5': (4.553, 0, 0.621)}
+note10/S2/350 {'v0.5.11': (3.271, 0, 0.969), 'turn': (3.271, 0, 0.969), 'own': (3.271, 0, 0.969), 'own+norev': (3.271, 0, 0.969), 'own+norev0.5': (3.271, 0, 0.969)}
+note10/S3/350 {'v0.5.11': (10.41, 0, 0.633), 'turn': (10.4, 0, 0.632), 'own': (10.4, 0, 0.632), 'own+norev': (10.4, 0, 0.632), 'own+norev0.5': (10.4, 0, 0.632)}
+note10/S4/350 {'v0.5.11': (27.16, 0, 9.854), 'turn': (24.21, 0, 6.634), 'own': (24.21, 0, 6.634), 'own+norev': (18.74, 0, 4.626), 'own+norev0.5': (23.48, 0, 6.226)}
+note10/S5/350 {'v0.5.11': (6.642, 0, 2.65), 'turn': (3.019, 0, 0.59), 'own': (3.019, 0, 0.59), 'own+norev': (3.019, 0, 0.59), 'own+norev0.5': (3.019, 0, 0.59)}
+note10/S6s/350 {'v0.5.11': (3.782, 0, 0.43), 'turn': (3.782, 0, 0.43), 'own': (3.782, 0, 0.43), 'own+norev': (3.782, 0, 0.43), 'own+norev0.5': (3.782, 0, 0.43)}
+note10/S6/350 {'v0.5.11': (4.5, 0, 0.555), 'turn': (4.5, 0, 0.555), 'own': (4.5, 0, 0.555), 'own+norev': (4.5, 0, 0.555), 'own+norev0.5': (4.5, 0, 0.555)}
+note10/S6L/350 {'v0.5.11': (3.894, 0, 0.441), 'turn': (3.894, 0, 0.441), 'own': (3.894, 0, 0.441), 'own+norev': (3.894, 0, 0.441), 'own+norev0.5': (3.894, 0, 0.441)}
+note10/S1-1km/350 {'v0.5.11': (1.873, 0, 0.692), 'turn': (1.873, 0, 0.692), 'own': (1.873, 0, 0.692), 'own+norev': (1.873, 0, 0.692), 'own+norev0.5': (1.873, 0, 0.692)}
+note10/S1-5km/350 {'v0.5.11': (19.08, 0, 2.114), 'turn': (9.646, 0, 0.458), 'own': (9.646, 0, 0.458), 'own+norev': (9.646, 0, 0.458), 'own+norev0.5': (9.646, 0, 0.458)}
+lowend/S1/300 {'v0.5.11': (10.88, 0, 0.37), 'turn': (10.88, 0, 0.37), 'own': (10.88, 0, 0.37), 'own+norev': (10.88, 0, 0.37), 'own+norev0.5': (10.88, 0, 0.37)}
+lowend/S2/300 {'v0.5.11': (11.95, 0, 0.737), 'turn': (11.95, 0, 0.737), 'own': (11.95, 0, 0.737), 'own+norev': (11.95, 0, 0.737), 'own+norev0.5': (11.95, 0, 0.737)}
+lowend/S3/300 {'v0.5.11': (25.25, 0, 0.524), 'turn': (22.08, 0, 0.442), 'own': (22.08, 0, 0.442), 'own+norev': (22.08, 0, 0.442), 'own+norev0.5': (22.08, 0, 0.442)}
+lowend/S4/300 {'v0.5.11': (123.9, 5, 8.832), 'turn': (20.02, 0, 1.095), 'own': (19.7, 0, 1.049), 'own+norev': (20.14, 0, 1.321), 'own+norev0.5': (19.6, 0, 1.306)}
+lowend/S5/300 {'v0.5.11': (11.63, 0, 0.53), 'turn': (9.351, 0, 0.373), 'own': (9.351, 0, 0.373), 'own+norev': (9.351, 0, 0.373), 'own+norev0.5': (9.351, 0, 0.373)}
+lowend/S6s/300 {'v0.5.11': (11.18, 0, 0.394), 'turn': (11.18, 0, 0.394), 'own': (11.18, 0, 0.394), 'own+norev': (11.18, 0, 0.394), 'own+norev0.5': (11.18, 0, 0.394)}
+lowend/S6/300 {'v0.5.11': (11.46, 0, 0.412), 'turn': (11.46, 0, 0.412), 'own': (11.46, 0, 0.412), 'own+norev': (11.46, 0, 0.412), 'own+norev0.5': (11.46, 0, 0.412)}
+lowend/S6L/300 {'v0.5.11': (10.29, 0, 0.333), 'turn': (10.29, 0, 0.333), 'own': (10.29, 0, 0.333), 'own+norev': (10.29, 0, 0.333), 'own+norev0.5': (10.29, 0, 0.333)}
+lowend/S1-1km/300 {'v0.5.11': (5.942, 0, 0.748), 'turn': (5.942, 0, 0.748), 'own': (5.942, 0, 0.748), 'own+norev': (5.942, 0, 0.748), 'own+norev0.5': (5.942, 0, 0.748)}
+lowend/S1-5km/300 {'v0.5.11': (21.34, 0, 0.774), 'turn': (20.47, 0, 0.61), 'own': (20.5, 0, 0.617), 'own+norev': (20.5, 0, 0.617), 'own+norev0.5': (20.5, 0, 0.617)}
+lowend/S1/350 {'v0.5.11': (9.404, 0, 0.282), 'turn': (9.404, 0, 0.282), 'own': (9.404, 0, 0.282), 'own+norev': (9.404, 0, 0.282), 'own+norev0.5': (9.404, 0, 0.282)}
+lowend/S2/350 {'v0.5.11': (10.76, 0, 0.612), 'turn': (10.24, 0, 0.566), 'own': (10.19, 0, 0.555), 'own+norev': (10.19, 0, 0.555), 'own+norev0.5': (10.19, 0, 0.555)}
+lowend/S3/350 {'v0.5.11': (20.2, 0, 0.34), 'turn': (19.18, 0, 0.311), 'own': (19.18, 0, 0.311), 'own+norev': (19.18, 0, 0.311), 'own+norev0.5': (19.18, 0, 0.311)}
+lowend/S4/350 {'v0.5.11': (142.9, 8, 26.992), 'turn': (18.58, 0, 0.728), 'own': (18.72, 0, 0.739), 'own+norev': (32.89, 1, 3.048), 'own+norev0.5': (19.22, 0, 0.982)}
+lowend/S5/350 {'v0.5.11': (9.525, 0, 0.319), 'turn': (8.438, 0, 0.284), 'own': (8.438, 0, 0.284), 'own+norev': (8.438, 0, 0.284), 'own+norev0.5': (8.438, 0, 0.284)}
+lowend/S6s/350 {'v0.5.11': (8.654, 0, 0.235), 'turn': (8.654, 0, 0.235), 'own': (8.654, 0, 0.235), 'own+norev': (8.654, 0, 0.235), 'own+norev0.5': (8.654, 0, 0.235)}
+lowend/S6/350 {'v0.5.11': (8.58, 0, 0.233), 'turn': (8.58, 0, 0.233), 'own': (8.58, 0, 0.233), 'own+norev': (8.58, 0, 0.233), 'own+norev0.5': (8.58, 0, 0.233)}
+lowend/S6L/350 {'v0.5.11': (9.201, 0, 0.258), 'turn': (9.201, 0, 0.258), 'own': (9.201, 0, 0.258), 'own+norev': (9.201, 0, 0.258), 'own+norev0.5': (9.201, 0, 0.258)}
+lowend/S1-1km/350 {'v0.5.11': (5.65, 0, 0.711), 'turn': (5.65, 0, 0.711), 'own': (5.65, 0, 0.711), 'own+norev': (5.65, 0, 0.711), 'own+norev0.5': (5.65, 0, 0.711)}
+lowend/S1-5km/350 {'v0.5.11': (18.57, 0, 0.599), 'turn': (18.07, 0, 0.561), 'own': (17.83, 0, 0.553), 'own+norev': (17.83, 0, 0.553), 'own+norev0.5': (17.83, 0, 0.553)}
+note10/S1_straight_on/300 {'v0.5.11': (248.9, None, None), 'turn': (248.8, None, None), 'own': (248.8, None, None), 'own+norev': (248.8, None, None), 'own+norev0.5': (248.8, None, None)}
+note10/S4_straight_on/300 {'v0.5.11': (187.7, None, None), 'turn': (190.0, None, None), 'own': (190.0, None, None), 'own+norev': (187.4, None, None), 'own+norev0.5': (190.0, None, None)}
+note10/S1_straight_on/350 {'v0.5.11': (248.6, None, None), 'turn': (248.6, None, None), 'own': (248.6, None, None), 'own+norev': (248.6, None, None), 'own+norev0.5': (248.6, None, None)}
+note10/S4_straight_on/350 {'v0.5.11': (188.2, None, None), 'turn': (191.1, None, None), 'own': (191.1, None, None), 'own+norev': (186.5, None, None), 'own+norev0.5': (190.8, None, None)}
+lowend/S1_straight_on/300 {'v0.5.11': (250.9, None, None), 'turn': (248.7, None, None), 'own': (248.4, None, None), 'own+norev': (248.4, None, None), 'own+norev0.5': (248.4, None, None)}
+lowend/S4_straight_on/300 {'v0.5.11': (224.2, None, None), 'turn': (350.3, None, None), 'own': (347.4, None, None), 'own+norev': (347.4, None, None), 'own+norev0.5': (342.3, None, None)}
+lowend/S1_straight_on/350 {'v0.5.11': (250.8, None, None), 'turn': (248.9, None, None), 'own': (248.3, None, None), 'own+norev': (248.3, None, None), 'own+norev0.5': (248.3, None, None)}
+lowend/S4_straight_on/350 {'v0.5.11': (233.7, None, None), 'turn': (388.9, None, None), 'own': (391.1, None, None), 'own+norev': (397.9, None, None), 'own+norev0.5': (390.5, None, None)}
+S1/note10/300 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 6.891, "any": 6.891, "majority": 6.891, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1/lowend/300 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 10.88, "any": 10.88, "majority": 10.88, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.96, "ekf10_branch": 1.0}}}
+S2/note10/300 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 5.267, "any": 5.267, "majority": 5.267, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S2/lowend/300 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 11.95, "any": 11.95, "majority": 11.95, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.92, "ekf10_branch": 1.0}}}
+S3/note10/300 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 9.485, "any": 9.485, "majority": 9.485, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/lowend/300 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 22.08, "any": 22.08, "majority": 22.08, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.96, "ekf10_branch": 1.0}}}
+S4/note10/300 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 5.985, "any": 5.985, "majority": 5.985, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 0.96}}}
+S4/lowend/300 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 19.6, "any": 19.6, "majority": 19.6, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.16, "ekf10_branch": 1.0}}}
+S5/note10/300 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 7.843, "any": 7.843, "majority": 7.843, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S5/lowend/300 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.351, "any": 9.351, "majority": 9.351, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.96, "ekf10_branch": 1.0}}}
+S6/note10/300 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 7.429, "any": 7.429, "majority": 7.429, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S6/lowend/300 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 11.46, "any": 11.46, "majority": 11.46, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/note10/300 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 13.7, "any": 13.7, "majority": 13.7, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/lowend/300 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 20.5, "any": 20.5, "majority": 20.5, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/pressure30/300 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 104.8, "any": 104.8, "majority": 104.8, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+S1/pressure30/300 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 101.3, "any": 101.3, "majority": 101.3, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+S1/note10/350 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 7.1, "any": 7.1, "majority": 7.1, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1/lowend/350 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 9.404, "any": 9.404, "majority": 9.404, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S2/note10/350 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 4.493, "any": 4.493, "majority": 4.493, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S2/lowend/350 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 10.19, "any": 10.19, "majority": 10.19, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.96, "ekf10_branch": 1.0}}}
+S3/note10/350 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 8.831, "any": 8.831, "majority": 8.831, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/lowend/350 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 19.18, "any": 19.18, "majority": 19.18, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.98, "ekf10_branch": 1.0}}}
+S4/note10/350 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 6.376, "any": 6.376, "majority": 6.376, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 0.9}}}
+S4/lowend/350 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 19.22, "any": 19.22, "majority": 19.22, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.02, "ekf10_branch": 1.0}}}
+S5/note10/350 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 8.606, "any": 8.606, "majority": 8.606, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S5/lowend/350 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 8.438, "any": 8.438, "majority": 8.438, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 0.94, "ekf10_branch": 1.0}}}
+S6/note10/350 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 7.612, "any": 7.612, "majority": 7.612, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S6/lowend/350 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 8.58, "any": 8.58, "majority": 8.58, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/note10/350 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 14.25, "any": 14.25, "majority": 14.25, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S1-5km/lowend/350 {"class": {"selected": {"1d": 0, "ekf10": 50, "eskf": 0}, "none": 17.83, "any": 17.83, "majority": 17.83, "branch_shown": {"branch": 1.0, "main": 0.0, "none": 0.0, "eskf_branch": 1.0, "ekf10_branch": 1.0}}}
+S3/pressure30/350 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 105.6, "any": 105.6, "majority": 105.6, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+S1/pressure30/350 {"class": {"selected": {"1d": 0, "ekf10": 0, "eskf": 50}, "none": 97.22, "any": 97.22, "majority": 97.22, "branch_shown": {"branch": 0.0, "main": 1.0, "none": 0.0, "eskf_branch": 0.0, "ekf10_branch": 0.0}}}
+ALLDONE
