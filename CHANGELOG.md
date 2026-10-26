@@ -51,6 +51,9 @@ How the numbers moved:
 - Simulator, driver's view: checkboxes for the 16-, 10- and 4-state filters and the constant-speed
   reference as dots on the road, or pills with the gap when out of view; the speed shown is the
   selected filter's (was the ESKF's). Deck updated to v0.5.12 (new slide: the curve landmark).
+- In-browser mode opened as a file (file://): the browser refused `py/worker.js` ("cannot be accessed
+  from origin 'null'"); the page now embeds the worker and the package and starts the worker from a
+  Blob. Over http(s) nothing changes.
 - Closing review (v9), documents only: the low-end straight-on cost (10-state "not yet" through the
   tunnel, 302–439 m at the portal) in §4.13 and §5; the supervisor's straight-on control stated as
   filter-level only; the "> 5 s early" column in §4.12 (low-end S4 60–74 %); the monitor as a

@@ -5,7 +5,20 @@
 (() => {
   const banner = document.getElementById("pyBanner");
   let worker = null, seq = 0; const pending = new Map();
-  try { worker = new Worker("py/worker.js"); } catch (e) { banner.textContent = "In-browser mode unavailable: " + e.message; }
+  window.__inBrowserLive = true;
+  // Over http(s) the worker is py/worker.js. Opened as a file (file://, origin "null") a browser
+  // refuses a worker script from disk, so the page carries the worker's source and the simulator
+  // package (base64 zip) and starts the worker from a Blob; Pyodide itself comes from the CDN.
+  try {
+    if (location.protocol.startsWith("http")) worker = new Worker("py/worker.js");
+    else {
+      const src = document.getElementById("pyWorkerSrc").textContent;
+      worker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+      const b64 = document.getElementById("pyZip").textContent.trim(), bin = atob(b64), buf = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+      worker.postMessage({ kind: "init", zip: buf.buffer }, [buf.buffer]);
+    }
+  } catch (e) { banner.textContent = "In-browser mode unavailable: " + e.message + " (run python tools/serve.py, or open the page over http)"; worker = null; }
   if (worker) worker.onmessage = (e) => {
     const m = e.data;
     if (m.type === "status") { banner.textContent = m.text ? "In-browser mode (experimental): " + m.text : "In-browser mode: Python ready, LIVE controls run here (each run takes longer than with serve.py)";

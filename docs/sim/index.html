@@ -793,7 +793,7 @@ if (ALL) {
     bar.querySelector(".badge").textContent = "LIVE OFF";
     document.getElementById("liveStat").textContent = "These controls re-run the simulation in Python: run  python tools/serve.py  and open http://localhost:8000";
   };
-  if (location.protocol.startsWith("http")) fetch("/api/ping").then(r => r.ok ? r.json() : null)
+  if (location.protocol.startsWith("http") || window.__inBrowserLive) fetch("/api/ping").then(r => r.ok ? r.json() : null)
     .then(j => { if (j && j.live) { LIVE = true; document.getElementById("live").classList.add("on"); } else staticLive(); }).catch(staticLive);
   else staticLive();
   const kS = document.getElementById("kSl"), lS = document.getElementById("lSl");

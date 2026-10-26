@@ -2,7 +2,7 @@
 // tools/serve.py inside a Web Worker with Pyodide (CPython compiled to WebAssembly), so the LIVE
 // controls work on a static host such as GitHub Pages. First load downloads ~30 MB.
 const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
-let ready = null;
+let ready = null, zipBuf = null;        // zipBuf: the package sent by a page opened as a file
 async function boot() {
   postMessage({ type: "status", text: "loading Python (Pyodide)…" });
   importScripts(PYODIDE + "pyodide.js");
@@ -10,7 +10,7 @@ async function boot() {
   postMessage({ type: "status", text: "loading numpy and scipy…" });
   await py.loadPackage(["numpy", "scipy"]);
   postMessage({ type: "status", text: "loading the simulator…" });
-  const buf = await (await fetch("tunnelsim.zip")).arrayBuffer();
+  const buf = zipBuf || await (await fetch("tunnelsim.zip")).arrayBuffer();
   py.unpackArchive(buf, "zip", { extractDir: "/tn" });
   py.runPython(`
 import sys, json
@@ -24,6 +24,7 @@ def _run(q):
 }
 onmessage = async (e) => {
   const { id, kind, query } = e.data;
+  if (kind === "init") { zipBuf = e.data.zip; return; }
   try {
     if (!ready) ready = boot();
     const py = await ready;

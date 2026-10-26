@@ -65,14 +65,22 @@ def main():
     bpage = page.replace("<title>Tunnel Simulator</title>", "<title>Tunnel Simulator (in-browser)</title>")
     i = bpage.index("<body") ; i = bpage.index(">", i) + 1
     bpage = bpage[:i] + "\n" + shim + bpage[i:]
-    (out / "browser.html").write_text(bpage)
     (out / "py").mkdir(exist_ok=True)
-    (out / "py" / "worker.js").write_text((ROOT / "tools" / "browser" / "worker.js").read_text())
+    wsrc = (ROOT / "tools" / "browser" / "worker.js").read_text()
+    (out / "py" / "worker.js").write_text(wsrc)
     with zipfile.ZipFile(out / "py" / "tunnelsim.zip", "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted((ROOT / "tunnelsim").glob("*.py")):
             z.write(f, f"tunnelsim/{f.name}")
         for f in ("simulate.py", "serve.py", "simulate_template.html"):
             z.write(ROOT / "tools" / f, f"tools/{f}")
+    # opened as a file (file://), a browser will not load py/worker.js: embed the worker and the package
+    import base64
+    emb = ('<script type="text/plain" id="pyWorkerSrc">' + wsrc.replace("</script", "<\\/script") + "</script>\n"
+           '<script type="application/octet-stream" id="pyZip">'
+           + base64.b64encode((out / "py" / "tunnelsim.zip").read_bytes()).decode() + "</script>\n")
+    i = bpage.index("<body"); i = bpage.index(">", i) + 1
+    bpage = bpage[:i] + "\n" + emb + bpage[i:]
+    (out / "browser.html").write_text(bpage)
     print(f"wrote {out / 'browser.html'} + py/ (experimental Pyodide live mode)")
 
 

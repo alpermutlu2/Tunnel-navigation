@@ -35,7 +35,8 @@ accepted by `tools/simulate.py`). `http://localhost:8000/controls` has the remai
 re-acquisition). Rebuild the page with `python tools/build_site.py`.
 
 **In-browser live mode (experimental).** `docs/sim/browser.html`
-(`https://alpermutlu2.github.io/Tunnel-navigation/sim/browser.html`) is the same page with the LIVE
+(`https://alpermutlu2.github.io/Tunnel-navigation/sim/browser.html`, or opened straight from disk:
+the page carries its worker and the simulator package, and needs internet only for Pyodide) is the same page with the LIVE
 controls answered in the browser: the same Python package runs in a Web Worker under Pyodide
 (CPython in WebAssembly), so no server is needed. The first load downloads ~30 MB and each run is
 slower than with `serve.py`; if Pyodide cannot load, the page falls back to the pre-run drives.
