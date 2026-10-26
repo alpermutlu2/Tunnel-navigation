@@ -103,7 +103,7 @@ class EskfConfig:
     # One-way tunnel (owner 2026-10-26, [ASSUMED]): while the speed along the body x axis is negative in
     # an outage, z = v_x − 0 with R = zupt_sigma² (one-sided); nothing for v_x ≥ 0. A limit, not a cure.
     no_reverse: bool = True
-    no_reverse_sigma: float = 0.0     # A/B: R = max(zupt_sigma, this)² (0 = owner's form)
+    no_reverse_sigma: float = 0.5     # m/s [ASSUMED]; default soft form since v0.5.12 (owner): R = (0.02 m/s)² hurt (Note10 S4 5.0 → 6.5 m)
     zupt_band_hz: tuple = (2.0, 18.0)  # road-vibration band, below the engine tone (E5)
     zupt_band_rms: float = 0.01       # m/s² threshold on the 1 s band RMS of |f|
     zupt_hold_s: float = 0.3          # s: debounce

@@ -24,7 +24,8 @@ Three parts:
 3. Display: inside the tunnel the selected filter; once GNSS is back, a follower that moves with
    the selected filter's speed and closes the gap to its re-locked ŝ at no more than HANDOVER_RATE
    m/s (the 1D and 10-state filters have no re-acquisition cap of their own). The branch decision
-   always comes from the ESKF (the others carry no second hypothesis).
+   shown comes from the selected filter: the ESKF's, or since v0.5.12 the 10-state filter's own
+   (batch test of the yaw-change profile against both geometries); the 1D filter has none (ESKF's).
 """
 from __future__ import annotations
 

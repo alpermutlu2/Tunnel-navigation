@@ -106,7 +106,7 @@ class Ekf10Config:
     # A limit, not a cure: the crawl pitch error that drives v̂ negative is left (pitch prior, §5).
     no_reverse: bool = True
     no_reverse_k: float = 0.0             # A/B: act only while v̂ < −k·σ_v (0 = owner's form)
-    no_reverse_sigma: float = 0.0         # A/B: R = max(zupt_sigma, this)² (0 = owner's form)
+    no_reverse_sigma: float = 0.5         # m/s [ASSUMED]; soft form, default since v0.5.12 (owner): R = (0.02 m/s)² gave 12 runs > 100 m in 300 (low-end S4), this 2
     landmark_gate: str = "own"            # "own": this filter's branch decision; "turn": a turn seen only
                                           # (v0.5.12 A/B: on a straight main tunnel the two must agree)
     landmark_T: float = 12.0              # s [ASSUMED] (owner: 10-15 s, one curve)

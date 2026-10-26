@@ -462,6 +462,7 @@ def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None, eskf_
     oe = run_eskf(t, F, W, gnss, bt, bh, C_bp, r_b, eskf_cfg or EskfConfig(), road_map=mv)
     s_e, g_e = _eskf_along(mv, oe.t, oe.p, oe.C, oe.P_pos, C_bp, r_b)
     o10 = run_ekf10(t, F, W, gnss, bt, bh, C_bp, r_b, road)      # its own branch decision (v0.5.12)
+    oe.aux["branch10"] = o10.branch_decision
     o1 = run_ekf1d(t, F, W, gnss, C_bp, r_b, road)
     ip = lambda tt, x: np.stack([np.interp(oe.t, tt, xb) for xb in x])
     s = {"1d": ip(o1.t, o1.s), "ekf10": ip(o10.t, o10.s), "eskf": s_e}
@@ -565,6 +566,14 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
             r[mode] = metrics(s_disp, g_i, dmax) if mode == "none" else metrics(s_disp, g_disp, dmax)
             tracks[f"{rule}/{mode}"] = {"sel": sel, "s_disp": s_disp, "sig_disp": g_i if mode == "none" else g_disp,
                                         "dmax": dmax}
+        # v0.5.12: the branch decision shown comes from the selected filter (ESKF or 10-state, both
+        # have one); the 1D filter has none, so it falls back to the ESKF's
+        d_e, d_10 = oe.aux.get("branch_decision"), oe.aux.get("branch10")
+        if d_e is not None and d_10 is not None and getattr(mv, "s_div", None) is not None:
+            shown = np.where(sel == "ekf10", d_10, d_e)
+            r["branch_shown"] = {"branch": round(float(np.mean(shown == 1)), 3), "main": round(float(np.mean(shown == -1)), 3),
+                                 "none": round(float(np.mean(shown == 0)), 3),
+                                 "eskf_branch": round(float(np.mean(d_e == 1)), 3), "ekf10_branch": round(float(np.mean(d_10 == 1)), 3)}
         res["rules"][rule] = r
     if keep_tracks:
         res["_tracks"] = {"t": oe.t, "s_true": s_true, "s": s, "sig": g, "rules": tracks, "t_back": t_back,
