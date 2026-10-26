@@ -596,6 +596,117 @@ Readings:
   split, the ESKF taking the wrong branch (−120 m) and the 10-state continuing (+200 m). The
   monitor then makes σ honest ((e/σ)² ~1–2), late.
 
+**4.13 v0.5.12: a branch window that grows with σ_s, a curve landmark and a branch decision for
+the 10-state filter, and a one-way speed constraint** (owner 2026-10-25/26; `EskfConfig.map_pre_sigma_k`,
+`no_reverse*`; `Ekf10Config.curve_landmark`, `no_reverse*`; `tools/eval_sets.py`,
+`tools/ekf10_sets.py`; `reports/0.5.12/`). Every number below is over seeds 0–299 (six sets of 50)
+unless it says otherwise. 20-seed runs were a first look only: on low-end S4 they showed 35 → 0
+failures where 300 seeds gave 35 → 6, the third time a small sample was optimistic, so the method
+is now "20 seeds to look, 300 for the number".
+
+*Branch window* (`eval_sets_300_win2.json`, `eval_sets_300_win0_*.json`; measured before the speed
+constraint was added). The decision window
+starts max(100 m, 2σ_s) before the diverge instead of 100 m.
+- **S4 seed 247** (§3.1): −110.1 → −3.4 m, the branch decided correctly. S4 200–249 rms 16.7 →
+  6.1 m; runs > 100 m on the branch route 1 → 0 in 300.
+- **Everything else:** other S4 sets within 0.1 m, S1-5km 0–49 12.78 → 12.94 m, all other
+  scenarios bit-identical.
+- **Straight-on control, unchanged with the window** (k = 0 and k = 2 give the same table):
+
+  | | S1 straight on | S4 straight on |
+  |---|---|---|
+  | runs > 100 m off at the portal (of 300) | 0 | 38 (3, 7, 8, 10, 3, 7 per set) |
+  | "not yet" after the diverge, mean / p95 | 5.1 / 6.1 s | 12.9 / 20.5 s |
+  | while "not yet": the shown point's distance from the road the car is on, largest per run, mean / p95 | 11.6 / 14.2 m | 38 / 58 m |
+  | runs where it exceeds 10 m | 235 | 300 |
+  | undecided at the portal | 0 | 1 (the same run as v0.5.11) |
+
+  While "not yet", the screen projects the estimate onto the route polyline, i.e. the branch. A
+  car that goes straight on has left the route and the app will re-route; 13 s at 38 m is the
+  measured cost of that state, recorded and not engineered away. A car that takes the branch is
+  "not yet" for 2.8 s (S1) and 3.7 s (S4), with the shown point ≤ 0.5 m from the road.
+
+*The 10-state filter's open failure, low-end stop-and-go.* Two attempts that did not fire, then
+what worked.
+- **Re-association as in the ESKF (yaw ψ̂ against ψ_map(s_c)) never fires** (ΔJ ≤ 0.4 against
+  10.83). The ESKF's re-association relies on ψ̂; on a low-end gyro the 10-state yaw is pulled to
+  the map within a second by the map-heading row, so the information is in the change of heading,
+  not in the heading.
+- **Matching the yaw rate (w̄ against v·κ(s_c)) never fires either.** That is an artefact of the
+  profile, not physics: the low-end gyro_noise of 0.063 rad/√s folds the τ ≤ 50 s bias terms into
+  white noise (v0.5.7). That is right for 300 s of consistency and wrong for a 10–15 s curve, over
+  which the bias is nearly constant. With the folded value in R (0.064 rad/s for a 1 s mean) the
+  curve rate (~0.06 rad/s) was buried. A gyro-only heading drifting ~90° in 300 s does not matter
+  either: a curve needs 12 s, not 300.
+- **The actual mechanism.** With σ_s larger than the curve, the linearised heading and
+  curvature-gyro rows lock s to a wrong point: σ_s 350 → 20 m at −160 m error. Either row alone
+  does it.
+- **(a) the curve s-guard:** while σ_s exceeds the route's shortest clothoid, those rows do not
+  correct s (H_s = 0), as in the ESKF's branch deferral.
+- **(b) the curve landmark (owner's form):** the yaw change over the last 12 s,
+  Δψ_g(t_j) = ∫(w_z − b̂_gz)dt/(1 + ŝ_g), against ψ_map(c − d_T + d_j) − ψ_map(c − d_T) for
+  candidates c in ŝ ± 3σ_s (d_j = ∫v̂ dt); full covariance
+  C = ARW²·min(t_i, t_j) + Σ_GM(τ ≤ 50 s) + P_bgz·t_i t_j + diag(sideslip k·v·|w|, map heading)².
+  The gyro terms are the sensor's [MEAS] short-term ones (worst axis: ARW 0.00625 rad/√s, GM
+  τ = 5 s σ 0.0066 rad/s, τ = 50 s σ 0.0056 rad/s); over 12 s that is ~5°, more conservative than
+  the owner's ARW-only 2°, because the τ ≤ 50 s terms are not constant over 12 s. It fires on a
+  turn of more than 5° and, if the profile fits (χ²ₙ 99.9 %) and beats ŝ by χ²₁, updates s with
+  R from the curvature of J (≥ 5 m), at most once per 12 s. (a) and (b) are one switch: (a)
+  alone is consistent and worse (S1-5km Note10: 39 runs > 100 m in 300).
+- **Its own branch decision (owner's form (2)).** The same profile against the same candidates,
+  once with the branch geometry (J_kol) and once with the main tunnel (J_ana): min J_ana − min
+  J_kol > χ²₁ → "branch" and the landmark runs; the reverse → "main", the map rows switch to the
+  main tunnel and the landmark stays off; otherwise "not yet". It is the batch form of the ESKF's
+  r_b / r_m test. A first form gated the landmark on the ESKF's decision instead; on a low-end
+  phone the ESKF is the broken filter (~900 m on S4), its "branch" came late or never, only (a)
+  was left, and the product's low-end S4 got worse (178–376 m against 89–335 m;
+  `supervisor_sets_*_eskfgate.json`). A gate on "a turn was seen" alone (form (1)) assumes a straight
+  main tunnel after the diverge, which most Istanbul tunnels are not; with it the landmark fired 176
+  times in 300 straight-on S4 runs, because the 12 s gyro noise (~5°) is the size of the 5° threshold.
+- **One-way speed constraint** (owner, [ASSUMED] "a car does not reverse in a one-way tunnel"):
+  while v̂ < 0 in an outage, z = 0 − v̂. The owner's form, R = zupt_sigma² = (0.02 m/s)², made
+  things worse (below), because v̂ wobbles around zero at stops and the tight one-sided update
+  biases it upward; the default is R = (0.5 m/s)² [ASSUMED], in both filters. It is a limit, not a
+  cure: the crawl pitch error that drives v̂ negative stays (§4.10, §5).
+
+Low-end S4, 10-state filter alone (route given), 300 seeds (`ekf10_sets_300_v2.json`):
+
+| | rms | rms without runs > 100 m | runs > 100 m | p95 | (e/σ)² |
+|---|---|---|---|---|---|
+| v0.5.11 | 224 m | 29.1 m | 35 | 354 m | 26.1 |
+| (a) only (v1 run) | 307 m | 44.1 m | 84 | 585 m | 8.0 |
+| (a) + (b), gate (1): a turn seen | 167 m | 21.8 m | 5 | 50 m | 8.4 |
+| (a) + (b), gate (2): own decision | 167 m | 21.9 m | 5 | 50 m | 8.5 |
+| (2) + no reverse, R = (0.02 m/s)² | 187 m | 25.7 m | 12 | 60 m | 10.3 |
+| **(2) + no reverse, R = (0.5 m/s)² (default)** | **94 m** | **22.0 m** | **2** | **47 m** | **5.1** |
+
+- **(1) and (2) on a car that takes the branch:** 260 of 300 low-end S4 runs identical, the largest
+  difference 23.8 m, the same failures; Note10 298 of 300. The decision comes a few seconds after the
+  turn passes 5°, so (2) sometimes misses one landmark.
+- **Straight on:** (2) never fires the landmark (low-end S1 and S4, Note10). It decides "main" in 300
+  of 300 on S1 and in 1 of 300 on low-end S4, where σ_s covers the straight before the diverge and
+  the two hypotheses look the same ("not yet").
+- **Seed 219** (a wrong lock with (1): σ 132 → 17 m at 83 m error) is 31 m with (2). A χ² margin
+  between the best and the best distant candidate was tried and made 20 seeds worse (0 → 3 runs >
+  100 m); it stays off (`landmark_margin`).
+- **Other scenarios:** Note10 S4 25.5 → 16.5 m (3 → 1 runs > 100 m), Note10 5 km 22.3 → 9.4 m
+  (2 → 0), Note10 S5 5.5 → 3.2 m; low-end 5 km 16.0 → 18.0 m; the rest within 1 m. Note10 S1 is
+  5.5 m with (1) and 5.7 m with (2): the gate also keeps the landmark off on curves before the
+  diverge, a small cost of the rule.
+- **The no-reverse constraint, the two forms:** on low-end S4 the tight form gives 12 runs > 100 m,
+  the soft one 2; on Note10 S4 the tight form gives 13.8 m and the soft one 16.5 m. In the ESKF the
+  tight form fired 1437 times on 10 Note10 S4 runs and moved the portal from 5.0 to 6.5 m; the soft
+  one leaves 5.0 m. The ESKF on low-end S4 stays ~900 m with either: its failure is not reversing.
+- **What remains on low-end S4:** seed 232 (−1649 → −1566 m) and seed 200, which the constraint
+  makes worse (66 → 229 m; v0.5.11 186 m). The constraint turns seeds 113 (−2063 m), 125 (−516 m)
+  and 255 (−996 m) into runs under 100 m, more than "a limit" promised; why the crawl goes negative
+  is still the pitch prior's question (§4.10).
+- **The same landmark could serve the ESKF;** it was not needed there, because the Note10 gyro keeps
+  ψ̂ informative.
+
+*R floor k·v² for the re-association* (`eval_sets_300_win2-slip_*.json`, off): S1, S4 and 5 km, 18
+sets: every per-seed error identical. At scenario speeds k·v² ≤ 3.4 m stays under the 5 m floor.
+
 ## 5. Limitations and next steps
 
 - **Simulation only.** The IMU noise terms are measured. The time shape of the noise, vibration,
