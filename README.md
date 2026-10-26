@@ -124,7 +124,8 @@ changes).
 ```bash
 python tools/evaluate.py                 # Monte Carlo, 50 seeds per scenario (~1 h on 2 cores)
 python tools/evaluate.py --seeds 20 S1 S4 --negative   # subset + car-goes-straight control
-python tools/eval_sets.py               # ESKF on four sets of 50 seeds (0-199); --validation: 200-299 once
+python tools/eval_sets.py default       # ESKF on six sets of 50 seeds (0-299); --validation: 300-399 once
+python tools/ekf10_sets.py               # 10-state filter variants on 0-299 (v0.5.12); --validation: 300-399
 python tools/compare_filters.py         # 4-, 10- and 16-state filters, 50 seeds, Note10 + low-end
 python tools/supervisor_eval.py sets:0-100   # supervisor (class rule, monitor) on seed ranges
 python tools/failure_cases.py           # pressure gradient and 2x map error under the gate / re-association

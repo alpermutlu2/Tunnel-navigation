@@ -1,9 +1,9 @@
 # Through the Tunnel: summary
 
 Short version of [`REPORT.md`](REPORT.md), which has the full results, mechanisms and sources.
-All numbers come from simulation. The main results are ranges over four independent sets of 50
-seeds; tuning was done on seeds 0–49, and a further 100 seeds (200–299) were run once on the final
-configuration for validation (`reports/0.5.11/`). Every parameter is tagged [MEAS] (measured, cited), [SPEC] (datasheet) or
+All numbers come from simulation. The main results are ranges over six independent sets of 50
+seeds (0–299); tuning was done on seeds 0–49, features were designed on 50–299, and a further 100
+seeds (300–399) were run once on the final configuration for validation (`reports/0.5.12/`). Every parameter is tagged [MEAS] (measured, cited), [SPEC] (datasheet) or
 [ASSUMED] (chosen here).
 
 ## Problem
@@ -71,29 +71,35 @@ sees truth.
 
 ## Results (Note10)
 
-Ranges over four sets of 50 seeds (0–199):
+Ranges over six sets of 50 seeds (0–299):
 
 | | straight, steady (S1, S6) | stop-and-go, braking (S4, S5) | S-bend (S2) | 5 km |
 |---|---|---|---|---|
-| along-track error at the exit branch, rms | 12–18 m | 25–50 m | 3.5–4.6 m | 25–32 m |
-| along-track error at the portal, rms | 5.5–7.8 m | 4.7–8.1 m | 4.1–5.4 m | 12–16 m |
+| along-track error at the exit branch, rms | 11–18 m | 25–50 m | 3.5–4.6 m | 25–38 m |
+| along-track error at the portal, rms | 5.5–7.8 m | 4.7–8.6 m | 4.1–5.4 m | 12–16 m |
 | cross-track error at the portal, rms | 1.5 m | 1.3–1.9 m | 3.2 m | 2.1 m |
-| callouts more than 1 s late (k = 1), of 200 | 0 | 1 (S4), 10 (S5) | 0 | 0 |
+| callouts more than 1 s late (k = 1), of 300 | 0 | 3 (S4), 17 (S5) | 0 | 2 |
 
 - **Consistent.** The filter's own uncertainty covers its error everywhere: mean (e/σ)² ≤ 0.39 in
   every set, conservative.
-- **Callout.** Without the rule, 10–56 % of callouts come more than 1 s late; with k = 1, 11 of
-  2000. k = 1.3 halves the late callouts (none on 0–199, 3 of 100 on S5 in validation), at
-  0.3–0.9 s more advance.
+- **Callout.** Without the rule, 10–56 % of callouts come more than 1 s late; with k = 1, 22 of
+  3000. k = 1.3 cuts them 2.5–4 fold (5 of 3000; 5 of 1000 in validation), at 0.3–0.9 s more
+  advance.
 - **Exit branch.** Recognised in every run that takes it. When the car goes straight on, "main"
   is reported in 599 of 600 (one undecided). Such a car has no curve to correct it: on
-  stop-and-go, 14 % of straight-on runs are more than 100 m off at the exit, until GNSS returns.
+  stop-and-go, 13 % of straight-on runs are more than 100 m off at the exit, until GNSS returns.
+  Until "main" is decided (13 s on stop-and-go) the car is shown on the branch, up to 38 m off.
 - **Exit.** The largest jump at the exit is under 6 m (p95).
-- **Validation on 100 untouched seeds** (run once, nothing changed after): inside the ranges,
-  except one S4 run 110 m off. Its dead-reckoning error (−220 m, 2.4σ) put the turn outside the
-  branch decision's 100 m window, so the branch was decided "main".
-- **Seed tiers.** The development set (0–49) gave the low end of the ranges: S1 12 m on it,
-  13–17 m on the other sets. A callout claim of "1 in 500 late" made on 0–49 became 11 in 2000.
+- **Validation on 100 untouched seeds (300–399),** run once, nothing changed after: no run more
+  than 100 m off; inside the ranges except the S4 diverge error in one set (56 m) and its late
+  callouts (5 of 50).
+- **Branch window.** v0.5.11's validation found one S4 run 110 m off: its dead-reckoning error
+  (−220 m) put the turn outside the branch decision's fixed 100 m window. The window now grows
+  with σ_s (max(100 m, 2σ_s)); the run is 3 m off and nothing else moved. Those seeds are now a
+  design tier.
+- **Seed tiers and method.** A callout claim of "1 in 500 late" made on 0–49 became 22 in 3000;
+  a low-end failure count of 35 → 0 on 20 seeds was 35 → 6 on 300. 20 seeds to look, 300 for the
+  number.
 - **A failure found on new seeds and fixed.**
   - Found: in 2 of 200 runs on S4 the filter ended ~600 m off with a small σ. It reached the exit
     curve far behind the car, and the map update at the wrong point wrote the curve into yaw.
@@ -126,7 +132,11 @@ The app runs all three and shows one (REPORT §4.12):
 - **Rehearsing short outages in open sky could not tell the filters apart** and was dropped.
 - **What the monitor can and cannot see:** it catches failures where the models differ (a tunnel
   pressure gradient, suspension pitch), late. It cannot see one in a part they share.
-- **Open in this configuration:** low-end stop-and-go, 89–335 m.
+- **Low-end stop-and-go:** 89–335 m in v0.5.11, 19–24 m in seven of eight sets now (one set at
+  225 m, one unexplained run). The 10-state filter got a curve landmark (the yaw change over 12 s
+  against the map's curve), its own branch decision (the same profile against the branch and the
+  main tunnel) and a one-way speed constraint ("a car does not reverse in a one-way tunnel",
+  [ASSUMED]).
 
 ## Where it breaks
 
@@ -146,8 +156,8 @@ The app runs all three and shows one (REPORT §4.12):
    - consistent ((e/σ)² 0.2–0.6) and no late callouts;
    - stop-and-go fails for the ESKF (~0.9 km). At crawling speed the vehicle constraints see a pitch
      error only through v·δθ, so the cheap gyro's tilt leaks gravity into the speed. The supervisor
-     selects the 10-state filter there (89–335 m); a road-grade pitch prior brought the ESKF to 88 m
-     but stays off (not consistent, needs the map grade).
+     selects the 10-state filter there (19–24 m in seven of eight sets); a road-grade pitch prior
+     brought the ESKF to 88 m but stays off (not consistent, needs the map grade).
 6. **Levelling from gravity** (an extra update) was tried and left off: it helps one scenario and
    hurts five.
 
@@ -187,6 +197,9 @@ The app runs all three and shows one (REPORT §4.12):
   - **Seeds:** read the 200-seed result as a selection effect and asked for an untouched
     validation tier.
   - **Re-association:** proposed it, and required the failure cases before it became the default.
+  - **Low-end stop-and-go:** corrected the agent's reading of the gyro noise (a profile artefact),
+    designed the curve landmark and the 10-state branch test, and rejected a gate that assumed a
+    straight main tunnel.
 - **Detail:** REPORT §6 lists every intervention and the choices the agent made. It also lists
   the AI-side errors and what caught them: the author, AI reviews, the agent's own tests, or the
   consistency metric.

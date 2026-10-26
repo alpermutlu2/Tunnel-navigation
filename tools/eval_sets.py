@@ -1,8 +1,9 @@
-"""ESKF on four independent seed sets (v0.5.11, owner 2026-10-25): development 0-49 (every tuning
-in this repository was done on these), validation 50-199. Variants of the map-row NIS gate and the
-branch deferral (thresholds fixed before the runs).
+"""ESKF on independent seed sets of 50 (owner 2026-10-25): development 0-49, feature design 50-299
+(200-299 since v0.5.12), validation 300-399 (run once). Variants are EskfConfig overrides.
 
-    python tools/eval_sets.py          -> reports/<version>/eval_sets_200.json
+    python tools/eval_sets.py default              -> reports/<version>/eval_sets_300_default.json (resumable)
+    python tools/eval_sets.py default --validation -> reports/<version>/validation_300-399.json
+    python tools/eval_sets.py win2 --only S4,S4_straight_on   -> a subset
 """
 import json
 import sys

@@ -7,6 +7,46 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.12 (2026-10-26): branch window, 10-state curve landmark and branch decision, one-way speed
+
+Seed tiers: 200–299 moved to feature design (the branch window came from seed 247); validation is
+300–399, run once (`reports/0.5.12/validation_300-399.json`, `ekf10_validation_300-399.json`,
+`supervisor_validation.json`). Main results are over six sets (0–299). Method: 20 seeds to look,
+300 for the number.
+
+- **Branch window** (`EskfConfig.map_pre_sigma_k = 2`): the decision window starts
+  max(100 m, 2σ_s) before the diverge. S4 seed 247 −110.1 → −3.4 m; S4 200–249 16.7 → 6.1 m; other
+  S4 sets ±0.1 m; S1-5km 0–49 12.78 → 12.94 m; the rest bit-identical. Straight-on control
+  unchanged; its "not yet" time and the shown point's distance from the road are now measured
+  (S4: 12.9 s, 38 m mean largest; `eskf_experiment()["undecided"]`).
+- **10-state curve landmark** (`Ekf10Config.curve_landmark`, owner's design): the yaw change over
+  12 s against the map's heading-change profile for candidates in ŝ ± 3σ_s, with the sensor's
+  short-term gyro terms [MEAS] in R (not the profile's folded 0.063 rad/√s); together with an
+  s-guard on the curve rows while σ_s exceeds the shortest clothoid. One switch.
+- **10-state branch decision**: the same profile against the branch (J_kol) and the main tunnel
+  (J_ana); "branch" turns the landmark on, "main" switches the map rows to the main tunnel. The
+  supervisor shows the selected filter's decision (low-end S4: right in 98–100 % per set, the
+  ESKF's 2–28 %).
+- **One-way speed constraint** (`no_reverse`, both filters, [ASSUMED]): while v̂ < 0 in an outage,
+  z = 0 − v̂, R = (0.5 m/s)². The owner's tight form R = (0.02 m/s)² was measured and rejected
+  (low-end S4 10-state 12 runs > 100 m against 2; ESKF Note10 S4 5.0 → 6.5 m on 10 seeds).
+- **Re-association R floor k·v²** (`map_reassoc_slip_k`, off): identical on S1, S4 and 5 km.
+- Removed: the 10-state re-association prototypes (by yaw, by yaw rate; neither fired).
+
+How the numbers moved:
+- 10-state alone, low-end S4, 300 seeds: 224 → 94 m rms (29.1 → 22.0 m without failures),
+  35 → 2 runs > 100 m, (e/σ)² 26 → 5.1. Note10 S4 25.5 → 16.5 m, Note10 5 km 22.3 → 9.4 m.
+  Validation: low-end S4 134 → 19 m, 13 → 0 runs > 100 m.
+- Supervisor, low-end S4: 89–335 m → 19–24 m in seven of eight sets (225 m in 200–249, seed 232).
+  Note10 cases within 0.2 m except S4 200–249 16.8 → 6.0 m (seed 247). Low-end others: 5 km
+  −2.8…+5.1 m per set, S5 −4.0…+0.1 m, the rest −1.7…+0.4 m.
+- ESKF Note10: the speed constraint moves only S4, by ≤ 0.05 m per set; low-end ESKF S4 stays
+  ~900 m (its failure is not reversing).
+- Callouts, k = 1: 22 of 3000 > 1 s late (11 of 2000 over 0–199 before); validation 13 of 1000.
+- Straight-on S4 runs > 100 m: 39 of 300 (the speed constraint added one in 0–49); 11 of 100 in
+  validation.
+- Tests 195 → 200 (`tests/test_v0512.py`).
+
 ## v0.5.11 (2026-10-25): three filters, supervisor, map re-association, seed tiers
 
 Review v8 patch (same version, no metric changed):

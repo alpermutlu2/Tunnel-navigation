@@ -6,9 +6,9 @@ Pointr case study. A phone in a car estimates its position through a GNSS outage
 tunnel. The navigation app has to keep showing the car, call out an exit inside the tunnel at the
 right moment, and recover cleanly when the car comes out.
 
-All results come from simulation. The main results are four independent sets of 50 seeds
-(`tools/eval_sets.py`, `reports/0.5.11/`) plus a held-out validation set; §3 explains the three
-seed tiers. Earlier sections quote 30–50 seeds where they say so. Every parameter is tagged [MEAS] (measured,
+All results come from simulation. The main results are six independent sets of 50 seeds
+(`tools/eval_sets.py`, `reports/0.5.12/`) plus a held-out validation set of 100; §3 explains the
+three seed tiers. Earlier sections quote 30–50 seeds where they say so. Every parameter is tagged [MEAS] (measured,
 cited), [SPEC] (datasheet) or [ASSUMED] (chosen here); §2.2 lists the assumptions and
 `tunnelsim/profiles.py` holds every value. The simulator runs interactively (`python tools/serve.py`) or one page per run
 (`tools/simulate.py`); the README has the commands.
@@ -113,31 +113,33 @@ the result when the car comes out.
 
 **Seeds, in three tiers.**
 - **Development, 0–49:** every tuning in this repository was chosen on these.
-- **Feature design, 50–199:** the map re-association of §4.11 was designed on seeds 63, 72, 103,
-  113 and 114, and its first form's error was found on all of 0–199. These are no longer held out
-  for that feature.
-- **Validation, 200–299:** run once on the final configuration and not used to change anything
-  (§3.1).
+- **Feature design, 50–299:** the map re-association of §4.11 was designed on seeds 63, 72, 103,
+  113 and 114, and its first form's error was found on all of 0–199. In v0.5.12, 200–299 moved
+  down to this tier: the branch window of §4.13 came from seed 247, so those seeds are no longer
+  held out.
+- **Validation, 300–399:** run once on the final configuration and not used to change anything
+  (§3.1). The v0.5.11 validation on 200–299 stays in `reports/0.5.11/`.
+- **Method:** 20 seeds to look, 300 for the number. Three times a 20–50-seed result was optimistic
+  ("1 in 500" late callouts on 0–49; low-end S4 failures 35 → 0 on 20 seeds against 35 → 6 on 300).
 
-The ranges below are over four independent sets of 50 seeds (0–199), final configuration
-(`reports/0.5.11/eval_sets_200_gate-reassoc.json`). The development set gave the low end of most
-ranges: the S1 diverge error was 12.1 m on 0–49 and 13.0–16.9 m on the other three sets.
+The ranges below are over six independent sets of 50 seeds (0–299), final configuration
+(`reports/0.5.12/eval_sets_300_default.json`).
 
 | | S1 | S2 | S3 | S4 | S5 | S6s | S6 | S6L | S1-1km | S1-5km |
 |---|---|---|---|---|---|---|---|---|---|---|
 | | 3 km straight | S-bend | V-profile | stop-and-go | braking | wander ±1 km/h | ±2 km/h | ±4 km/h | 1 km | 5 km |
-| along-track at diverge, rms [m] | 12.1–16.9 | 3.5–4.6 | 12.1–15.2 | 34.7–50.2 | 25.0–31.2 | 13.4–17.6 | 13.3–18.3 | 13.2–18.1 | 4.5–5.0 | 24.6–31.6 |
-| along-track at portal, rms [m] | 5.5–6.7 | 4.1–5.4 | 8.2–11.2 | 4.7–6.0 | 6.5–8.1 | 5.8–7.3 | 6.1–7.8 | 5.6–7.8 | 2.5–2.9 | 12.3–16.1 |
-| portal p95, worst set [m] | 13 | 10 | 21 | 11 | 15 | 15 | 15 | 17 | 6 | 29 |
-| runs > 100 m off at the portal (of 200) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| mean (e/σ)² at portal, worst set | 0.19 | 0.39 | 0.26 | 0.13 | 0.32 | 0.23 | 0.25 | 0.25 | 0.29 | 0.34 |
-| callout > 1 s late, worst set: k = 0 / 1 / 1.3 / 1.65 | 12 / 0 / 0 / 0 % | 0 / 0 / 0 / 0 % | 10 / 0 / 0 / 0 % | 50 / 2 / 0 / 0 % | 56 / 10 / 0 / 0 % | 10 / 0 / 0 / 0 % | 14 / 0 / 0 / 0 % | 10 / 0 / 0 / 0 % | 0 / 0 / 0 / 0 % | 34 / 0 / 0 / 0 % |
-| callout mean, k = 1 [s] (− early) | -0.6…-0.8 | -0.2…-0.3 | -0.8…-0.9 | -2.0…-2.4 | -0.4…-0.8 | -0.6…-0.8 | -0.6…-0.8 | -0.6…-0.9 | -0.1…-0.2 | -1.3…-1.6 |
-| largest exit step p95, worst set [m] | 4.3 | 6.0 | 4.2 | 4.0 | 4.6 | 4.1 | 4.1 | 4.4 | 4.9 | 4.3 |
+| along-track at diverge, rms [m] | 11.4–16.9 | 3.5–4.6 | 12.1–15.2 | 34.9–50.3 | 25.0–35.7 | 11.7–17.6 | 11.4–18.3 | 11.1–18.1 | 4.1–5.4 | 24.6–38.2 |
+| along-track at portal, rms [m] | 5.5–6.9 | 4.1–5.4 | 8.2–11.2 | 4.7–6.1 | 6.1–8.6 | 5.8–7.4 | 6.1–7.8 | 5.6–7.8 | 2.5–3.1 | 12.3–16.2 |
+| portal p95, worst set [m] | 14 | 10 | 23 | 12 | 17 | 15 | 15 | 17 | 6 | 30 |
+| runs > 100 m off at the portal (of 300) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| mean (e/σ)² at portal, worst set | 0.20 | 0.39 | 0.26 | 0.13 | 0.36 | 0.23 | 0.25 | 0.25 | 0.33 | 0.35 |
+| callout > 1 s late, worst set: k = 0 / 1 / 1.3 / 1.65 | 12 / 0 / 0 / 0 % | 0 / 0 / 0 / 0 % | 10 / 0 / 0 / 0 % | 50 / 4 / 4 / 2 % | 56 / 12 / 6 / 0 % | 10 / 0 / 0 / 0 % | 14 / 0 / 0 / 0 % | 10 / 0 / 0 / 0 % | 0 / 0 / 0 / 0 % | 46 / 4 / 0 / 0 % |
+| callout mean, k = 1 [s] (− early) | -0.6…-0.8 | -0.3 | -0.8…-1.0 | -2.0…-2.5 | -0.3…-0.8 | -0.6…-0.9 | -0.6…-0.8 | -0.6…-0.9 | -0.2 | -1.2…-1.6 |
+| largest exit step p95, worst set [m] | 4.4 | 6.0 | 4.2 | 4.1 | 4.6 | 4.2 | 4.4 | 4.4 | 4.9 | 4.5 |
 
 Cross-track error at the portal is 1.3–3 m (v0.5.10, 50 seeds), the map's own lateral uncertainty.
-Branch decision: the branch is reported in 800 of 800 runs that take it. When the car goes
-straight on, "main" is reported in 400 of 400 on 0–199 and in 199 of 200 in validation; one run
+Branch decision: the branch is reported in 3000 of 3000 runs that take it. When the car goes
+straight on, "main" is reported in 599 of 600 on 0–299 and in 200 of 200 in validation; one run
 stayed undecided and none reported the branch.
 
 - **Showing the car.**
@@ -148,58 +150,56 @@ stayed undecided and none reported the branch.
     106 m at 5 km, because heading is not observable in a straight tunnel.
   - The exit curve brings the portal error down to 2.5–16 m.
   - The filter is consistent: mean (e/σ)² ≤ 0.39 in every set.
+  - Low-end phones: §4.12 (the 10-state filter is shown there, 19–24 m at the portal on S4 in seven
+    of eight sets since v0.5.12).
 - **Callout.** "The right moment" is read as *never late, and only as early as the uncertainty
   requires*: a late callout can make the driver miss the exit.
   - **Without the rule (k = 0):** 10–56 % of callouts come more than 1 s late (worst set).
-  - **With k = 1:** 11 of 2000 callouts are more than 1 s late (10 on S5, 1 on S4), and on average
-    they come 0.1–2.4 s early. The development set alone gave "1 in 500"; over 200 seeds S5 is at
-    0–10 % per set.
-  - **With k = 1.3 or 1.65:** none of 2000 are late on 0–199, but 3 of 100 on S5 in the
-    validation tier (§3.1). The cost is 0.3–0.9 s more advance (S4: 2.2 → 3.0 → 4.0 s early on
-    average).
+  - **With k = 1:** 22 of 3000 callouts are more than 1 s late (17 on S5, 3 on S4, 2 at 5 km),
+    and on average they come 0.2–2.5 s early. The development set alone gave "1 in 500"; over 300
+    seeds S5 is at 2–12 % per set.
+  - **With k = 1.3:** 5 of 3000 (3 on S5, 2 on S4); with k = 1.65, 1 (S4). In validation, k = 1
+    gives 13 of 1000 and k = 1.3 gives 5 (§3.1). The cost is 0.3–0.9 s more advance (S4: 2.2 →
+    3.0 → 4.0 s early on average).
   - **Why k = 1 stays:** σ_s is about twice the real error ((e/σ)² 0.1–0.4), so k = 1 is in effect
     ~2σ. The k = 1.3 row is the measured alternative; it halves the late callouts.
   - k has to be chosen again once σ is calibrated on real data. The voice says the estimated
     distance rounded to 50 m.
 - **Branch.**
   - Car takes the branch: the in-loop decision reports it 2–3.5 s after the diverge.
-  - Car goes straight on (negative control, map with the branch): "main" in 400 of 400. The
-    portal error then stays at the no-map value: S1 18–28 m rms, S4 51–78 m rms, because there is
-    no exit curve.
-  - **On S4, 28 of 200 straight-on runs are more than 100 m off at the portal** (3, 7, 8 and 10
-    per set; 10 of 100 in validation). One stop-and-go drive in seven stays in the main tunnel
-    and is shown more than 100 m off when it comes out. This is the measured cost of "the map's
+  - Car goes straight on (negative control, map with the branch): "main" in 599 of 600. The
+    portal error then stays at the no-map value: S1 18–28 m rms, S4 52–79 m rms, because there is
+    no exit curve. Until "main" is decided (5 s on S1, 13 s on S4 after the diverge) the screen
+    shows the car on the branch, up to 38 m from the road it is on (§4.13).
+  - **On S4, 39 of 300 straight-on runs are more than 100 m off at the portal** (4, 7, 8, 10, 3
+    and 7 per set; 11 of 100 in validation). About one stop-and-go drive in eight stays in the main
+    tunnel and is shown more than 100 m off when it comes out. This is the measured cost of "the map's
     along-track gain comes only from curves": with no curve before the exit, nothing corrects the
     dead reckoning until GNSS returns, and then the exit follower.
 - **Recovery.** The largest step at the exit is ≤ 6 m (p95, worst set).
 
-**3.1 Validation on untouched seeds** (200–299, final configuration, run once;
-`reports/0.5.11/validation_200-299.json`). Nothing was changed after this run.
+**3.1 Validation on untouched seeds** (300–399, final configuration, run once;
+`reports/0.5.12/validation_300-399.json`). Nothing was changed after this run.
 
 | | S1 | S2 | S3 | S4 | S5 | S6s | S6 | S6L | 1 km | 5 km |
 |---|---|---|---|---|---|---|---|---|---|---|
-| diverge rms, two sets [m] | 11.4 / 14.6 | 4.0 / 4.6 | 12.2 / 15.0 | 44.9 / 41.5 | 29.1 / 35.7 | 11.7 / 14.7 | 11.4 / 14.9 | 11.1 / 15.3 | 4.1 / 5.4 | 28.8 / 38.2 |
-| portal rms, two sets [m] | 6.8 / 6.9 | 4.1 / 4.9 | 9.4 / 11.1 | 16.7 / 5.1 | 6.1 / 8.6 | 7.2 / 7.3 | 7.6 / 7.6 | 7.4 / 7.4 | 2.6 / 3.1 | 14.4 / 16.2 |
-| runs > 100 m off (of 100) | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| worst (e/σ)² | 0.20 | 0.34 | 0.25 | 0.20 | 0.36 | 0.22 | 0.24 | 0.22 | 0.33 | 0.35 |
-| > 1 s late of 100, k = 1 / 1.3 | 0 / 0 | 0 / 0 | 0 / 0 | 2 / 2 | 7 / 3 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 2 / 0 |
+| diverge rms, two sets [m] | 16.4 / 15.2 | 4.4 / 3.6 | 15.2 / 13.0 | 40.1 / 55.6 | 30.3 / 30.5 | 16.7 / 15.7 | 17.8 / 15.3 | 16.8 / 14.7 | 5.1 / 5.2 | 33.2 / 33.6 |
+| portal rms, two sets [m] | 6.6 / 6.8 | 5.1 / 4.3 | 9.1 / 8.5 | 5.9 / 6.4 | 7.5 / 8.3 | 6.6 / 7.3 | 7.1 / 7.2 | 7.4 / 7.1 | 3.0 / 2.9 | 13.4 / 13.9 |
+| runs > 100 m off (of 100) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| worst (e/σ)² | 0.20 | 0.36 | 0.17 | 0.14 | 0.34 | 0.22 | 0.22 | 0.22 | 0.30 | 0.26 |
+| > 1 s late of 100, k = 1 / 1.3 | 0 / 0 | 0 / 0 | 1 / 0 | 5 / 2 | 7 / 3 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 
-- **Inside the ranges of §3.** Most numbers fall there. The 5 km diverge (38 m in one set) is
-  above them.
-- **One new failure, S4 seed 247.**
-  - The crawl leaves an unusually large dead-reckoning error: −220 m at the diverge region, with
-    σ_s 93 m (2.4σ).
-  - The car turns while ŝ is still more than 100 m before the diverge, outside the branch
-    decision's window, so the branch is decided "main".
-  - Re-association, which runs only on a decided branch, never starts. The portal error is
-    −110 m with e/σ 2.0.
-  - The same seed going straight on is 323 m off with "main" reported correctly.
-  - Straight-on control in validation: "main" in 199 of 200, one run undecided, none reporting
-    the branch. 10 of the 100 S4 straight-on runs are more than 100 m off at the portal (§3).
-  - The structural limit: the along-track error can exceed the branch window. A window that grows
-    with σ_s is the next step (§5).
-- **k = 1.3 is not "never late".** It gave 0 in 2000 on 0–199, but 3 of 100 on S5 here (k = 1:
-  7). The claim is "k = 1.3 halves the late callouts", not "removes them".
+- **Inside the ranges of §3,** except two: the S4 diverge error in one set (55.6 m against
+  34.9–50.3 m) and S4's late callouts at k = 1 in one set (5 of 50 against ≤ 2 of 50).
+- **No run is more than 100 m off.** The v0.5.11 validation failure (S4 seed 247, a branch decided
+  "main" because the turn fell outside the 100 m window) led to the σ-scaled window of §4.13;
+  seeds 200–299 are therefore a design tier now.
+- **Straight-on control:** "main" in 200 of 200; 11 of the 100 S4 runs are more than 100 m off at
+  the portal (§3).
+- **Low-end, product configuration (supervisor):** S4 portal 19.6 / 19.2 m, (e/σ)² ≤ 0.38 with the
+  monitor (§4.12).
+- **k = 1.3 is not "never late":** 5 of 1000 here, 5 of 3000 on 0–299. The claim is "k = 1.3 cuts
+  the late callouts 2.5–4 fold", not "removes them".
 
 **Tunnel length** (diverge at min(0.73·L, L − 200 m) [ASSUMED]). At the diverge: 4.8 m after
 1 km, 12 m after 3 km, 25 m after 5 km. The error grows faster than linearly, since bias drift
@@ -363,7 +363,9 @@ the portal:
 | S6 | 11.5 / 11.7, 0.32 | 11.2 / 9.0, 0.26 | 20.6 / 19.0, 0.58 |
 | 5 km | 20.7 / 19.8, 0.48 | 17.6 / 16.0, 0.47 | 29.3 / 25.8, 0.49 |
 
-The filter's mount pitched 2° wrong changes no filter by more than 2 m (lumped bias). The 4-state
+These are v0.5.11 numbers; v0.5.12 gave the 10-state filter a curve landmark, its own branch decision
+and a one-way speed constraint (§4.13: low-end S4 portal 94 m rms, 22 m without its 2 failures, in
+300 seeds). The filter's mount pitched 2° wrong changes no filter by more than 2 m (lumped bias). The 4-state
 filter with a map grade 10 % too steep or too shallow, S3, 50 seeds: portal 117 / 85 m,
 (e/σ)² 710 / 290, and with the shallow grade every callout comes more than 1 s late
 (`reports/0.5.11/ekf1d_grade_error_50.json`); without any grade, 3.4 km.
@@ -528,8 +530,8 @@ Readings:
   200): tune on one set and report on another.
 
 **4.12 A supervisor over the three filters** (owner 2026-10-25; `tunnelsim/supervisor.py`,
-`tools/supervisor_eval.py`; `reports/0.5.11/supervisor_{dev,heldout}.json`,
-`supervisor_sets_{0-99,100-199}.json`). All three filters run on the same phone data; the
+`tools/supervisor_eval.py`; `reports/0.5.11/supervisor_{dev,heldout}.json`;
+`reports/0.5.12/supervisor_sets_{0-99,100-199,200-299}.json`, `supervisor_validation.json`). All three filters run on the same phone data; the
 supervisor decides what the app shows. It sees only estimator-side outputs.
 
 *Selection, decided once before the tunnel.*
@@ -545,8 +547,10 @@ supervisor decides what the app shows. It sees only estimator-side outputs.
 
 *Display.* Inside the tunnel the selected filter. From the first GNSS fix of any kind after the
 outage, a follower that moves with the selected filter's speed and closes the gap to its re-locked
-ŝ at ≤ 2 m/s: exit step ≤ 1.1 m p95 on nominal runs. Without it, the smaller filters' re-lock on
-the first Doppler fix moved ŝ by up to 25 m. The branch decision always comes from the ESKF.
+ŝ at ≤ 2 m/s: exit step ≤ 1.2 m p95 on nominal runs. Without it, the smaller filters' re-lock on
+the first Doppler fix moved ŝ by up to 25 m. The branch decision shown comes from the selected
+filter: the ESKF's, or since v0.5.12 the 10-state filter's own (§4.13). On low-end S4 the shown
+decision is right in 98–100 % of runs per set; the ESKF's, shown until v0.5.11, in 2–28 %.
 
 *Disagreement monitor* (does not switch filters):
 - σ_disp² = σ_i² + max(0, agg_j[(ŝ_i − ŝ_j)² − σ_i² − σ_j²]), alarm while agg_j d_ij > 9.
@@ -554,27 +558,29 @@ the first Doppler fix moved ŝ by up to 25 m. The branch decision always comes f
   runs, because of the 1D filter's error, and made 100 % of low-end callouts > 5 s early.
 - "**majority**" (agg = min, the default) needs the selected filter to disagree with both others.
 
-*Class rule with the majority monitor, four sets (0–199)*, app's along-track error:
+*Class rule with the majority monitor, six sets (0–299), v0.5.12*, app's along-track error:
 
 | | diverge rms | portal rms | (e/σ)² worst set, without / with monitor | > 1 s late | runs with an alarm |
 |---|---|---|---|---|---|
-| Note10, S1–S6, 1 and 5 km | 3.5–31.8 m | 4.3–16.4 m | ≤ 0.43 / ≤ 0.38 | ≤ 10 % (S5) | ≤ 10 % |
-| low-end, S1, S2, S3, S5, S6, 5 km | 10.9–25.1 m | 7.4–23.8 m | ≤ 0.80 / ≤ 0.80 | ≤ 2 % | 0 % |
-| low-end S4 | 40–229 m | 89–335 m | 59 / 10.4 | 6 % | 36 % |
-| pressure 30 Pa/km, S1 / S3 | 105–153 m | 96–106 m | 13.3 / 1.9, 8.5 / 1.05 | 0 % | 32 % / 68 % |
+| Note10, S1–S6, 5 km | 3.5–38.5 m | 4.1–16.5 m | ≤ 0.43 / ≤ 0.38 | ≤ 12 % (S5) | ≤ 10 % |
+| low-end, S1, S2, S3, S5, S6, 5 km | 11.0–30.7 m | 7.4–22.1 m | ≤ 0.73 / ≤ 0.73 | ≤ 4 % | 0 % |
+| low-end S4 | 54–139 m | 20–24 m in five sets, 225 m in one | 24 / 0.70 | ≤ 2 % | 26–46 % |
+| low-end S4, v0.5.11 (0–299) | 40–229 m | 89–335 m | 59 / 12.9 | 6 % | 36 % |
+| pressure 30 Pa/km, S1 / S3 | 105–154 m | 96–106 m | 13.3 / 2.0, 8.5 / 1.05 | 0 % | 32 % / 70 % |
 
-*Validation, seeds 200–299* (`supervisor_sets_200-299.json`, run once): the same picture.
-- Note10: portal 4.1–16.5 m, (e/σ)² ≤ 0.37.
-- Low-end except S4: 8.8–19.8 m, (e/σ)² ≤ 0.70.
-- Low-end S4: 177–249 m, (e/σ)² 28 → 12.9 with the monitor.
-- Pressure gradient: (e/σ)² 8.5–12.7 → 1.05–2.05.
-- Exit step ≤ 1.2 m except the pressure gradient on S3 (6.8 m).
+*Validation, seeds 300–399* (`supervisor_validation.json`, run once): the same picture.
+- Note10: portal 4.5–14.3 m, (e/σ)² ≤ 0.38.
+- Low-end except S4: 8.4–22.1 m, (e/σ)² ≤ 0.74.
+- Low-end S4: 19.6 / 19.2 m, (e/σ)² 1.31 → 0.38 with the monitor.
+- Pressure gradient: (e/σ)² 8.4–12.7 → 1.06–1.9.
+- Exit step ≤ 1.1 m except the pressure gradient on S3 (6.8 m).
 
 Readings:
-- **Low-end S4 stays broken in the product configuration** (the low-end IMU; §4.9's 10-state S4 row,
-  22.7 / 25.2 m, is the Note10). The 10-state filter has the
-  point-linearised heading update that re-association replaced in the ESKF, and fails in some
-  sets.
+- **Low-end S4 in the product configuration** went from 89–335 m (v0.5.11) to 19–24 m in seven of
+  eight sets (§4.13: the curve landmark, the 10-state filter's own branch decision and the one-way
+  speed constraint). The set at 225 m holds seed 232, −1566 m, not yet explained: σ_s grows to 713 m
+  by t + 300 s, then the speed estimate sits at zero while the car still moves and σ_s falls to
+  46 m at −1277 m; the branch is never decided and the landmark never fires.
 - **Why the monitor works where it does: the filters are not independent.**
 
   | shared input | 1D | 10-state | ESKF |
@@ -746,29 +752,36 @@ sets: every per-seed error identical. At scenario speeds k·v² ≤ 3.4 m stays 
     more often;
   - the gyro bias as a sum of Gauss–Markov terms (τ 5/50/500 s, as in the truth model) instead of
     a random walk;
-  - the map-constrained filters of §4.9 (4 or 10 states, 80–94 m on low-end S4 against the ESKF's
-    868–894 m), selected by the supervisor of §4.12, or the pitch prior of §4.10;
+  - the map-constrained filters of §4.9, selected by the supervisor of §4.12 (done: 19–24 m on
+    low-end S4 in seven of eight sets since v0.5.12), or the pitch prior of §4.10 for the ESKF;
   - Android's calibrated gyro stream, which removes the turn-on bias at stops but not the drift in
     the tunnel.
 - **A smaller filter** (built as a prototype, §4.9). The 10-state filter matches the ESKF at the
-  diverge on a mid-range phone and is the better filter on a low-end one. Before it could replace
-  the ESKF it needs:
-  - a second hypothesis at the diverge (today it follows the branch when the car goes straight on);
-  - a capped re-acquisition at the exit (8–39 m steps);
-  - consistency in stop-and-go ((e/σ)² 8.8 on S4), where the ESKF's speed-wander prior is the first
-    candidate;
+  diverge on a mid-range phone and is the better filter on a low-end one. Since v0.5.12 it has its
+  own branch decision (§4.13). Before it could replace the ESKF it still needs:
+  - a capped re-acquisition at the exit (8–39 m steps; the supervisor's follower covers it today);
+  - consistency in stop-and-go ((e/σ)² 5.1 on low-end S4, 4.8 on Note10 S4 in validation);
   - the map-error stress of §4.4.
-- **The product configuration's open failure is low-end stop-and-go** (§4.12: 89–335 m). The
-  10-state filter still has the point-linearised heading update; giving it the ESKF's
-  re-association (§4.11) is the first step, then the pitch prior (§4.10).
-- **The validation tier is one set of 100 seeds** (§3.1); claims on rarer failures (2 in 200 in
-  §4.11) need more.
-- **A car that stays in the main tunnel has no curve to correct it.** On S4, 14 % of such runs are
+- **Low-end stop-and-go, what is left** (§4.13): 2 runs of 300 more than 100 m off in the 10-state
+  filter (seed 232, unexplained; seed 200, made worse by the speed constraint). The constraint is
+  a limit: the crawl pitch error that drives the speed negative is still the pitch prior's job
+  (§4.10).
+- **The one-way assumption** (§4.13): a car does not reverse in a one-way tunnel [ASSUMED]. It is
+  weaker than the hard map constraint, but a two-way tunnel or a car backing out of a jam breaks it.
+- **The main tunnel after the diverge is straight in every scenario** and straight in the map object.
+  The 10-state filter's branch test compares against the main tunnel's geometry, so a curved main
+  tunnel is handled by design, but it needs the main polyline in the map, and it was not simulated
+  or measured. Most Istanbul tunnels curve after a branch.
+- **The 12 s gyro noise on a low-end phone (~5°) is the size of the 5° turn threshold.** The branch
+  gate keeps false turns from moving s; on its own the threshold would not.
+- **The validation tier is one set of 100 seeds** (§3.1, 300–399); claims on rarer failures (2 in
+  300 in §4.13) need more.
+- **A car that stays in the main tunnel has no curve to correct it.** On S4, 13 % of such runs are
   more than 100 m off at the portal (§3). Only GNSS at the exit, through the follower, fixes it;
   a map with features in the main tunnel (or a curve) would be needed.
-- **The branch decision's window** is fixed at 100 m before the diverge. A dead-reckoning error
-  larger than that (S4, 1 in 100 validation runs) puts the turn outside it and decides "main";
-  the window should grow with σ_s.
+- **The branch decision's window** grows with σ_s since v0.5.12 (max(100 m, 2σ_s), §4.13). The
+  measured cost is in the straight-on control: "not yet" for 13 s on S4, with the car shown on the
+  branch up to 38 m from its road, until the app re-routes.
 - **Next, for the pitch prior** (§4.10):
   - learn the offset at the portal, where pitch is still known from GNSS, instead of restarting it
     with σ 1°;
@@ -812,6 +825,11 @@ sets: every per-seed error identical. At scenario speeds k·v² ≤ 3.4 m stays 
 | Map re-association (§4.11) | Read seed 63's mechanism, predicted that the NIS gate would also reject useful innovations (it did), and proposed re-association along the arc. Required the failure cases (wrong branch, map error 2×) before it became the default | CHANGELOG v0.5.11 |
 | Pitch prior (§4.10) | Proposed the road-grade prior for low-end phones. Diagnosed the ZUPT speed gate as circular and moved its source to the detector's own confidence. Proposed the offset state, which the measurement then rejected | CHANGELOG v0.5.11 |
 | Supervisor (§4.12) | Proposed a layer that selects among the three filters, and deciding before the tunnel while GNSS is good. Approved the class rule and the open-sky rehearsals | CHANGELOG v0.5.11 |
+| Branch window (§4.13) | Proposed the σ-scaled window from seed 247. Asked for the "not yet" cost on the straight-on control and decided to record it rather than engineer it away (the app re-routes). Demoted 200–299 to a design tier and set 300–399 as the validation tier | CHANGELOG v0.5.12 |
+| 10-state landmark (§4.13) | **Corrected the agent's reading** that the yaw rate is buried in gyro noise: a profile artefact (the folded 0.063 rad/√s), not physics. Designed the curve landmark on the yaw change over 10–15 s and the s-guard before it, as one switch | CHANGELOG v0.5.12 |
+| 10-state branch decision (§4.13) | **Rejected the agent's proposal** to gate the landmark on "a turn was seen": it assumes a straight main tunnel, which Istanbul tunnels are not. Designed the batch J_kol / J_ana test instead | CHANGELOG v0.5.12 |
+| Speed constraint (§4.13) | Proposed "a car does not reverse in a one-way tunnel" as an assumption, with the expectation "a limit, not a cure". Chose the soft form after the measurement showed his tight form harmful | CHANGELOG v0.5.12 |
+| Method (§3) | Read the third optimistic small-sample result as a method: 20 seeds to look, 300 for the number | CHANGELOG v0.5.12 |
 | Low-end S4 mechanism | **Corrected the agent's diagnosis** (yaw drift at stops) from a trace: the filter loses speed while crawling, because pitch is weakly observable at low speed. Found that the in-browser page could not work on GitHub Pages because `*.zip` was git-ignored | §4.6, CHANGELOG v0.5.7 |
 
 ### 6.2 Choices the agent made
@@ -857,6 +875,10 @@ change. The author is ready to explain or change any of them:
 | Re-association v2 left the map's length error out of its R (S5 (e/σ)² 13 with a 2× map error); the first fix had the wrong sign and made it worse | the owner's failure-case request; the sign by comparison with the cross-track row |
 | The supervisor display started its follower at the first position fix, after the smaller filters had already re-locked on Doppler (25 m step) | a trace requested by the owner |
 | 1D baseline: re-lock after the tunnel started only on position fixes, so the gate locked out GNSS at the exit | the agent's event counts (230 rejections in 5 seeds) |
+| 10-state re-association by yaw rate: R took the profile's folded 0.063 rad/√s, which buries the curve rate; "a gyro-only heading drifts 90° in 300 s" argued against a landmark that needs 12 s | the author |
+| The 10-state landmark gated on the ESKF's branch decision: on a low-end phone the ESKF is the broken filter, its decision came late or never, and the product's low-end S4 got worse (178–376 m) | the agent's supervisor run over 0–299 |
+| "Low-end S4: 35 → 0 failures" from 20 seeds; 35 → 6 on 300 | the 300-seed run; the method rule was the author's |
+| A statement on the supervisor table that seed 232 fails because the speed goes negative before the constraint acts; the trace shows the speed held at zero while the car moves | the agent's trace before the report went out |
 
 **Process controls,** used because generated code can be confidently wrong:
 - parameter tags;
