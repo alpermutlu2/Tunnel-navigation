@@ -394,6 +394,10 @@ def ekf10_experiment(key, seeds=50, overrides=(), mount_err_deg=None, cfg10=None
     res = {"scenario": key, "filter": "10-state map-constrained", "seeds": int(len(seed_ids)),
            "overrides": list(overrides), "events": o.events,
            "imu_class_detected": {str(c): int(n) for c, n in zip(*np.unique(o.imu_class, return_counts=True))}}
+    if o.branch_decision is not None:          # v0.5.12: the 10-state filter's own branch decision
+        bd = o.branch_decision
+        res["branch10"] = {"branch": round(float(np.mean(bd == 1)), 3), "main": round(float(np.mean(bd == -1)), 3),
+                           "none": round(float(np.mean(bd == 0)), 3)}
     if not branch:
         disp = road.position(o.s[:, k_x])[:, :2]
         res["portal_horizontal_m"] = stats(np.linalg.norm(disp - tr.pos_n[kt[k_x], :2][None], axis=1))
@@ -446,9 +450,6 @@ def _eskf_along(mv, t_out, p, C, P_pos, C_bp, r_b):
     return s, g
 
 
-LANDMARK_GATE = "eskf"     # v0.5.12 A/B: "eskf" (owner rule) or "none"
-
-
 def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None, eskf_cfg=None):
     """Run the 1D, 10-state and ESKF filters on one batch; along-track outputs on the ESKF time axis."""
     from .eskf import EskfConfig, run_eskf
@@ -460,12 +461,7 @@ def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None, eskf_
         bt, bh = bt[m], bh[:, m]
     oe = run_eskf(t, F, W, gnss, bt, bh, C_bp, r_b, eskf_cfg or EskfConfig(), road_map=mv)
     s_e, g_e = _eskf_along(mv, oe.t, oe.p, oe.C, oe.P_pos, C_bp, r_b)
-    # the 10-state curve landmark acts after the ESKF's "branch" decision only (owner 2026-10-26)
-    dec, bt_ = oe.aux.get("branch_decision"), oe.aux.get("branch_time")
-    gate = None if dec is None or getattr(mv, "s_div", None) is None else np.where(dec == 1, np.nan_to_num(bt_, nan=np.inf), np.inf)
-    if LANDMARK_GATE == "none":
-        gate = None
-    o10 = run_ekf10(t, F, W, gnss, bt, bh, C_bp, r_b, road, branch_gate=gate)
+    o10 = run_ekf10(t, F, W, gnss, bt, bh, C_bp, r_b, road)      # its own branch decision (v0.5.12)
     o1 = run_ekf1d(t, F, W, gnss, C_bp, r_b, road)
     ip = lambda tt, x: np.stack([np.interp(oe.t, tt, xb) for xb in x])
     s = {"1d": ip(o1.t, o1.s), "ekf10": ip(o10.t, o10.s), "eskf": s_e}

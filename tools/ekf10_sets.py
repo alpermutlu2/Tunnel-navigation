@@ -3,8 +3,9 @@
     python tools/ekf10_sets.py        -> reports/<version>/ekf10_sets_300.json  (resumable)
     python tools/ekf10_sets.py --validation   -> validation seeds 300-399 (run once)
 
-Standalone 10-state runs (no supervisor): the route is given, so the landmark has no branch gate here;
-in the supervisor it acts after the ESKF's "branch" decision. Straight-on control: horizontal distance
+Standalone 10-state runs (no supervisor). v2 (owner 2026-10-26): the landmark is gated by the filter's
+own branch decision; no-reverse constraint in two forms. ekf10_sets_300.json is v1 (variants base, a,
+a+b; landmark ungated). Straight-on control: horizontal distance
 between the displayed route position and the car at the portal.
 """
 import json
@@ -20,12 +21,15 @@ sys.path.insert(0, str(ROOT))
 import tunnelsim  # noqa: E402
 
 SETS = (0, 50, 100, 150, 200, 250)
-OUT = "ekf10_sets_300.json"
+OUT = "ekf10_sets_300_v2.json"
 if "--validation" in sys.argv:
     SETS = (300, 350); OUT = "ekf10_validation_300-399.json"; sys.argv.remove("--validation")
 KEYS = ("S1", "S2", "S3", "S4", "S5", "S6s", "S6", "S6L", "S1-1km", "S1-5km")
-VARIANTS = {"base": dict(curve_s_guard=False, landmark=False), "a": dict(curve_s_guard=True, landmark=False),
-            "a+b": dict(curve_s_guard=True, landmark=True)}
+VARIANTS = {"v0.5.11": dict(curve_landmark=False, no_reverse=False),
+            "turn": dict(landmark_gate="turn", no_reverse=False),       # (1): a turn seen only
+            "own": dict(no_reverse=False),                               # (2): own branch decision
+            "own+norev": dict(no_reverse_sigma=0.0),                     # owner's form, R = zupt_sigma²
+            "own+norev0.5": dict(no_reverse_sigma=0.5)}                  # soft form, R = (0.5 m/s)²
 IMUS = {"note10": (), "lowend": ("imu_lowend",)}
 FAIL_M = 100.0
 
@@ -39,10 +43,11 @@ def one(args):
     out = {}
     for var, kw in VARIANTS.items():
         r = ekf10_experiment(key, seeds, IMUS[imu], cfg10=Ekf10Config(**kw), sim=sim, branch=branch, keep_tracks=branch)
-        ev = {k: v for k, v in r["events"].items() if "landmark" in k}
+        ev = {k: v for k, v in r["events"].items() if k in ("landmark", "landmark_seen", "branch10", "main10", "no_reverse")}
         if not branch:
             out[var] = {"portal_horizontal_rmse": r["portal_horizontal_m"]["rmse"],
-                        "portal_horizontal_p95": r["portal_horizontal_m"]["p95_abs"], **ev}
+                        "portal_horizontal_p95": r["portal_horizontal_m"]["p95_abs"],
+                        "branch10": r.get("branch10"), **ev}
             continue
         T = r["_tracks"]
         kx = int(np.argmin(np.abs(T["t"] - (T["t_exit"] - 0.05))))

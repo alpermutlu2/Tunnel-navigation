@@ -100,6 +100,10 @@ class EskfConfig:
     nhc_rate_hz: float = 5.0
     baro_sigma: float = 0.15          # m, 1 Hz average (E4)
     zupt_sigma: float = 0.02          # m/s (E5)
+    # One-way tunnel (owner 2026-10-26, [ASSUMED]): while the speed along the body x axis is negative in
+    # an outage, z = v_x − 0 with R = zupt_sigma² (one-sided); nothing for v_x ≥ 0. A limit, not a cure.
+    no_reverse: bool = True
+    no_reverse_sigma: float = 0.0     # A/B: R = max(zupt_sigma, this)² (0 = owner's form)
     zupt_band_hz: tuple = (2.0, 18.0)  # road-vibration band, below the engine tone (E5)
     zupt_band_rms: float = 0.01       # m/s² threshold on the 1 s band RMS of |f|
     zupt_hold_s: float = 0.3          # s: debounce
@@ -611,6 +615,18 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             _update(xs, Psub, z[st], H[st], R[st], None)
             P[st], x[st] = Psub, xs
             ev["zupt"] += int(st.sum())
+        if cfg.no_reverse and (kk - i0) % n_nhc == 0:
+            u_f = np.einsum("bij,j->bi", C, C_bp.T @ np.array([1.0, 0.0, 0.0]))
+            v_f = np.einsum("bi,bi->b", u_f, v)
+            rev = (imu_t[kk] - last_vel > cfg.cruise_no_gnss_s) & (v_f < 0.0)
+            if rev.any():
+                H = np.zeros((B, 1, NA)); H[:, 0, 3:6] = u_f
+                z = v_f[:, None] - np.einsum("bij,bj->bi", H, x)
+                R = np.full((B, 1, 1), max(cfg.zupt_sigma, cfg.no_reverse_sigma) ** 2)
+                Psub, xs = P[rev], x[rev]
+                _update(xs, Psub, z[rev], H[rev], R[rev], None)
+                P[rev], x[rev] = Psub, xs
+                ev["no_reverse"] = ev.get("no_reverse", 0) + int(rev.sum())
         # B. cruise mode (decided at the covariance rate, pseudo-measurement at 1 Hz)
         if cfg.cruise and do_cov:
             spd = np.linalg.norm(v, axis=1)
