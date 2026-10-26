@@ -1,0 +1,2 @@
+wrote /home/claude/tunnel-navigation/docs/sim/index.html (5.4 MB)
+wrote /home/claude/tunnel-navigation/docs/sim/browser.html + py/ (experimental Pyodide live mode)

@@ -45,6 +45,8 @@ How the numbers moved:
 - Callouts, k = 1: 22 of 3000 > 1 s late (11 of 2000 over 0–199 before); validation 13 of 1000.
 - Straight-on S4 runs > 100 m: 39 of 300 (the speed constraint added one in 0–49); 11 of 100 in
   validation.
+- Snapshot (`metrics.json`, Note10 ESKF): only S4 moves, by the speed constraint: portal 4.86 →
+  4.79 m, diverge 30.58 → 30.68 m, (e/σ)² 0.082 → 0.080.
 - Tests 195 → 200 (`tests/test_v0512.py`).
 
 ## v0.5.11 (2026-10-25): three filters, supervisor, map re-association, seed tiers
