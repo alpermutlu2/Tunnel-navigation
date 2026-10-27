@@ -427,6 +427,8 @@ function drawNav() {
   const cv = document.getElementById("nav"); const [g, W, H] = setup(cv);
   const sh = appS(k), [ex, ey] = sToXY(sh), psi = headingAt(sh);
   const scale = Math.min(W, H) / 380;                       // px per metre: ~380 m across the short side
+  // one UI unit for every text and bar, so the panel and full screen keep the same proportions
+  const u = Math.max(1, Math.min(W, H) / 400), bh = Math.round(72 * u), fb = Math.round(60 * u);
   const cx = W / 2, cy = H * 0.72;
   const T = (x, y) => { const dx = x - ex, dy = y - ey, c = Math.cos(psi - Math.PI / 2), s_ = Math.sin(psi - Math.PI / 2);
     return [cx + (dx * c + dy * s_) * scale, cy - (-dx * s_ + dy * c) * scale]; };   // heading-up
@@ -442,8 +444,8 @@ function drawNav() {
   // route line ahead of the car (the guidance line)
   const ahead = []; for (let s = sh; s < Math.min(sh + 700, D.road.x.length * 10 - 20); s += 10) ahead.push(sToXY(s));
   stroke(ahead, 4.2 * scale, "#4f8df5");
-  if (inT) { g.fillStyle = "#c98a2b"; g.font = `600 ${Math.round(Math.max(11, Math.min(W, H) * 0.03))}px system-ui`; g.textBaseline = "middle";
-    g.fillText("TUNNEL", 14, H * 0.2 + 30); }
+  if (inT) { g.fillStyle = "#c98a2b"; g.font = `600 ${Math.round(13 * u)}px system-ui`; g.textBaseline = "middle";
+    g.fillText("TUNNEL", 14 * u, bh + 70 * u); }
   // the other estimators (nav-view checkboxes): a dot on the road, or an edge marker with the gap
   const others = [];
   if (NAV.cv) { const c = cvS(k); if (c !== null) others.push(["CV", css("--cv"), sToXY(c), c]); }
@@ -451,15 +453,15 @@ function drawNav() {
   if (NAV.e10 && D.s_10) others.push(["10", css("--e10"), sToXY(D.s_10[k]), D.s_10[k]]);
   if (NAV.eskf) others.push(["16", css("--est"), D.est_xy[k], D.s_hat[k]]);
   if (document.getElementById("ghost").checked) others.push(["true", "#ffffff", D.true_xy[k], null]);
-  const fs = Math.round(Math.max(11, Math.min(W, H) * 0.028)), topM = Math.max(64, H * 0.13) + 6, botM = Math.max(56, H * 0.1) + 6;
+  const fs = Math.round(12 * u), topM = bh + 6 * u, botM = fb + 6 * u;
   const ahead_ = [], behind_ = [];
   others.forEach(([lab, col, xy, sv], i) => {
-    const [u, v] = T(xy[0], xy[1]);
-    if (u < 8 || u > W - 8 || v < topM || v > H - botM) { (v < H / 2 ? ahead_ : behind_).push([lab, col, sv === null ? null : sv - sh]); return; }
+    const [u_, v] = T(xy[0], xy[1]);
+    if (u_ < 8 || u_ > W - 8 || v < topM || v > H - botM) { (v < H / 2 ? ahead_ : behind_).push([lab, col, sv === null ? null : sv - sh]); return; }
     g.fillStyle = col; g.strokeStyle = "#0e1116"; g.lineWidth = 2.5;
-    g.beginPath(); g.arc(u, v, 7, 0, 7); g.fill(); g.stroke();
+    g.beginPath(); g.arc(u_, v, 7 * u, 0, 7); g.fill(); g.stroke();
     g.font = `600 ${fs}px system-ui`; g.textBaseline = "middle";
-    const ty = v + (i % 2 ? 10 : -10), tx = Math.min(W - g.measureText(lab).width - 4, u + 12);
+    const ty = v + (i % 2 ? 10 : -10) * u, tx = Math.min(W - g.measureText(lab).width - 4, u_ + 12 * u);
     g.lineWidth = 3; g.strokeStyle = "#0e1116"; g.strokeText(lab, tx, ty); g.fillStyle = col; g.fillText(lab, tx, ty);
   });
   // out of view: pills under the banner (ahead) and above the bottom bar (behind), with the gap to the app
@@ -467,48 +469,50 @@ function drawNav() {
     let x = 10; g.font = `600 ${fs}px system-ui`; g.textBaseline = "middle";
     for (const [lab, col, d] of list) {
       const txt = `${lab} ${d === null ? "" : (d > 0 ? "+" : "−") + Math.abs(Math.round(d)) + " m"} ${y < H / 2 ? "▲" : "▼"}`;
-      const w = g.measureText(txt).width + 26;
+      const w = g.measureText(txt).width + 26 * u;
       if (x + w > W - 6) break;
-      g.fillStyle = "rgba(14,17,22,.88)"; g.beginPath(); g.roundRect(x, y - 12, w, 24, 12); g.fill();
-      g.fillStyle = col; g.beginPath(); g.arc(x + 11, y, 5, 0, 7); g.fill();
-      g.fillStyle = "#e8ecf1"; g.fillText(txt, x + 20, y + 1); x += w + 6;
+      g.fillStyle = "rgba(14,17,22,.88)"; g.beginPath(); g.roundRect(x, y - 12 * u, w, 24 * u, 12 * u); g.fill();
+      g.fillStyle = col; g.beginPath(); g.arc(x + 11 * u, y, 5 * u, 0, 7); g.fill();
+      g.fillStyle = "#e8ecf1"; g.fillText(txt, x + 20 * u, y + 1); x += w + 6 * u;
     }
   };
-  pills(ahead_, topM + 12); pills(behind_, H - botM - 12);
+  pills(ahead_, topM + 12 * u); pills(behind_, H - botM - 12 * u);
   // car chevron
-  g.save(); g.translate(cx, cy); g.fillStyle = "#ffffff"; g.strokeStyle = "#4f8df5"; g.lineWidth = 3;
+  g.save(); g.translate(cx, cy); g.scale(u, u); g.fillStyle = "#ffffff"; g.strokeStyle = "#4f8df5"; g.lineWidth = 3;
   g.beginPath(); g.moveTo(0, -16); g.lineTo(11, 12); g.lineTo(0, 6); g.lineTo(-11, 12); g.closePath(); g.fill(); g.stroke(); g.restore();
   // top maneuver banner
-  const bh = Math.max(64, H * 0.13), ex0 = D.exits[0];
-  const called = callK >= 0 && k >= callK, branchK = D.exits.length ? D.t.findIndex((_, i) => appS(i) >= ex0.s + 40) : -1;
+  const ex0 = D.exits[0];
+  const called = callK >= 0 && k >= callK;
   g.fillStyle = "#1f6f4a"; g.fillRect(0, 0, W, bh);
-  g.fillStyle = "#ffffff"; g.textBaseline = "middle";
+  g.fillStyle = "#ffffff"; g.textBaseline = "middle"; g.textAlign = "left";
   if (ex0 && sh < ex0.s + 40) {
-    g.save(); g.translate(30, bh / 2); g.strokeStyle = "#fff"; g.lineWidth = 4; g.lineCap = "round"; g.beginPath();
+    g.save(); g.translate(30 * u, bh / 2); g.scale(u, u); g.strokeStyle = "#fff"; g.lineWidth = 4; g.lineCap = "round"; g.beginPath();
     g.moveTo(-6, 14); g.lineTo(-6, -2); g.quadraticCurveTo(-6, -10, 4, -14); g.stroke();
     g.beginPath(); g.moveTo(-2, -16); g.lineTo(6, -14); g.lineTo(1, -7); g.stroke(); g.restore();
-    g.font = `700 ${Math.round(bh * 0.36)}px system-ui`; g.fillText(roundDist(ex0.s - sh), 58, bh * 0.38);
-    g.font = `500 ${Math.round(bh * 0.22)}px system-ui`; g.fillText(`${ex0.name} · keep right`, 58, bh * 0.72);
+    g.font = `700 ${Math.round(26 * u)}px system-ui`; g.fillText(roundDist(ex0.s - sh), 58 * u, bh * 0.38);
+    g.font = `500 ${Math.round(16 * u)}px system-ui`; g.fillText(`${ex0.name} · keep right`, 58 * u, bh * 0.73);
   } else {
-    g.font = `600 ${Math.round(bh * 0.26)}px system-ui`; g.fillText(ex0 ? `Continue on ${ex0.name}` : "Continue", 18, bh / 2);
+    g.font = `600 ${Math.round(19 * u)}px system-ui`; g.fillText(ex0 ? `Continue on ${ex0.name}` : "Continue", 18 * u, bh / 2);
   }
-  // spoken callout bubble (the moment the app announces)
+  // spoken callout bubble (the moment the app announces): height from its font, never wider than the screen
   if (called && k < callK + 10) {
     const msg = `“In ${spokenDist()} m, take ${ex0.name}”`;
-    g.font = `600 ${Math.round(Math.max(13, W * 0.04))}px system-ui`; const tw = g.measureText(msg).width + 28;
-    g.fillStyle = "rgba(255,196,0,.95)"; g.beginPath(); g.roundRect((W - tw) / 2, bh + 12, tw, 34, 17); g.fill();
-    g.fillStyle = "#1a1a1a"; g.fillText(msg, (W - tw) / 2 + 14, bh + 29);
+    let f = 16 * u; g.font = `600 ${Math.round(f)}px system-ui`;
+    const wMax = W - 24 * u; if (g.measureText(msg).width + 2 * f > wMax) { f *= wMax / (g.measureText(msg).width + 2 * f); g.font = `600 ${Math.round(f)}px system-ui`; }
+    const tw = g.measureText(msg).width + 2 * f, th = 2 * f, by = bh + 12 * u;
+    g.fillStyle = "rgba(255,196,0,.95)"; g.beginPath(); g.roundRect((W - tw) / 2, by, tw, th, th / 2); g.fill();
+    g.fillStyle = "#1a1a1a"; g.textAlign = "center"; g.fillText(msg, W / 2, by + th / 2 + 1); g.textAlign = "left";
   }
   // bottom bar: speed, GPS state
-  const fb = Math.max(56, H * 0.1); g.fillStyle = "rgba(14,17,22,.92)"; g.fillRect(0, H - fb, W, fb);
+  g.fillStyle = "rgba(14,17,22,.92)"; g.fillRect(0, H - fb, W, fb);
   const vApp = Math.round(Math.max(0, (D.v_app || D.v_est)[k]) * 3.6);
-  g.fillStyle = "#fff"; g.font = `700 ${Math.round(fb * 0.42)}px system-ui`; g.fillText(`${vApp}`, 18, H - fb / 2);
-  const sw = g.measureText(`${vApp}`).width; g.font = `500 ${Math.round(fb * 0.2)}px system-ui`; g.fillStyle = "#9aa4b2";
-  g.fillText("km/h", 24 + sw, H - fb / 2 + 2);
+  g.fillStyle = "#fff"; g.font = `700 ${Math.round(25 * u)}px system-ui`; g.fillText(`${vApp}`, 18 * u, H - fb / 2);
+  const sw = g.measureText(`${vApp}`).width; g.font = `500 ${Math.round(12 * u)}px system-ui`; g.fillStyle = "#9aa4b2";
+  g.fillText("km/h", 24 * u + sw, H - fb / 2 + 2 * u);
   const gpsTxt = inT ? `No GPS · estimated ±${Math.round(2 * appSig(k))} m` : "GPS";
-  g.font = `600 ${Math.round(fb * 0.22)}px system-ui`; const gw = g.measureText(gpsTxt).width + 20;
-  g.fillStyle = inT ? "#8a5a00" : "#1f6f4a"; g.beginPath(); g.roundRect(W - gw - 14, H - fb / 2 - 13, gw, 26, 13); g.fill();
-  g.fillStyle = "#fff"; g.fillText(gpsTxt, W - gw - 4, H - fb / 2 + 1);
+  g.font = `600 ${Math.round(13 * u)}px system-ui`; const pf = 13 * u, gw = g.measureText(gpsTxt).width + 1.6 * pf, gh = 2 * pf;
+  g.fillStyle = inT ? "#8a5a00" : "#1f6f4a"; g.beginPath(); g.roundRect(W - gw - 14 * u, H - fb / 2 - gh / 2, gw, gh, gh / 2); g.fill();
+  g.fillStyle = "#fff"; g.fillText(gpsTxt, W - gw - 14 * u + 0.8 * pf, H - fb / 2 + 1);
 }
 
 function render() {

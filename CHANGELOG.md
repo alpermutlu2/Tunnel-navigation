@@ -54,6 +54,9 @@ How the numbers moved:
 - In-browser mode opened as a file (file://): the browser refused `py/worker.js` ("cannot be accessed
   from origin 'null'"); the page now embeds the worker and the package and starts the worker from a
   Blob. Over http(s) nothing changes.
+- Driver's view in full screen: the callout bubble's text outgrew its fixed 34 px box (font from the
+  width, box from nothing). Every text, bar and marker now scales with one unit from the short side,
+  and the bubble's height and width follow its font.
 - Closing review (v9), documents only: the low-end straight-on cost (10-state "not yet" through the
   tunnel, 302–439 m at the portal) in §4.13 and §5; the supervisor's straight-on control stated as
   filter-level only; the "> 5 s early" column in §4.12 (low-end S4 60–74 %); the monitor as a
