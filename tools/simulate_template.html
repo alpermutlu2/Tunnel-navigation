@@ -283,6 +283,9 @@ function callout() {             // ŝ + k·σ_s reaches the callout point: errs
 // what the voice says at the callout: the distance to the exit from the estimate, rounded to 50 m
 // (as navigation apps do), so it matches the banner; the true distance is shown next to it
 function spokenDist() { return Math.max(50, Math.round((D.exits[0].s - appS(callK)) / 50) * 50); }
+// v0.5.13 (owner): when the shown 2σ exceeds VAGUE_2SIG_M the app does not say a distance
+const VAGUE_2SIG_M = 100;   // [ASSUMED]
+function calloutText(i) { const ex = D.exits[0]; return 2 * appSig(i) > VAGUE_2SIG_M ? `${ex.name} ahead, keep right` : `In ${spokenDist()} m, take ${ex.name}`; }
 function header() {
 document.getElementById("title").textContent = D.title;
 document.getElementById("desc").textContent = D.description;
@@ -489,14 +492,14 @@ function drawNav() {
     g.save(); g.translate(30 * u, bh / 2); g.scale(u, u); g.strokeStyle = "#fff"; g.lineWidth = 4; g.lineCap = "round"; g.beginPath();
     g.moveTo(-6, 14); g.lineTo(-6, -2); g.quadraticCurveTo(-6, -10, 4, -14); g.stroke();
     g.beginPath(); g.moveTo(-2, -16); g.lineTo(6, -14); g.lineTo(1, -7); g.stroke(); g.restore();
-    g.font = `700 ${Math.round(26 * u)}px system-ui`; g.fillText(roundDist(ex0.s - sh), 58 * u, bh * 0.38);
+    g.font = `700 ${Math.round(26 * u)}px system-ui`; g.fillText(2 * appSig(k) > VAGUE_2SIG_M ? "Exit ahead" : roundDist(ex0.s - sh), 58 * u, bh * 0.38);
     g.font = `500 ${Math.round(16 * u)}px system-ui`; g.fillText(`${ex0.name} · keep right`, 58 * u, bh * 0.73);
   } else {
     g.font = `600 ${Math.round(19 * u)}px system-ui`; g.fillText(ex0 ? `Continue on ${ex0.name}` : "Continue", 18 * u, bh / 2);
   }
   // spoken callout bubble (the moment the app announces): height from its font, never wider than the screen
   if (called && k < callK + 10) {
-    const msg = `“In ${spokenDist()} m, take ${ex0.name}”`;
+    const msg = `“${calloutText(callK)}”`;
     let f = 16 * u; g.font = `600 ${Math.round(f)}px system-ui`;
     const wMax = W - 24 * u; if (g.measureText(msg).width + 2 * f > wMax) { f *= wMax / (g.measureText(msg).width + 2 * f); g.font = `600 ${Math.round(f)}px system-ui`; }
     const tw = g.measureText(msg).width + 2 * f, th = 2 * f, by = bh + 12 * u;
@@ -515,7 +518,53 @@ function drawNav() {
   g.fillStyle = "#fff"; g.fillText(gpsTxt, W - gw - 14 * u + 0.8 * pf, H - fb / 2 + 1);
 }
 
+// v0.5.13 (owner): the view travels in the link: #tab=…&t=…&show=…&nav=…&k=…&lead=…&max=nav|<panel>
+function viewHash() {
+  const p = new URLSearchParams();
+  if (curKey) p.set("tab", curKey);
+  if (D) p.set("t", (D.t[k] - D.t_entry).toFixed(1));
+  p.set("show", Object.keys(SHOW).filter(x => SHOW[x]).join(",") || "-");
+  const nv = Object.keys(NAV).filter(x => NAV[x]); if (document.getElementById("ghost").checked) nv.push("true");
+  if (nv.length) p.set("nav", nv.join(","));
+  if (callKs !== null) p.set("k", String(callKs));
+  p.set("lead", String(callLead));
+  const fs = document.fullscreenElement;
+  if (fs) p.set("max", fs.id === "navwrap" ? "nav" : String([...document.querySelectorAll("main .card")].indexOf(fs)));
+  return p.toString();
+}
+let hashAt = 0;
+function writeHash(force) {
+  const now = performance.now(); if (!force && now - hashAt < 500) return; hashAt = now;
+  try { history.replaceState(null, "", "#" + viewHash().replace(/%2C/g, ",")); } catch (e) { /* file:// in some browsers */ }
+}
+function readHash() {
+  const h = location.hash.slice(1); if (!h) return null;
+  if (!h.includes("=")) return { tab: decodeURIComponent(h) };                 // old links: #<tab>
+  return Object.fromEntries(new URLSearchParams(h));
+}
+function applyHash(q) {
+  if (!q) return;
+  if (q.show) for (const el of document.querySelectorAll("#showRow input[data-f]")) { el.checked = q.show.split(",").includes(el.dataset.f); SHOW[el.dataset.f] = el.checked; }
+  if (q.nav !== undefined) { const nv = q.nav.split(",");
+    for (const el of document.querySelectorAll(".navf")) { el.checked = nv.includes(el.dataset.n); NAV[el.dataset.n] = el.checked; }
+    document.getElementById("ghost").checked = nv.includes("true"); }
+  const kS = document.getElementById("kSl"), lS = document.getElementById("lSl");
+  if (q.k !== undefined && kS) { kS.value = q.k; kS.dispatchEvent(new Event("input")); }
+  if (q.lead !== undefined && lS) { lS.value = q.lead; lS.dispatchEvent(new Event("input")); }
+  if (q.t !== undefined && D) { k = Math.max(0, D.t.findIndex(x => x >= D.t_entry + +q.t)); if (k < 0) k = 0; }
+  if (q.max !== undefined) {           // a browser opens full screen only on a user gesture: ask for one click
+    const el = q.max === "nav" ? document.getElementById("navwrap") : document.querySelectorAll("main .card")[+q.max];
+    if (el) { const tip = document.createElement("div"); tip.id = "fsTip";
+      tip.textContent = "Click anywhere to open the linked panel full screen";
+      tip.style.cssText = "position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:20;background:#1f6f4a;color:#fff;font:600 14px system-ui;padding:8px 16px;border-radius:999px;cursor:pointer";
+      document.body.appendChild(tip);
+      document.addEventListener("click", () => { tip.remove(); el.requestFullscreen?.().catch(() => {}); }, { once: true }); }
+  }
+  render();
+}
+
 function render() {
+  writeHash();
   drawMap(); drawStrip(); drawNav();
   plot("err", [...(SHOW.eskf ? [{ y: D.e_s, c: css("--est") }] : []), ...(SHOW.cv ? [{ y: cvErr, c: css("--cv") }] : []),
                ...(SHOW.ref && D.e_1d ? [{ y: D.e_1d, c: css("--ref") }] : []), ...(SHOW.e10 && D.e_10 ? [{ y: D.e_10, c: css("--e10") }] : []),
@@ -541,7 +590,7 @@ function render() {
   let msg = "";
   if (callK >= 0 && k >= callK && k < callK + 12) {
     const dt = D.t[callK] - D.t[trueCallK];
-    msg = `Callout: "In ${spokenDist()} m, take ${D.exits[0].name}" (${D.exits[0].s >= D.s_true[callK] ? `true distance ${Math.round(D.exits[0].s - D.s_true[callK])} m` : `the car passed the exit ${Math.round(D.s_true[callK] - D.exits[0].s)} m ago`}; ${Math.abs(dt).toFixed(1)} s ${dt > 0 ? "late" : "early"} vs the right moment)`;
+    msg = `Callout: "${calloutText(callK)}" (${D.exits[0].s >= D.s_true[callK] ? `true distance ${Math.round(D.exits[0].s - D.s_true[callK])} m` : `the car passed the exit ${Math.round(D.s_true[callK] - D.exits[0].s)} m ago`}; ${Math.abs(dt).toFixed(1)} s ${dt > 0 ? "late" : "early"} vs the right moment)`;
   }
   if (D.zupt_on[k]) msg += (msg ? " · " : "") + "stopped: zero-velocity update";
   if (D.reassoc && D.reassoc.slice(Math.max(0, k - 4), k + 1).some(Boolean)) msg += (msg ? " · " : "") + "16-state: position re-associated along the curve";
@@ -600,7 +649,7 @@ for (const c of document.querySelectorAll("main .card")) { c.title = "double-cli
 document.addEventListener("fullscreenchange", () => {
   const bar = document.getElementById("fsbar"), fs = document.fullscreenElement;
   if (fs) fs.appendChild(bar); else document.body.appendChild(bar);
-  setTimeout(render, 60);
+  setTimeout(() => { render(); writeHash(true); }, 60);
 });
 window.addEventListener("resize", render);
 function load(key, keepTime) {
@@ -804,12 +853,15 @@ if (ALL) {
   kS.oninput = () => { callKs = +kS.value; document.getElementById("kv").textContent = callKs.toFixed(2); callout(); render(); renderResults(); };
   lS.oninput = () => { callLead = +lS.value; document.getElementById("lv").textContent = `${callLead} m`; callout(); render(); renderResults(); };
   callKs = +kS.value;
-  const first = (location.hash.slice(1) && ALL.runs[location.hash.slice(1)]) ? location.hash.slice(1) : ALL.order[0];
+  const hq = readHash();
+  const first = (hq && hq.tab && ALL.runs[hq.tab]) ? hq.tab : ALL.order[0];
   load(first, false);
+  applyHash(hq);
 } else {
   derive();
   k = Math.max(0, D.t.findIndex(x => x >= D.t_entry - 20));
   render();
+  applyHash(readHash());
 }
 requestAnimationFrame(tick);
 </script>

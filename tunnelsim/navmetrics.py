@@ -11,8 +11,8 @@ Prompts (owner: 1000 / 500 / 200 m and "now"):
     each prompt fires when ŝ + k·σ reaches s_gore − D (the callout rule of §3); "now" uses
     D = max(30 m, 2 s · v̂) [ASSUMED] with the shown filter's speed. Per prompt: the true distance to the
     gore when it fired minus D (+ = early, metres), the timing against the moment the true car passes
-    s_gore − D (late > 1 s), and for "now" whether it fired only after the car had reached the gore
-    (missed).
+    s_gore − D (late > 1 s), for "now" whether it fired only after the car had reached the gore
+    (missed), and the share of prompts worded without a distance (shown 2σ > 100 m: "Exit A ahead").
 """
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ PROMPTS_M = (1000.0, 500.0, 200.0)
 NOW_MIN_M = 30.0       # [ASSUMED]
 NOW_LEAD_S = 2.0       # [ASSUMED]
 LATE_S = 1.0
+VAGUE_2SIG_M = 100.0   # [ASSUMED] owner 2026-10-29: above this shown 2σ the prompt names no distance
 RECOVERY_WINDOW_S = 60.0
 
 
@@ -66,7 +67,8 @@ def prompts(t, s_hat, sig, s_true, v_hat, s_gore, k=1.0):
         d_true = s_gore - s_true[kf]
         # the moment the true car passes s_gore − D (D as fired)
         kt = np.array([int(np.argmax(s_true >= s_gore - Df[b])) for b in range(B)])
-        r = {"err_m": d_true - Df, "dt_s": t[kf] - t[kt], "fired": has}
+        r = {"err_m": d_true - Df, "dt_s": t[kf] - t[kt], "fired": has,
+             "vague": 2.0 * sig[np.arange(B), kf] > VAGUE_2SIG_M}
         if name == "now":
             r["missed"] = (~has) | (d_true < 0.0)
         res[name] = r
@@ -79,7 +81,8 @@ def summarise_prompts(p):
     for name, r in p.items():
         e = r["err_m"]
         out[name] = {"err_mean_m": round(float(np.mean(e)), 1), "err_p95_abs_m": round(float(np.percentile(np.abs(e), 95)), 1),
-                     "late_gt_1s": round(float(np.mean(r["dt_s"] > LATE_S)), 3)}
+                     "late_gt_1s": round(float(np.mean(r["dt_s"] > LATE_S)), 3),
+                     "vague": round(float(np.mean(r["vague"])), 3)}
         if "missed" in r:
             out[name]["missed"] = round(float(np.mean(r["missed"])), 3)
     return out
