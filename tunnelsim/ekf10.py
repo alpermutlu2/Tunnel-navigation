@@ -105,6 +105,15 @@ class Ekf10Config:
     # outage, z = 0 − v̂ with R = zupt_sigma² (the simplest inequality constraint); nothing for v̂ ≥ 0.
     # A limit, not a cure: the crawl pitch error that drives v̂ negative is left (pitch prior, §5).
     no_reverse: bool = True
+    # v0.5.13 (owner 2026-10-29, A/B): speed from the lateral force in a turn. In a turn of rate ω the
+    # car's centripetal acceleration is v·ω, so the 1 s mean lateral specific force f_y = v·ω: κ cancels,
+    # a measurement of speed that needs neither the map nor s: z = f̄_y − b̂_y − v̂·(ω̄ − b̂_gz), applied
+    # when |ω̄| > lateral_omega_min. b̂_y, the lateral
+    # accelerometer bias plus the mount's residual roll, is the mean f_y over straight driving (|ω| < 0.005
+    # rad/s, 30 s memory). R: accelerometer noise over 1 s, body roll leaking g·sin φ (10 % of v·ω), the
+    # gyro bias instability times v, lane keeping (v·σ_wander) and the b̂_y error (0.02 m/s²) [ASSUMED].
+    lateral_speed: bool = False
+    lateral_omega_min: float = 0.02       # rad/s [ASSUMED]
     no_reverse_k: float = 0.0             # A/B: act only while v̂ < −k·σ_v (0 = owner's form)
     no_reverse_sigma: float = 0.5         # m/s [ASSUMED]; soft form, default since v0.5.12 (owner): R = (0.02 m/s)² gave 12 runs > 100 m in 300 (low-end S4), this 2
     landmark_gate: str = "own"            # "own": this filter's branch decision; "turn": a turn seen only
@@ -200,6 +209,7 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
     fx = np.einsum("j,bnj->bn", C_bp[0], f)
     wy = np.einsum("j,bnj->bn", C_bp[1], w)
     wz = np.einsum("j,bnj->bn", C_bp[2], w)
+    fy = np.einsum("j,bnj->bn", C_bp[1], f)
     grid = _RouteGrid(road_map)
     lever = float(r_b[0])
     # --- initialisation at the first fix with position and velocity
@@ -234,6 +244,7 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
     bi = int(np.searchsorted(b_idx, i0, side="right"))
     last_fix = np.full(B, imu_t[i0]); relock = np.zeros(B, bool); settle = np.zeros(B, int)
     wsum = np.zeros(B); wn = 0
+    fysum = np.zeros(B); by_hat = np.full(B, np.nan)       # lateral force sum, its straight-road mean
     L_clo = _min_clothoid(road_map)
     nT = int(round(cfg10.landmark_T))
     ex0 = road_map.exits[0] if getattr(road_map, "exits", None) else None
@@ -292,6 +303,7 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
         F[:, I_PSI, I_BGZ] = -1.0
         Fsum += F * dt; dt_sum += dt
         wsum += 0.5 * (wz[:, k] + wz[:, k + 1]); wn += 1
+        fysum += 0.5 * (fy[:, k] + fy[:, k + 1])
         if cfg10.curve_landmark:
             lm_psi += psi_rate * dt / (1.0 + x[:, I_SG]); lm_d += v * dt
         kk = k + 1
@@ -454,7 +466,29 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
                  + cfg10.lane_wander_rate_sigma ** 2)                           # lane keeping
             update(np.ones(B, bool), z, H, np.broadcast_to(R, (B,)).copy() if np.ndim(R) == 0 else R, CHI2_1_999)
             ev["curv"] += B
-            wsum[:] = 0.0; wn = 0
+        if map_due and wn > 0:
+            wm_ = wsum / wn; fym = fysum / wn
+            wc = wm_ - x[:, I_BGZ]
+            straight = np.abs(wc) < 0.005
+            a_ = 1.0 / 30.0
+            by_hat = np.where(straight, np.where(np.isfinite(by_hat), (1 - a_) * by_hat + a_ * fym, fym), by_hat)
+            if cfg10.lateral_speed:
+                v = x[:, I_V]
+                # the 1 s mean rate's own short-term noise (sensor ARW and τ ≤ 50 s bias terms, as the
+                # landmark): the row needs a turn well above it, else noise peaks are selected as turns
+                # (low-end S4 at 0.02 rad/s: 12 runs > 100 m in 20) and v̂·ω̄ carries that noise into z
+                arw_l, gm_l = LANDMARK_GYRO.get(name, LANDMARK_GYRO["note10"])
+                sig_w1 = np.sqrt(arw_l ** 2 / (wn / fs) + sum(sg_ ** 2 for sg_, _ in gm_l))
+                sel = (np.abs(wc) > max(cfg10.lateral_omega_min, 4.0 * sig_w1)) & np.isfinite(by_hat) & (v > 1.0)
+                if sel.any():
+                    H = np.zeros((B, NX)); H[:, I_V] = wc; H[:, I_BGZ] = -v
+                    z = np.where(sel, fym - np.nan_to_num(by_hat) - v * wc, 0.0)
+                    R = (cfg.accel_noise ** 2 / (wn / fs) + (0.1 * v * wc) ** 2 + (v * sig_bi) ** 2 + (v * sig_w1) ** 2
+                         + (v * cfg10.lane_wander_rate_sigma) ** 2 + 0.02 ** 2)
+                    ok = update(sel, z, H, R, CHI2_1_999)
+                    ev["lateral_speed"] = ev.get("lateral_speed", 0) + int(ok.sum())
+        if map_due and wn > 0:
+            wsum[:] = 0.0; wn = 0; fysum[:] = 0.0
         # --- ZUPT
         if st.any():
             H = np.zeros((B, NX)); H[:, I_V] = 1.0
