@@ -113,8 +113,35 @@ RECOVERY_M = 10.0           # recovered = horizontal error stays below this; ~2x
                             # does not count as "not recovered"
 
 
+CUPHOLDER_RPY_DEG = (10.0, -20.0, 25.0)    # [ASSUMED] phone in a cup holder: offset from the dash mount
+
+
+def filter_mount(tr, t, F, W, gnss, seed_ids, mount="known", mount_err_deg=None):
+    """The mount the filters use, and the IMU data in the frame they expect (v0.5.13).
+    mount "known": the true mount (or it offset by mount_err_deg, the v0.5.0 test).
+    mount "estimated": tunnelsim/mount_init.py on the open-sky approach (gravity tilt, magnetometer
+    yaw, velocity-direction yaw); the data of each member is rotated into a virtual phone frame so
+    one nominal C_bp serves the batch: f_v = C_nomᵀ Ĉ_bp f_p, hence C_nom f_v = Ĉ_bp f_p.
+    Returns F, W, C_bp for the filters and a dict of diagnostics (mount errors in degrees)."""
+    from .frames import C_BP_NOMINAL, mount_rotation
+    if mount == "known":
+        C = tr.C_bp if mount_err_deg is None else mount_rotation(*mount_err_deg) @ C_BP_NOMINAL.T @ tr.C_bp
+        return F, W, C, None
+    from .magnetometer import simulate_mag
+    from .mount_init import estimate_mount, mount_error_deg
+    mt, M = simulate_mag(tr, seed_ids)
+    use_mag, use_acc = {"estimated": (True, True), "estimated_mag": (True, False)}[mount]
+    C_hat, info = estimate_mount(t, F, W, mt, M, gnss, use_mag=use_mag, use_accel=use_acc)
+    R = np.einsum("ji,bjk->bik", C_BP_NOMINAL, C_hat)                 # C_nomᵀ Ĉ_bp
+    err = mount_error_deg(C_hat, tr.C_bp)
+    diag = {"mode": mount, "err_rms_deg": np.sqrt((err ** 2).mean(0)).round(2).tolist(),
+            "yaw_err_p95_deg": round(float(np.percentile(np.abs(err[:, 2]), 95)), 2),
+            "yaw_from": {k_: sum(1 for i in info if i["yaw_from"] == k_) for k_ in ("mag", "mag+accel", "accel", "none")}}
+    return np.einsum("bij,bnj->bni", R, F), np.einsum("bij,bnj->bni", R, W), C_BP_NOMINAL, diag
+
+
 def simulate_run(key, seeds, overrides=(), imu_switches=None, branch=True, vehicle=None, speed_scale=1.0,
-                 speed_change=None):
+                 speed_change=None, approach_manoeuvre=True):
     """Sensor data for a batch of seeds: IMU (no gaps; jitter off so the batch shares a time
     axis), GNSS and barometer at nominal settings plus overrides. branch=False: the car goes
     straight on at the diverge (v0.4 geometry); vehicle: replaces the scenario's Vehicle (e.g. no
@@ -140,6 +167,10 @@ def simulate_run(key, seeds, overrides=(), imu_switches=None, branch=True, vehic
         sc.speed = type(sc.speed)(v0=sc.speed.v0, events=evs)
     if vehicle is not None:
         sc.vehicle = vehicle
+    if not approach_manoeuvre:
+        # v0.5.13: no speed change before the tunnel (the approach is straight), so nothing excites the
+        # mount yaw in open sky
+        sc.speed = type(sc.speed)(v0=sc.speed.v0, events=[e for e in sc.speed.events if e.at_s >= sc.road.tunnel.s_entry])
     tr = generate_truth(sc)
     cfg = configure("no_gaps", *overrides)
     isrc, gsrc, bsrc = ImuTruthSource.from_truth(tr), GnssTruthSource.from_truth(tr, sc), BaroTruthSource.from_truth(tr, sc)
@@ -157,20 +188,19 @@ def simulate_run(key, seeds, overrides=(), imu_switches=None, branch=True, vehic
 
 
 def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=None, keep_tracks=False,
-                    branch=True, vehicle=None, mount_err_deg=None, map_err=None):
+                    branch=True, vehicle=None, mount_err_deg=None, map_err=None, mount="known", approach_manoeuvre=True):
     """branch=False: negative control, the car goes straight on at the diverge while the map (and
     the branch check) still has the branch on the route (review 7)."""
     from .eskf import EskfConfig, run_eskf
     seed_ids = np.arange(seeds) if np.isscalar(seeds) else np.asarray(seeds)
     seeds = len(seed_ids)
-    sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, seed_ids, overrides, branch=branch, vehicle=vehicle)
+    sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, seed_ids, overrides, branch=branch, vehicle=vehicle,
+                                                 approach_manoeuvre=approach_manoeuvre)
     map_road = get_scenario(key, branch=True).road
     zmask = (tr.v < 0.05) if zupt_oracle else None
-    C_bp_filter = tr.C_bp
-    if mount_err_deg is not None:
-        # assumption removal (C): the filter's mount differs from the true one by these angles
-        from .frames import C_BP_NOMINAL, mount_rotation
-        C_bp_filter = mount_rotation(*mount_err_deg) @ C_BP_NOMINAL.T @ tr.C_bp   # body-frame offset
+    # assumption removal (C): mount_err_deg offsets the filter's mount; v0.5.13: mount="estimated"
+    F, W, C_bp_filter, mount_diag = filter_mount(tr, t, F, W, gnss, seed_ids, mount, mount_err_deg)
+    C_bp_eval = tr.C_bp if mount == "known" else C_bp_filter     # the body frame as the filter holds it
     from .mapview import MapView
     mv = MapView(map_road, *(map_err or (0.0, 1.0)))     # map_err: (lateral offset m, length scale)
     out = run_eskf(t, F, W, gnss, bt, bh, C_bp_filter, tr.lever_arm_b, eskf_cfg or EskfConfig(), zupt_mask=zmask,
@@ -180,14 +210,14 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
     t_e, t_x = tr.t[i_e], tr.t[min(i_x, len(tr.t) - 1)]
     idx = np.clip(np.round((out.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
     tn = _tangent(tr, idx)
-    pR_hat = out.p - np.einsum("bkij,j->bki", out.C @ tr.C_bp.T, tr.lever_arm_b)
+    pR_hat = out.p - np.einsum("bkij,j->bki", out.C @ C_bp_eval.T, tr.lever_arm_b)
     d = pR_hat - tr.pos_n[idx][None]
     e_s = np.einsum("bki,ki->bk", d, tn)
     e_h = np.linalg.norm(d[..., :2], axis=-1)
     # cross-track (left of the road +) and heading error of the body x axis vs the road (review 9)
     nrm = np.stack([-tn[:, 1], tn[:, 0], np.zeros(len(tn))], 1)
     e_lat = np.einsum("bki,ki->bk", d, nrm)
-    fwd = np.einsum("bkij,j->bki", out.C @ tr.C_bp.T, np.array([1.0, 0.0, 0.0]))
+    fwd = np.einsum("bkij,j->bki", out.C @ C_bp_eval.T, np.array([1.0, 0.0, 0.0]))
     psi_hat = np.arctan2(fwd[..., 1], fwd[..., 0])
     fwd_t = np.einsum("kij,j->ki", tr.C_nb[idx], np.array([1.0, 0.0, 0.0]))
     e_psi = np.rad2deg(np.angle(np.exp(1j * (psi_hat - np.arctan2(fwd_t[:, 1], fwd_t[:, 0])[None]))))
@@ -201,6 +231,8 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
     k180, kx = at(t_e + 180.0), at(t_x - 0.05)
     res = {"scenario": key, "seeds": seeds, "overrides": list(overrides), "zupt": "oracle" if zupt_oracle else "detector",
            "exit_after_portal_s": round(t_x - t_e, 2), "events": out.events}
+    if mount_diag is not None:
+        res["mount"] = mount_diag
     res["fixed_180s"] = stats(e_s[:, k180])
     res["real_exit"] = stats(e_s[:, kx])
     res["real_exit_lateral"] = stats(e_lat[:, kx])
@@ -383,7 +415,7 @@ def ekf1d_experiment(key, seeds=50, overrides=(), use_grade=True, mount_err_deg=
 # v0.5.11: 10-state map-constrained filter (tunnelsim/ekf10.py), scored like the 1D baseline
 # ---------------------------------------------------------------------------------------------
 def ekf10_experiment(key, seeds=50, overrides=(), mount_err_deg=None, cfg10=None, eskf_cfg=None, sim=None,
-                     branch=True, keep_tracks=False):
+                     branch=True, keep_tracks=False, mount="known", vehicle=None, approach_manoeuvre=True):
     """Along-track metrics at the diverge and the portal, consistency, callout timing (k = 0, 1),
     exit step. branch=False: negative control (the car goes straight on, the filter's route takes
     the branch; the 10-state filter has no second hypothesis), scored as the horizontal distance
@@ -392,9 +424,10 @@ def ekf10_experiment(key, seeds=50, overrides=(), mount_err_deg=None, cfg10=None
     from .ekf10 import Ekf10Config, run_ekf10
     from .frames import C_BP_NOMINAL, mount_rotation
     seed_ids = np.arange(seeds) if np.isscalar(seeds) else np.asarray(seeds)
-    sc, tr, t, F, W, gnss, bt, bh = sim if sim is not None else simulate_run(key, seed_ids, overrides, branch=branch)
+    sc, tr, t, F, W, gnss, bt, bh = sim if sim is not None else simulate_run(key, seed_ids, overrides, branch=branch,
+                                                                             vehicle=vehicle, approach_manoeuvre=approach_manoeuvre)
     road = get_scenario(key, branch=True).road
-    C_bp_f = tr.C_bp if mount_err_deg is None else mount_rotation(*mount_err_deg) @ C_BP_NOMINAL.T @ tr.C_bp
+    F, W, C_bp_f, mount_diag = filter_mount(tr, t, F, W, gnss, seed_ids, mount, mount_err_deg)
     o = run_ekf10(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, road, cfg10 or Ekf10Config(), eskf_cfg or EskfConfig())
     kt = np.clip(np.round((o.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
     s_true = tr.s[kt]
@@ -406,6 +439,8 @@ def ekf10_experiment(key, seeds=50, overrides=(), mount_err_deg=None, cfg10=None
     res = {"scenario": key, "filter": "10-state map-constrained", "seeds": int(len(seed_ids)),
            "overrides": list(overrides), "events": o.events,
            "imu_class_detected": {str(c): int(n) for c, n in zip(*np.unique(o.imu_class, return_counts=True))}}
+    if mount_diag is not None:
+        res["mount"] = mount_diag
     if o.branch_decision is not None:          # v0.5.12: the 10-state filter's own branch decision
         bd = o.branch_decision
         res["branch10"] = {"branch": round(float(np.mean(bd == 1)), 3), "main": round(float(np.mean(bd == -1)), 3),
@@ -485,17 +520,19 @@ def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None, eskf_
 
 
 def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsal", "simplest"), sim=None,
-                          keep_tracks=False, eskf_cfg=None, map_err=None):
+                          keep_tracks=False, eskf_cfg=None, map_err=None, mount="known", vehicle=None, approach_manoeuvre=True):
     """The three filters, their open-sky rehearsals and the supervisor, scored against the truth.
     Metrics per filter and per selection rule (displayed track: selected filter in the tunnel,
     disagreement-inflated σ, ESKF handover after the exit)."""
     from . import supervisor as SV
     from .mapview import MapView
     seed_ids = np.arange(seeds) if np.isscalar(seeds) else np.asarray(seeds)
-    sc, tr, t, F, W, gnss, bt, bh = sim if sim is not None else simulate_run(key, seed_ids, overrides)
+    sc, tr, t, F, W, gnss, bt, bh = sim if sim is not None else simulate_run(key, seed_ids, overrides, vehicle=vehicle,
+                                                                             approach_manoeuvre=approach_manoeuvre)
     road = get_scenario(key, branch=True).road if sim is None else sc.road
     mv = MapView(road, *(map_err or (0.0, 1.0)))
-    C_bp, r_b = tr.C_bp, tr.lever_arm_b
+    F, W, C_bp, mount_diag = filter_mount(tr, t, F, W, gnss, seed_ids, mount)     # v0.5.13
+    r_b = tr.lever_arm_b
     oe, s, g, cls, vv = _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, eskf_cfg=eskf_cfg)
     B = len(seed_ids)
     # estimator side: outage start / GNSS back, from the fixes alone
@@ -568,6 +605,8 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
 
     res = {"scenario": key, "seeds": [int(seed_ids[0]), int(seed_ids[-1])], "overrides": list(overrides),
            "rehearsal_windows": [list(map(float, w_)) for w_ in win], "filters": {}, "rules": {}}
+    if mount_diag is not None:
+        res["mount"] = mount_diag
     for n in SV.FILTERS:
         res["filters"][n] = metrics(s[n], g[n], v_d=vv[n])
         if n in scores:
