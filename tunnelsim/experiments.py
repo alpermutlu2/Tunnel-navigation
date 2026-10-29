@@ -124,7 +124,7 @@ def filter_mount(tr, t, F, W, gnss, seed_ids, mount="known", mount_err_deg=None)
     one nominal C_bp serves the batch: f_v = C_nomᵀ Ĉ_bp f_p, hence C_nom f_v = Ĉ_bp f_p.
     Returns F, W, C_bp for the filters and a dict of diagnostics (mount errors in degrees)."""
     from .frames import C_BP_NOMINAL, mount_rotation
-    if mount == "known":
+    if mount == "known" or mount_err_deg is not None:
         C = tr.C_bp if mount_err_deg is None else mount_rotation(*mount_err_deg) @ C_BP_NOMINAL.T @ tr.C_bp
         return F, W, C, None
     from .magnetometer import simulate_mag
@@ -137,6 +137,9 @@ def filter_mount(tr, t, F, W, gnss, seed_ids, mount="known", mount_err_deg=None)
     diag = {"mode": mount, "err_rms_deg": np.sqrt((err ** 2).mean(0)).round(2).tolist(),
             "yaw_err_p95_deg": round(float(np.percentile(np.abs(err[:, 2]), 95)), 2),
             "yaw_from": {k_: sum(1 for i in info if i["yaw_from"] == k_) for k_ in ("mag", "mag+accel", "accel", "none")}}
+    # the ESKF's mount-yaw state prior: magnetometer only ~6° rms (measured, S1 10 seeds), with the
+    # velocity-direction step 0.5° rms, taken as 1° [ASSUMED]; the batch shares one scenario, so one value
+    diag["yaw_sigma_deg"] = 6.0 if diag["yaw_from"]["mag"] > len(info) / 2 else 1.0
     return np.einsum("bij,bnj->bni", R, F), np.einsum("bij,bnj->bni", R, W), C_BP_NOMINAL, diag
 
 
@@ -188,7 +191,7 @@ def simulate_run(key, seeds, overrides=(), imu_switches=None, branch=True, vehic
 
 
 def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=None, keep_tracks=False,
-                    branch=True, vehicle=None, mount_err_deg=None, map_err=None, mount="known", approach_manoeuvre=True):
+                    branch=True, vehicle=None, mount_err_deg=None, map_err=None, mount="estimated", approach_manoeuvre=True):
     """branch=False: negative control, the car goes straight on at the diverge while the map (and
     the branch check) still has the branch on the route (review 7)."""
     from .eskf import EskfConfig, run_eskf
@@ -203,7 +206,11 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
     C_bp_eval = tr.C_bp if mount == "known" else C_bp_filter     # the body frame as the filter holds it
     from .mapview import MapView
     mv = MapView(map_road, *(map_err or (0.0, 1.0)))     # map_err: (lateral offset m, length scale)
-    out = run_eskf(t, F, W, gnss, bt, bh, C_bp_filter, tr.lever_arm_b, eskf_cfg or EskfConfig(), zupt_mask=zmask,
+    cfg_e = eskf_cfg or EskfConfig()
+    if mount_diag is not None:
+        from dataclasses import replace as _rp
+        cfg_e = _rp(cfg_e, mount_yaw_sigma=np.deg2rad(mount_diag["yaw_sigma_deg"]))
+    out = run_eskf(t, F, W, gnss, bt, bh, C_bp_filter, tr.lever_arm_b, cfg_e, zupt_mask=zmask,
                    road_map=mv)
     i_e = int(np.argmax(tr.in_tunnel))
     i_x = len(tr.in_tunnel) - int(np.argmax(tr.in_tunnel[::-1]))
@@ -415,7 +422,7 @@ def ekf1d_experiment(key, seeds=50, overrides=(), use_grade=True, mount_err_deg=
 # v0.5.11: 10-state map-constrained filter (tunnelsim/ekf10.py), scored like the 1D baseline
 # ---------------------------------------------------------------------------------------------
 def ekf10_experiment(key, seeds=50, overrides=(), mount_err_deg=None, cfg10=None, eskf_cfg=None, sim=None,
-                     branch=True, keep_tracks=False, mount="known", vehicle=None, approach_manoeuvre=True):
+                     branch=True, keep_tracks=False, mount="estimated", vehicle=None, approach_manoeuvre=True):
     """Along-track metrics at the diverge and the portal, consistency, callout timing (k = 0, 1),
     exit step. branch=False: negative control (the car goes straight on, the filter's route takes
     the branch; the 10-state filter has no second hypothesis), scored as the horizontal distance
@@ -520,7 +527,7 @@ def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None, eskf_
 
 
 def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsal", "simplest"), sim=None,
-                          keep_tracks=False, eskf_cfg=None, map_err=None, mount="known", vehicle=None, approach_manoeuvre=True):
+                          keep_tracks=False, eskf_cfg=None, map_err=None, mount="estimated", vehicle=None, approach_manoeuvre=True):
     """The three filters, their open-sky rehearsals and the supervisor, scored against the truth.
     Metrics per filter and per selection rule (displayed track: selected filter in the tunnel,
     disagreement-inflated σ, ESKF handover after the exit)."""
@@ -533,6 +540,10 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
     mv = MapView(road, *(map_err or (0.0, 1.0)))
     F, W, C_bp, mount_diag = filter_mount(tr, t, F, W, gnss, seed_ids, mount)     # v0.5.13
     r_b = tr.lever_arm_b
+    if mount_diag is not None:
+        from dataclasses import replace as _rp
+        from .eskf import EskfConfig
+        eskf_cfg = _rp(eskf_cfg or EskfConfig(), mount_yaw_sigma=np.deg2rad(mount_diag["yaw_sigma_deg"]))
     oe, s, g, cls, vv = _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, eskf_cfg=eskf_cfg)
     B = len(seed_ids)
     # estimator side: outage start / GNSS back, from the fixes alone

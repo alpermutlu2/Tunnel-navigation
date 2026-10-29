@@ -69,13 +69,16 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
     sc, tr, t, F, W, gnss, bt, bh = simulate_run(key, [seed], tuple(overrides), vehicle=vehicle, speed_scale=speed_scale,
                                                  speed_change=speed_change)
     zmask = (tr.v < 0.05) if zupt == "oracle" else None
-    C_bp_f = tr.C_bp
-    if mount_err is not None:
-        from tunnelsim.frames import C_BP_NOMINAL, mount_rotation
-        C_bp_f = mount_rotation(*mount_err) @ C_BP_NOMINAL.T @ tr.C_bp
+    # v0.5.13: the filters use the mount estimated in open sky (or the true one offset by mount_err)
+    from tunnelsim.experiments import filter_mount
+    F, W, C_bp_f, mdiag = filter_mount(tr, t, F, W, gnss, [seed], "known" if mount_err is not None else "estimated", mount_err)
+    ecfg = _eskf_config(eskf)
+    if mdiag is not None:
+        from dataclasses import replace as _rp
+        ecfg = _rp(ecfg, mount_yaw_sigma=np.deg2rad(mdiag["yaw_sigma_deg"]))
     from tunnelsim.mapview import MapView
     mv_f = MapView(get_scenario(key).road, *(map_err or (0.0, 1.0)))
-    out = run_eskf(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, _eskf_config(eskf), zupt_mask=zmask,
+    out = run_eskf(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, ecfg, zupt_mask=zmask,
                    road_map=mv_f)
     # 1D map-constrained EKF baseline on the same sensor data (v0.5.9); its map has the grade
     from tunnelsim.reference1d import Ekf1dConfig, run_ekf1d
@@ -103,7 +106,7 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
     s_app = SV.display(out.t, s_i, V_[sel_[0]], t_back)[0]
     idx = np.clip(np.round((out.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
     tn = _tangent(tr, idx)
-    pR = out.p[0] - np.einsum("kij,j->ki", out.C[0] @ tr.C_bp.T, tr.lever_arm_b)
+    pR = out.p[0] - np.einsum("kij,j->ki", out.C[0] @ C_bp_f.T, tr.lever_arm_b)
     e_s = np.einsum("ki,ki->k", pR - tr.pos_n[idx], tn)
     sig_s = np.sqrt(np.einsum("ki,kij,kj->k", tn, out.P_pos[0], tn))
     i_e = int(np.argmax(tr.in_tunnel))

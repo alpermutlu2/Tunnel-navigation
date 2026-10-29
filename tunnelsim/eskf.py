@@ -103,6 +103,13 @@ class EskfConfig:
     # One-way tunnel (owner 2026-10-26, [ASSUMED]): while the speed along the body x axis is negative in
     # an outage, z = v_x − 0 with R = zupt_sigma² (one-sided); nothing for v_x ≥ 0. A limit, not a cure.
     no_reverse: bool = True
+    # v0.5.13 (owner 2026-10-29): the mount's yaw as a random-constant state δψ_m when the mount was
+    # estimated in open sky (tunnelsim/mount_init.py); prior σ from how it was found (magnetometer only
+    # ~6°, with the velocity-direction step ~1°), 0 = known mount, no state. A yaw error of the mount
+    # leaves the car's heading right (the NHC aligns the assumed body x with the velocity) but rotates
+    # the phone attitude by δψ_m, so in a curve δψ_m·a_lat leaks into the along-track speed. Rows:
+    # NHC lateral ∂v_by/∂δψ_m = v_bx; map heading ∂ψ_body/∂δψ_m = −1 (body forward = Ĉ C_bpᵀ R_z(−ψ_m) e_x).
+    mount_yaw_sigma: float = 0.0
     no_reverse_sigma: float = 0.5     # m/s [ASSUMED]; default soft form since v0.5.12 (owner): R = (0.02 m/s)² hurt (Note10 S4 5.0 → 6.5 m)
     zupt_band_hz: tuple = (2.0, 18.0)  # road-vibration band, below the engine tone (E5)
     zupt_band_rms: float = 0.01       # m/s² threshold on the 1 s band RMS of |f|
@@ -251,6 +258,13 @@ def triad(f_p, fwd_p, v_n):
     return Bn @ Bp.T
 
 
+def _rz_b(a):
+    """(B,3,3) rotations about z by angles a (B,)."""
+    c, s_ = np.cos(a), np.sin(a)
+    R = np.zeros((len(a), 3, 3)); R[:, 0, 0] = c; R[:, 0, 1] = -s_; R[:, 1, 0] = s_; R[:, 1, 1] = c; R[:, 2, 2] = 1.0
+    return R
+
+
 def zupt_detector(t, f, cfg, fs, win_s=1.0):
     """Stop detector, (B,N) bool. Both must hold over the trailing 1 s window:
       1. road-band (2-18 Hz) RMS of |f| below a threshold: no road vibration (the engine tone at
@@ -347,8 +361,9 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         cfg = replace(cfg, **FILTER_PROFILES[cls_name])
     elif cfg.imu_class != "note10":
         cfg = replace(cfg, **FILTER_PROFILES[cfg.imu_class])
-    NA = NX + 6          # (+ pitch-prior offset δγ, NX + 5)
+    NA = NX + 7          # (+ pitch-prior offset δγ, NX + 5; mount yaw δψ_m, NX + 6)
     IP = NX + 5
+    IY = NX + 6
     # + speed clone / v_ref (NX), driver wander d (NX + 1), baro gradient g_h (NX + 2),
     ID = NX + 1          #   map lateral offset (NX + 3), map scale error (NX + 4)
     IG = NX + 2
@@ -372,6 +387,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     d = np.r_[[cfg.p0_pos] * 3, [cfg.p0_vel] * 3, cfg.p0_att_rp, cfg.p0_att_rp, cfg.p0_att_yaw,
               [cfg.p0_ba] * 3, [cfg.p0_bg] * 3, cfg.p0_bh] ** 2
     P[:, :NX, :NX] = np.diag(d)
+    P[:, IY, IY] = max(cfg.mount_yaw_sigma, 1e-9) ** 2
     # --- ZUPT detector
     if zupt_mask is None:
         still = zupt_detector(imu_t, f, cfg, fs)
@@ -399,6 +415,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     br_dec = np.zeros(B, int)               # branch decision: 0 none, +1 route (branch), -1 main
     psi_start = np.full(B, np.nan); s_start = np.full(B, np.nan); map_prev_out = np.zeros(B, bool)
     ra_flag = np.zeros(B, bool)             # re-association applied since the last output epoch
+    my_hat = np.zeros(B)                    # mount yaw correction [rad] (state IY)
     m_hat = np.zeros(B); e_hat = np.zeros(B); off_hat = np.zeros(B)   # + pitch-prior offset [rad]  # map lateral offset [m], map scale error [-]
     br_time = np.full(B, np.nan)              # time of the in-loop branch decision
     pre_w = np.full(B, cfg.map_pre_m)         # branch window length before the diverge [m]
@@ -697,7 +714,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             if out_m.any():
                 l_n = np.einsum("bij,j->bi", C, C_bp.T @ r_b)                     # phone -> R lever, nav
                 pR = p - l_n
-                fwd = np.einsum("bij,j->bi", C, C_bp.T @ np.array([1.0, 0.0, 0.0]))
+                fwd = np.einsum("bij,j->bi", C, C_bp.T @ np.array([1.0, 0.0, 0.0])) if cfg.mount_yaw_sigma <= 0 else \
+                    np.einsum("bij,jk,bk->bi", C, C_bp.T, np.stack([np.cos(my_hat), -np.sin(my_hat), np.zeros(B)], 1))
                 psi_hat = np.arctan2(fwd[:, 1], fwd[:, 0])
                 s_new = road_map.nearest(pR[:, :2], s_map)
                 if road_map.s_div is not None:
@@ -791,6 +809,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     H = np.zeros((B, 2, NA))
                     # heading: ψ̂ − (ψ_map(ŝ) + κ·d·ε̂); δz = δθ_z − κ tᵀδp − κ d δε (curve matching)
                     H[:, 0, 8] = 1.0
+                    if cfg.mount_yaw_sigma > 0:
+                        H[:, 0, IY] = -1.0
                     H[:, 0, 0:2] = -kap[:, None] * t2
                     H[:, 0, IE] = -kap * dist
                     # cross-track: nᵀ(p̂_R − c_map(ŝ)) + m̂; δz = nᵀδp + nᵀ[l×]δθ + δm
@@ -815,12 +835,16 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         # NHC (body y, z velocity at R = 0)
         if (kk - i0) % n_nhc == 0:
             C_bn = C_bp @ np.swapaxes(C, 1, 2)                       # body <- nav
+            if cfg.mount_yaw_sigma > 0:
+                C_bn = _rz_b(my_hat) @ C_bn                          # body = R_z(ψ_m) C_bp · phone
             w_b = np.einsum("ij,bj->bi", C_bp, w[:, kk] - b_g)
             v_R = v - np.einsum("bij,bj->bi", C @ C_pb, np.cross(w_b, r_b))
             v_b = np.einsum("bij,bj->bi", C_bn, v_R)
             H = np.zeros((B, 2, NA))
             H[:, :, 3:6] = C_bn[:, 1:3]
             H[:, :, 6:9] = (C_bn @ skew_b(v_R))[:, 1:3]
+            if cfg.mount_yaw_sigma > 0:
+                H[:, 0, IY] = v_b[:, 0]
             z = v_b[:, 1:3] - np.einsum("bij,bj->bi", H, x)
             R = np.broadcast_to(np.eye(2) * cfg.nhc_sigma ** 2, (B, 2, 2)).copy()
             if cfg.nhc_turn_k > 0.0:
@@ -897,6 +921,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             d_hat = d_hat - x[:, ID]
             g_hat = g_hat - x[:, IG]
             m_hat = m_hat - x[:, IM]; e_hat = e_hat - x[:, IE]; off_hat = off_hat - x[:, IP]
+            my_hat = my_hat - x[:, IY]
             fc = f[:, kk] - b_a
             a_k = np.einsum("bij,bj->bi", C, fc) + GRAVITY_N
         if reclone.any():
@@ -941,5 +966,5 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     return EskfOutput(t=np.array(out_t), p=np.stack(out_p, 1), v=np.stack(out_v, 1), C=np.stack(out_C, 1),
                       P_pos=np.stack(out_P, 1), b_a=np.stack(out_ba, 1), zupt=np.stack(out_z, 1), events=ev,
                       aux={**dict(zip(("b_h", "g_h", "cruise", "sigma_g", "reassoc", "branch_state"), np.moveaxis(np.stack(out_aux, 1), -1, 0))),
-                           "branch_decision": br_dec.copy(), "branch_time": br_time.copy(),
+                           "branch_decision": br_dec.copy(), "branch_time": br_time.copy(), "mount_yaw": my_hat.copy(),
                            "imu_class": imu_classes, "imu_sigma": imu_sig})

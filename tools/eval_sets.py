@@ -19,7 +19,7 @@ import tunnelsim  # noqa: E402
 
 SETS = (0, 50, 100, 150, 200, 250)   # v0.5.12: 200-299 is a design tier (the branch window came from seed 247)
 if "--validation" in sys.argv:          # untouched seeds, final configuration only, run once (owner 2026-10-25)
-    SETS = (300, 350)
+    SETS = (400, 450)
     sys.argv.remove("--validation")
 ONLY = None
 if "--only" in sys.argv:                # e.g. --only S1_straight_on,S4_straight_on
@@ -32,6 +32,12 @@ VARIANTS = {"base": {"map_nis_gate": False}, "gate": {"map_nis_gate": True},
             "default": {},
             "win0": {"map_pre_sigma_k": 0.0},
             "win2": {"map_pre_sigma_k": 2.0},
+            # v0.5.13: experiment options (keys starting with "_"): the mount the filters use, the true mount, the approach
+            "known": {"_mount": "known"},
+            "cup": {"_vehicle_mount": "cupholder"},
+            "noexc": {"_approach": False},
+            "cup-known": {"_vehicle_mount": "cupholder", "_mount": "known"},
+            "noexc-known": {"_approach": False, "_mount": "known"},
             "win2+slip": {"map_pre_sigma_k": 2.0, "map_reassoc_slip_k": 7e-3}}
 RUN = tuple(sys.argv[1].split(",")) if len(sys.argv) > 1 else tuple(VARIANTS)
 FAIL_M = 100.0     # a run whose portal error exceeds this counts as a failure
@@ -41,7 +47,17 @@ def one(args):
     var, key, lo, branch = args
     from tunnelsim.eskf import EskfConfig
     from tunnelsim.experiments import eskf_experiment
-    r = eskf_experiment(key, np.arange(lo, lo + 50), eskf_cfg=EskfConfig(**VARIANTS[var]), branch=branch, keep_tracks=True)
+    kw = {k_: v_ for k_, v_ in VARIANTS[var].items() if not k_.startswith("_")}
+    ex = {}
+    if "_mount" in VARIANTS[var]:
+        ex["mount"] = VARIANTS[var]["_mount"]
+    if "_approach" in VARIANTS[var]:
+        ex["approach_manoeuvre"] = VARIANTS[var]["_approach"]
+    if VARIANTS[var].get("_vehicle_mount") == "cupholder":
+        from dataclasses import replace as _rp
+        from tunnelsim.experiments import CUPHOLDER_RPY_DEG, get_scenario
+        ex["vehicle"] = _rp(get_scenario(key).vehicle, mount_rpy_deg=CUPHOLDER_RPY_DEG)
+    r = eskf_experiment(key, np.arange(lo, lo + 50), eskf_cfg=EskfConfig(**kw), branch=branch, keep_tracks=True, **ex)
     T = r["_tracks"]
     kx = int(np.argmin(np.abs(T["t"] - (T["t_exit"] - 0.05))))
     e = T["e_s"][:, kx]
@@ -55,6 +71,8 @@ def one(args):
            "map_rejected": r["events"].get("map_rejected", 0),
            "none": r["branch_confirm"]["none_frac"], "branch_delay_s": (r["branch_confirm"]["delay_s"] or {}).get("bias"),
            "errors": e.round(1).tolist()}
+    if "mount" in r:
+        out["mount_err_rms_deg"] = r["mount"]["err_rms_deg"]; out["mount_yaw_from"] = r["mount"]["yaw_from"]
     if "recovery_time" in r:                     # v0.5.13
         out.update({f"rec_{k_}": v_ for k_, v_ in r["recovery_time"].items()})
     if "prompts" in r:
@@ -82,8 +100,8 @@ if __name__ == "__main__":
     out_name = f"eval_sets_{n_}.json" if RUN == tuple(VARIANTS)[:3] else f"eval_sets_{n_}_{'_'.join(RUN).replace('+', '-')}.json"
     if ONLY:
         out_name = out_name.replace(".json", "_" + "_".join(sorted(ONLY)) + ".json")
-    if SETS[0] >= 300:
-        out_name = "validation_300-399.json"
+    if SETS[0] >= 400:
+        out_name = "validation_400-499.json"
     res = {"version": tunnelsim.__version__, "sets": list(SETS), "variants": {v: VARIANTS[v] for v in RUN}, "seeds_per_set": 50, "fail_m": FAIL_M, "runs": {}}
     d = ROOT / "reports" / tunnelsim.__version__
     d.mkdir(parents=True, exist_ok=True)

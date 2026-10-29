@@ -21,15 +21,13 @@ sys.path.insert(0, str(ROOT))
 import tunnelsim  # noqa: E402
 
 SETS = (0, 50, 100, 150, 200, 250)
-OUT = "ekf10_sets_300_v2.json"
+OUT = "ekf10_sets_300_v3.json"
 if "--validation" in sys.argv:
-    SETS = (300, 350); OUT = "ekf10_validation_300-399.json"; sys.argv.remove("--validation")
+    SETS = (400, 450); OUT = "ekf10_validation_400-499.json"; sys.argv.remove("--validation")
 KEYS = ("S1", "S2", "S3", "S4", "S5", "S6s", "S6", "S6L", "S1-1km", "S1-5km")
-VARIANTS = {"v0.5.11": dict(curve_landmark=False, no_reverse=False),
-            "turn": dict(landmark_gate="turn", no_reverse=False),       # (1): a turn seen only
-            "own": dict(no_reverse=False),                               # (2): own branch decision
-            "own+norev": dict(no_reverse_sigma=0.0),                     # owner's form, R = zupt_sigma²
-            "own+norev0.5": dict(no_reverse_sigma=0.5)}                  # soft form, R = (0.5 m/s)²
+VARIANTS = {"v0.5.12": dict(lateral_speed=False, _mount="known"),            # v0.5.12 configuration
+            "lateral": dict(_mount="known"),                                   # + lateral-force speed
+            "v0.5.13": dict()}                                                 # + mount estimated in open sky
 IMUS = {"note10": (), "lowend": ("imu_lowend",)}
 FAIL_M = 100.0
 
@@ -42,8 +40,10 @@ def one(args):
     sim = simulate_run(key, seeds, IMUS[imu], branch=branch)
     out = {}
     for var, kw in VARIANTS.items():
-        r = ekf10_experiment(key, seeds, IMUS[imu], cfg10=Ekf10Config(**kw), sim=sim, branch=branch, keep_tracks=branch)
-        ev = {k: v for k, v in r["events"].items() if k in ("landmark", "landmark_seen", "branch10", "main10", "no_reverse")}
+        cfg_kw = {k_: v_ for k_, v_ in kw.items() if not k_.startswith("_")}
+        r = ekf10_experiment(key, seeds, IMUS[imu], cfg10=Ekf10Config(**cfg_kw), sim=sim, branch=branch, keep_tracks=branch,
+                             mount=kw.get("_mount", "estimated"))
+        ev = {k: v for k, v in r["events"].items() if k in ("landmark", "landmark_seen", "branch10", "main10", "no_reverse", "lateral_speed")}
         if not branch:
             out[var] = {"portal_horizontal_rmse": r["portal_horizontal_m"]["rmse"],
                         "portal_horizontal_p95": r["portal_horizontal_m"]["p95_abs"],

@@ -32,9 +32,10 @@ def test_landmark_and_guard_are_one_switch():
 def test_curve_landmark_fixes_lowend_s4_seed_15():
     seeds = np.array([15])
     sim = simulate_run("S4", seeds, ("imu_lowend",))
-    off = _portal(ekf10_experiment("S4", seeds, ("imu_lowend",), sim=sim, keep_tracks=True,
-                                   cfg10=Ekf10Config(curve_landmark=False, no_reverse=False)))
-    on = ekf10_experiment("S4", seeds, ("imu_lowend",), sim=sim, keep_tracks=True)
+    off = _portal(ekf10_experiment("S4", seeds, ("imu_lowend",), sim=sim, keep_tracks=True, mount="known",
+                                   cfg10=Ekf10Config(curve_landmark=False, no_reverse=False, lateral_speed=False)))
+    on = ekf10_experiment("S4", seeds, ("imu_lowend",), sim=sim, keep_tracks=True, mount="known",
+                          cfg10=Ekf10Config(lateral_speed=False))
     assert abs(off[0]) > 100.0 and abs(_portal(on)[0]) < 30.0
     assert on["branch10"]["branch"] == 1.0
 
@@ -55,3 +56,17 @@ def test_no_reverse_does_nothing_while_speed_is_positive(cfg_off):
     b = ekf10_experiment("S1", seeds, sim=sim, keep_tracks=True, cfg10=cfg_off)
     assert a["events"].get("no_reverse", 0) == 0
     np.testing.assert_array_equal(a["_tracks"]["e_s"], b["_tracks"]["e_s"])
+
+
+def test_mount_estimate_matches_truth_with_an_approach_manoeuvre():
+    """v0.5.13: gravity tilt + magnetometer yaw + velocity-direction yaw, S1 approach, cup holder."""
+    from dataclasses import replace
+    from tunnelsim.experiments import CUPHOLDER_RPY_DEG, get_scenario
+    from tunnelsim.magnetometer import simulate_mag
+    from tunnelsim.mount_init import estimate_mount, mount_error_deg
+    veh = replace(get_scenario("S1").vehicle, mount_rpy_deg=CUPHOLDER_RPY_DEG)
+    sc, tr, t, F, W, gnss, bt, bh = simulate_run("S1", np.arange(3), (), vehicle=veh)
+    mt, M = simulate_mag(tr, np.arange(3))
+    C, info = estimate_mount(t, F, W, mt, M, gnss)
+    err = mount_error_deg(C, tr.C_bp)
+    assert np.abs(err).max() < 2.5 and all(i["yaw_from"] == "mag+accel" for i in info)

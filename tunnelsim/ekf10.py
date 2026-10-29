@@ -112,7 +112,7 @@ class Ekf10Config:
     # accelerometer bias plus the mount's residual roll, is the mean f_y over straight driving (|ω| < 0.005
     # rad/s, 30 s memory). R: accelerometer noise over 1 s, body roll leaking g·sin φ (10 % of v·ω), the
     # gyro bias instability times v, lane keeping (v·σ_wander) and the b̂_y error (0.02 m/s²) [ASSUMED].
-    lateral_speed: bool = False
+    lateral_speed: bool = True            # default since v0.5.13 (owner)
     lateral_omega_min: float = 0.02       # rad/s [ASSUMED]
     no_reverse_k: float = 0.0             # A/B: act only while v̂ < −k·σ_v (0 = owner's form)
     no_reverse_sigma: float = 0.5         # m/s [ASSUMED]; soft form, default since v0.5.12 (owner): R = (0.02 m/s)² gave 12 runs > 100 m in 300 (low-end S4), this 2

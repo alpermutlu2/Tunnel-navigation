@@ -41,7 +41,7 @@ if __name__ == "__main__":
     # "sets": the class rule only (no rehearsals) on four independent sets of 50 seeds
     spans = {"dev": [(0, 50)], "heldout": [(50, 100)], "smoke": [(0, 2)],
              "sets": [(0, 50), (50, 100), (100, 150), (150, 200)],
-             "validation": [(300, 350), (350, 400)]}.get(part) or globals()["_SPANS"]
+             "validation": [(400, 450), (450, 500)]}.get(part) or globals()["_SPANS"]
     rules = ("class",) if part.startswith(("sets", "validation")) else ("class", "rehearsal", "simplest")
     res = {"version": tunnelsim.__version__, "spans": spans, "rules": rules, "runs": {}}
     d = ROOT / "reports" / tunnelsim.__version__

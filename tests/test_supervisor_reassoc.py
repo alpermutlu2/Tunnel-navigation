@@ -16,8 +16,9 @@ def _portal(e):
 def test_reassociation_fixes_s4_seed_63():
     """Seed 63: 94 m behind at the diverge; without re-association and gate the heading row writes
     the branch curve into yaw (−694 m at the portal)."""
-    off = _portal(eskf_experiment("S4", [63], eskf_cfg=EskfConfig(map_nis_gate=False, map_reassoc=False), keep_tracks=True))
-    on = _portal(eskf_experiment("S4", [63], keep_tracks=True))
+    # the v0.5.11 mechanism, with the true mount (the estimated mount of v0.5.13 changes this seed)
+    off = _portal(eskf_experiment("S4", [63], eskf_cfg=EskfConfig(map_nis_gate=False, map_reassoc=False), keep_tracks=True, mount="known"))
+    on = _portal(eskf_experiment("S4", [63], keep_tracks=True, mount="known"))
     assert abs(off[0]) > 300.0
     assert abs(on[0]) < 20.0
 
