@@ -55,6 +55,11 @@ def one(args):
            "map_rejected": r["events"].get("map_rejected", 0),
            "none": r["branch_confirm"]["none_frac"], "branch_delay_s": (r["branch_confirm"]["delay_s"] or {}).get("bias"),
            "errors": e.round(1).tolist()}
+    if "recovery_time" in r:                     # v0.5.13
+        out.update({f"rec_{k_}": v_ for k_, v_ in r["recovery_time"].items()})
+    if "prompts" in r:
+        for pn, pv in r["prompts"].items():
+            out.update({f"prompt_{pn.replace(' ', '')}_{k_}": v_ for k_, v_ in pv.items()})
     if "undecided" in r:
         u = r["undecided"]
         out.update({"undecided_s_mean": u["after_diverge_s"]["bias"], "undecided_s_p95": u["after_diverge_s"]["p95_abs"],

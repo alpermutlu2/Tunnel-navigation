@@ -286,6 +286,18 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
             res["branch_confirm"]["source"] = "in-loop (map layer)"
         else:
             res["branch_confirm"] = dict(res["branch_offline"], source="offline (branch.py)")
+    # v0.5.13: recovery time and prompt timing (tunnelsim/navmetrics.py), from the first fix of any kind
+    from . import navmetrics as NM
+    t_back = np.full(len(seed_ids), np.inf)
+    for b_ in range(len(seed_ids)):
+        anyf = gnss["t"][(np.isfinite(gnss["pos"][b_, :, 0]) | np.isfinite(gnss["vel"][b_, :, 0])) & (gnss["t"] > t_x - 5.0)]
+        if len(anyf):
+            t_back[b_] = anyf[0]
+    rec, worst = NM.recovery(out.t, e_s, t_back)
+    res["recovery_time"] = NM.summarise_recovery(rec, worst)
+    if sc.road.exits:
+        res["prompts"] = NM.summarise_prompts(NM.prompts(out.t, s_hat, sig_s, s_true, np.linalg.norm(out.v, axis=-1),
+                                                         sc.road.exits[0].s, CALLOUT_K))
     # recovery after the exit
     after = out.t >= t_x
     win = after & (out.t <= t_x + 60.0)
@@ -529,7 +541,9 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
     k_ct = int(np.argmax(s_true >= s_call))
     in_t = (oe.t >= tr.t[int(np.argmax(tr.in_tunnel))]) & (oe.t <= t_x)
 
-    def metrics(s_d, g_d, dmax=None):
+    from . import navmetrics as NM
+
+    def metrics(s_d, g_d, dmax=None, v_d=None):
         e = s_d - s_true[None]
         m = (s_d + CALLOUT_K * g_d) >= s_call
         k_hat = np.where(m.any(1), np.argmax(m, 1), m.shape[1] - 1)
@@ -542,6 +556,11 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
              "callout_mean_s": round(float(dc.mean()), 2), "late_gt_1s": round(float(np.mean(dc > CALLOUT_LATE_S)), 3),
              "early_gt_5s": round(float(np.mean(dc < -5.0)), 3),
              "exit_step_p95": stats(jumps)["p95_abs"]}
+        # v0.5.13: recovery time of the shown track and prompt timing (tunnelsim/navmetrics.py)
+        rec, worst = NM.recovery(oe.t, e, t_back)
+        r["recovery"] = NM.summarise_recovery(rec, worst)
+        if v_d is not None:
+            r["prompts"] = NM.summarise_prompts(NM.prompts(oe.t, s_d, g_d, s_true, v_d, ex.s, CALLOUT_K))
         if dmax is not None:
             r["alarm_time_frac"] = round(float(np.mean(dmax[:, in_t] > SV.ALARM_D)), 3)
             r["alarm_runs_frac"] = round(float(np.mean((dmax[:, in_t] > SV.ALARM_D).any(axis=1))), 3)
@@ -550,7 +569,7 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
     res = {"scenario": key, "seeds": [int(seed_ids[0]), int(seed_ids[-1])], "overrides": list(overrides),
            "rehearsal_windows": [list(map(float, w_)) for w_ in win], "filters": {}, "rules": {}}
     for n in SV.FILTERS:
-        res["filters"][n] = metrics(s[n], g[n])
+        res["filters"][n] = metrics(s[n], g[n], v_d=vv[n])
         if n in scores:
             res["filters"][n]["rehearsal_rms_median"] = round(float(np.median(scores[n][0])), 2)
             res["filters"][n]["rehearsal_nees_median"] = round(float(np.median(scores[n][1])), 2)
@@ -563,7 +582,7 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
             s_i, g_disp, dmax = SV.monitor(sel, s, g, "any" if mode == "none" else mode)
             v_i = np.stack([vv[n][b] for b, n in enumerate(sel)])
             s_disp = SV.display(oe.t, s_i, v_i, t_back)
-            r[mode] = metrics(s_disp, g_i, dmax) if mode == "none" else metrics(s_disp, g_disp, dmax)
+            r[mode] = metrics(s_disp, g_i, dmax, v_i) if mode == "none" else metrics(s_disp, g_disp, dmax, v_i)
             tracks[f"{rule}/{mode}"] = {"sel": sel, "s_disp": s_disp, "sig_disp": g_i if mode == "none" else g_disp,
                                         "dmax": dmax}
         # v0.5.12: the branch decision shown comes from the selected filter (ESKF or 10-state, both
