@@ -61,8 +61,8 @@ CHI2_1_999 = 10.83
 # bias-instability GM terms with τ ≤ 50 s as (σ [rad/s], τ [s]); the τ = 500 s term is the bias state.
 LANDMARK_GYRO = {"note10": (7.0e-4, ((2.2e-4, 5.0), (1.8e-4, 50.0))),
                  "mpu9250": (6.25e-3, ((6.64e-3, 5.0), (5.61e-3, 50.0)))}
-NX = 10
-I_S, I_V, I_H, I_T, I_PSI, I_BA, I_BGY, I_BGZ, I_BH, I_SG = range(NX)
+NX = 11
+I_S, I_V, I_H, I_T, I_PSI, I_BA, I_BGY, I_BGZ, I_BH, I_SG, I_MY = range(NX)   # + mount yaw (v0.5.13)
 
 
 @dataclass(frozen=True)
@@ -113,6 +113,11 @@ class Ekf10Config:
     # rad/s, 30 s memory). R: accelerometer noise over 1 s, body roll leaking g·sin φ (10 % of v·ω), the
     # gyro bias instability times v, lane keeping (v·σ_wander) and the b̂_y error (0.02 m/s²) [ASSUMED].
     lateral_speed: bool = True            # default since v0.5.13 (owner)
+    # v0.5.13 (owner, option a): the mount's yaw error ψ_m as a random constant, as in the ESKF. With the
+    # mount rotated by ψ_m about the body z axis the forward and lateral forces mix: f_x = f'_x − ψ_m f'_y,
+    # f_y = f'_y + ψ_m f'_x (f' as read through the estimated mount). Prior σ from how the mount was found
+    # (magnetometer only ~6°, with the velocity-direction step ~1°); 0 = known mount, the state is frozen.
+    mount_yaw_sigma: float = 0.0
     lateral_omega_min: float = 0.02       # rad/s [ASSUMED]
     no_reverse_k: float = 0.0             # A/B: act only while v̂ < −k·σ_v (0 = owner's form)
     no_reverse_sigma: float = 0.5         # m/s [ASSUMED]; soft form, default since v0.5.12 (owner): R = (0.02 m/s)² gave 12 runs > 100 m in 300 (low-end S4), this 2
@@ -226,6 +231,7 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
     for i, s0 in ((I_S, cfg.p0_pos), (I_V, cfg.p0_vel), (I_H, cfg10.p0_h), (I_T, cfg.p0_att_rp), (I_PSI, cfg.p0_att_yaw),
                   (I_BA, cfg.p0_ba), (I_BGY, cfg.p0_bg), (I_BGZ, cfg.p0_bg), (I_BH, cfg.p0_bh), (I_SG, cfg10.gyro_scale_sigma)):
         P[:, i, i] = s0 ** 2
+    P[:, I_MY, I_MY] = max(cfg10.mount_yaw_sigma, 1e-9) ** 2
     q = np.zeros(NX)
     q[I_V] = cfg.accel_noise ** 2
     q[I_T] = q[I_PSI] = cfg.gyro_noise ** 2
@@ -244,7 +250,7 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
     bi = int(np.searchsorted(b_idx, i0, side="right"))
     last_fix = np.full(B, imu_t[i0]); relock = np.zeros(B, bool); settle = np.zeros(B, int)
     wsum = np.zeros(B); wn = 0
-    fysum = np.zeros(B); by_hat = np.full(B, np.nan)       # lateral force sum, its straight-road mean
+    fysum = np.zeros(B); fxsum = np.zeros(B); by_hat = np.full(B, np.nan)       # lateral force sum, its straight-road mean
     L_clo = _min_clothoid(road_map)
     nT = int(round(cfg10.landmark_T))
     ex0 = road_map.exits[0] if getattr(road_map, "exits", None) else None
@@ -287,7 +293,8 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
     for k in range(i0, N - 1):
         dt = imu_t[k + 1] - imu_t[k]
         th, v = x[:, I_T], x[:, I_V]
-        a = 0.5 * (fx[:, k] + fx[:, k + 1]) - x[:, I_BA] - G0 * np.sin(th)
+        fy_k = 0.5 * (fy[:, k] + fy[:, k + 1])
+        a = 0.5 * (fx[:, k] + fx[:, k + 1]) - x[:, I_MY] * fy_k - x[:, I_BA] - G0 * np.sin(th)
         th_rate = -(0.5 * (wy[:, k] + wy[:, k + 1]) - x[:, I_BGY])
         psi_rate = 0.5 * (wz[:, k] + wz[:, k + 1]) - x[:, I_BGZ]
         x[:, I_S] += v * dt + 0.5 * a * dt * dt
@@ -297,13 +304,13 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
         x[:, I_PSI] += psi_rate * dt
         F = np.zeros((B, NX, NX))
         F[:, I_S, I_V] = 1.0
-        F[:, I_V, I_T] = -G0 * np.cos(th); F[:, I_V, I_BA] = -1.0
+        F[:, I_V, I_T] = -G0 * np.cos(th); F[:, I_V, I_BA] = -1.0; F[:, I_V, I_MY] = -fy_k
         F[:, I_H, I_V] = np.sin(th); F[:, I_H, I_T] = v * np.cos(th)
         F[:, I_T, I_BGY] = 1.0
         F[:, I_PSI, I_BGZ] = -1.0
         Fsum += F * dt; dt_sum += dt
         wsum += 0.5 * (wz[:, k] + wz[:, k + 1]); wn += 1
-        fysum += 0.5 * (fy[:, k] + fy[:, k + 1])
+        fysum += 0.5 * (fy[:, k] + fy[:, k + 1]); fxsum += 0.5 * (fx[:, k] + fx[:, k + 1])
         if cfg10.curve_landmark:
             lm_psi += psi_rate * dt / (1.0 + x[:, I_SG]); lm_d += v * dt
         kk = k + 1
@@ -467,7 +474,7 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
             update(np.ones(B, bool), z, H, np.broadcast_to(R, (B,)).copy() if np.ndim(R) == 0 else R, CHI2_1_999)
             ev["curv"] += B
         if map_due and wn > 0:
-            wm_ = wsum / wn; fym = fysum / wn
+            wm_ = wsum / wn; fym = fysum / wn; fxm = fxsum / wn
             wc = wm_ - x[:, I_BGZ]
             straight = np.abs(wc) < 0.005
             a_ = 1.0 / 30.0
@@ -481,14 +488,15 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
                 sig_w1 = np.sqrt(arw_l ** 2 / (wn / fs) + sum(sg_ ** 2 for sg_, _ in gm_l))
                 sel = (np.abs(wc) > max(cfg10.lateral_omega_min, 4.0 * sig_w1)) & np.isfinite(by_hat) & (v > 1.0)
                 if sel.any():
-                    H = np.zeros((B, NX)); H[:, I_V] = wc; H[:, I_BGZ] = -v
-                    z = np.where(sel, fym - np.nan_to_num(by_hat) - v * wc, 0.0)
+                    # f'_y = v·ω − ψ_m f'_x (ψ_m from the mount-yaw state)
+                    H = np.zeros((B, NX)); H[:, I_V] = wc; H[:, I_BGZ] = -v; H[:, I_MY] = -fxm
+                    z = np.where(sel, fym - np.nan_to_num(by_hat) - (v * wc - x[:, I_MY] * fxm), 0.0)
                     R = (cfg.accel_noise ** 2 / (wn / fs) + (0.1 * v * wc) ** 2 + (v * sig_bi) ** 2 + (v * sig_w1) ** 2
                          + (v * cfg10.lane_wander_rate_sigma) ** 2 + 0.02 ** 2)
                     ok = update(sel, z, H, R, CHI2_1_999)
                     ev["lateral_speed"] = ev.get("lateral_speed", 0) + int(ok.sum())
         if map_due and wn > 0:
-            wsum[:] = 0.0; wn = 0; fysum[:] = 0.0
+            wsum[:] = 0.0; wn = 0; fysum[:] = 0.0; fxsum[:] = 0.0
         # --- ZUPT
         if st.any():
             H = np.zeros((B, NX)); H[:, I_V] = 1.0

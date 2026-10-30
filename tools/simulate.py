@@ -88,7 +88,8 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
     from tunnelsim import supervisor as SV
     from tunnelsim.ekf10 import Ekf10Config, run_ekf10
     from tunnelsim.experiments import _eskf_along
-    o10 = run_ekf10(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, sc.road, Ekf10Config(), _eskf_config(eskf))
+    o10 = run_ekf10(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, sc.road, Ekf10Config(mount_yaw_sigma=ecfg.mount_yaw_sigma),
+                    _eskf_config(eskf))
     s_e16, g_e16 = _eskf_along(mv_f, out.t, out.p, out.C, out.P_pos, C_bp_f, tr.lever_arm_b)
     ipo = lambda tt, x: np.interp(out.t, tt, x)[None]
     S_ = {"1d": ipo(o1.t, o1.s[0]), "ekf10": ipo(o10.t, o10.s[0]), "eskf": s_e16}

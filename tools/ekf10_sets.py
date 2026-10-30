@@ -28,6 +28,8 @@ KEYS = ("S1", "S2", "S3", "S4", "S5", "S6s", "S6", "S6L", "S1-1km", "S1-5km")
 VARIANTS = {"v0.5.12": dict(lateral_speed=False, _mount="known"),            # v0.5.12 configuration
             "lateral": dict(_mount="known"),                                   # + lateral-force speed
             "v0.5.13": dict()}                                                 # + mount estimated in open sky
+if "--only-final" in sys.argv:          # v0.5.13 option (a): the 10-state mount-yaw state changed only this variant
+    VARIANTS = {"v0.5.13": dict()}; OUT = OUT.replace(".json", "_final.json"); sys.argv.remove("--only-final")
 IMUS = {"note10": (), "lowend": ("imu_lowend",)}
 FAIL_M = 100.0
 

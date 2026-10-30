@@ -435,6 +435,9 @@ def ekf10_experiment(key, seeds=50, overrides=(), mount_err_deg=None, cfg10=None
                                                                              vehicle=vehicle, approach_manoeuvre=approach_manoeuvre)
     road = get_scenario(key, branch=True).road
     F, W, C_bp_f, mount_diag = filter_mount(tr, t, F, W, gnss, seed_ids, mount, mount_err_deg)
+    if mount_diag is not None:
+        from dataclasses import replace as _rp
+        cfg10 = _rp(cfg10 or Ekf10Config(), mount_yaw_sigma=np.deg2rad(mount_diag["yaw_sigma_deg"]))
     o = run_ekf10(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, road, cfg10 or Ekf10Config(), eskf_cfg or EskfConfig())
     kt = np.clip(np.round((o.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
     s_true = tr.s[kt]
@@ -515,7 +518,9 @@ def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None, eskf_
         bt, bh = bt[m], bh[:, m]
     oe = run_eskf(t, F, W, gnss, bt, bh, C_bp, r_b, eskf_cfg or EskfConfig(), road_map=mv)
     s_e, g_e = _eskf_along(mv, oe.t, oe.p, oe.C, oe.P_pos, C_bp, r_b)
-    o10 = run_ekf10(t, F, W, gnss, bt, bh, C_bp, r_b, road)      # its own branch decision (v0.5.12)
+    from .ekf10 import Ekf10Config
+    o10 = run_ekf10(t, F, W, gnss, bt, bh, C_bp, r_b, road,            # its own branch decision (v0.5.12)
+                    Ekf10Config(mount_yaw_sigma=(eskf_cfg.mount_yaw_sigma if eskf_cfg is not None else 0.0)))
     oe.aux["branch10"] = o10.branch_decision
     o1 = run_ekf1d(t, F, W, gnss, C_bp, r_b, road)
     ip = lambda tt, x: np.stack([np.interp(oe.t, tt, xb) for xb in x])
