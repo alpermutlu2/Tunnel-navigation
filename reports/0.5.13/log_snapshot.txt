@@ -1,0 +1,5 @@
+wrote /home/claude/tunnel-navigation/reports/0.5.13/metrics.json  (201 passed in 372.57s (0:06:12))
+
+real	18m44.987s
+user	17m44.747s
+sys	0m30.338s

@@ -65,7 +65,11 @@ How the numbers moved (0–299, six sets; every change from the estimated mount 
 - New metrics, ESKF Note10: to 5 m median 10–18 s per set, 12–34 of 300 not within 60 s; "now"
   prompt 2–48 m early on average, missed ≤ 1 of 50 (S4). Supervisor: to 5 m 12–19 s (Note10),
   17–28 s (low-end), 36–52 s (pressure).
-SNAPSHOT_PLACEHOLDER
+- Snapshot (`metrics.json`, Note10 ESKF, 0–49, now with the estimated mount): every scenario moves,
+  because the filter's mount changed. Diverge rms within ±0.65 m (S1 11.71 → 11.53, S4 30.68 →
+  30.03, 5 km 21.09 → 20.65) except S2 3.28 → 3.93 m (the S-bend, as above); portal within ±0.45 m
+  (S1 4.38 → 4.32, S4 4.79 → 4.62, 5 km 13.39 → 12.95, S6L 5.01 → 5.18); (e/σ)² within ±0.04
+  (largest 1 km 0.253 → 0.216). Exit step p95 within ±0.25 m. Tests 200 → 201.
 
 ## v0.5.12 (2026-10-26): branch window, 10-state curve landmark and branch decision, one-way speed
 
