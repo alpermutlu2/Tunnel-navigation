@@ -32,7 +32,8 @@ place. A **custom tunnel** row in the same bar builds a new scenario without cod
 (0.5–5 km), grade inside the tunnel, speed, and one stop (duration and position); it appears as a
 "Custom" tab (`tunnelsim/scenario.py: get_scenario("custom:L=2000,g=3,v=70,stop=30,at=0.3")`, also
 accepted by `tools/simulate.py`). `http://localhost:8000/controls` has the remaining switches (cruise model, NHC turn gate,
-re-acquisition). Rebuild the page with `python tools/build_site.py`.
+re-acquisition). The page state is kept in the address (`#tab=…&t=…&nav=…`), so a view can be
+shared as a link. Rebuild the page with `python tools/build_site.py`.
 
 **In-browser live mode (experimental).** `docs/sim/browser.html`
 (`https://alpermutlu2.github.io/Tunnel-navigation/sim/browser.html`, or opened straight from disk:
@@ -97,7 +98,7 @@ python tools/simulate.py S4 --seed 7                                # another no
 python tools/simulate.py S5 --override gnss_lagging --override vib_noisy   # parameter changes
 python tools/simulate.py S4 --zupt oracle                           # stops given by the truth
 python tools/simulate.py S1 --eskf cruise=False --eskf nhc_turn_gate=0   # any EskfConfig field
-python tools/simulate.py S1 --mount-err 0,3,3                       # filter's mount wrong [deg]
+python tools/simulate.py S1 --mount-err 0,3,3                       # filter given a wrong mount [deg] (default: estimated on the approach)
 python tools/simulate.py S2 --no-sideslip                           # car without sideslip
 python tools/simulate.py S1-5km                                     # tunnel length 0.5/1/5 km variants
 python tools/simulate.py S3 --override baro_tunnel_30pa             # tunnel pressure gradient
@@ -129,12 +130,12 @@ changes).
 ```bash
 python tools/evaluate.py                 # Monte Carlo, 50 seeds per scenario (~1 h on 2 cores)
 python tools/evaluate.py --seeds 20 S1 S4 --negative   # subset + car-goes-straight control
-python tools/eval_sets.py default       # ESKF on six sets of 50 seeds (0-299); --validation: 300-399 once
-python tools/ekf10_sets.py               # 10-state filter variants on 0-299 (v0.5.12); --validation: 300-399
+python tools/eval_sets.py default       # ESKF on six sets of 50 seeds (0-299); variants known, cup, noexc (mount); --validation: 400-499 once
+python tools/ekf10_sets.py               # 10-state filter variants on 0-299 (v0.5.13); --validation: 400-499
 python tools/compare_filters.py         # 4-, 10- and 16-state filters, 50 seeds, Note10 + low-end
 python tools/supervisor_eval.py sets:0-100   # supervisor (class rule, monitor) on seed ranges
 python tools/failure_cases.py           # pressure gradient and 2x map error under the gate / re-association
-python -m pytest -q tests                # ~150 tests (+2 slow: --runslow)
+python -m pytest -q tests                # ~200 tests (+2 slow: --runslow)
 python tools/snapshot.py                 # reports/<version>/metrics.json (tests, truth, sensors, INS, budget, ESKF)
 python tools/snapshot.py --diff 0.4.0 0.5.0
 ```
@@ -147,7 +148,8 @@ Other tools: `tools/budget.py` (INS error budget, v0.4), `tools/allan_scatter.py
 - `tunnelsim/`: truth generator (`truth.py`, `scenario.py`), sensor models (`sensors.py`,
   `profiles.py`), strapdown INS (`ins.py`), ESKF (`eskf.py`), 1D map-constrained EKF baseline
   (`reference1d.py`), 10-state map-constrained filter (`ekf10.py`), supervisor (`supervisor.py`),
-  branch check (`branch.py`),
+  branch check (`branch.py`), open-sky magnetometer (`magnetometer.py`, truth side) and mount
+  alignment (`mount_init.py`, estimator side), recovery and prompt metrics (`navmetrics.py`),
   experiments and metrics (`experiments.py`, `budget.py`). The estimator side never imports the
   truth objects (`docs/contracts.md`).
 - `DESIGN.md`: assumptions, sensor models, error budget, estimator roadmap, decision log.

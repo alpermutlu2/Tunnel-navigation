@@ -7,6 +7,66 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.13 (2026-10-30): mount estimated in open sky, lateral-force speed row, recovery and prompt metrics
+
+From a comparison with another case-study repository; the owner chose items 1, 2, 3, 4 and 6 and
+rejected BLE beacons (item 5: a tunnel with beacons is not a fair assumption). Validation is
+400–499, run once (`reports/0.5.13/validation_400-499.json`, `ekf10_validation_400-499.json`,
+`supervisor_validation.json`); 300–399 was v0.5.12's and was not used here. REPORT §4.14.
+
+- **Mount alignment** (`tunnelsim/mount_init.py`, owner's design): tilt from the gravity mean over
+  quiet GNSS epochs, yaw from the magnetometer (TRIAD against the GNSS course and grade), then
+  yaw from the acceleration direction (grid search of R_z(δ) against the GNSS acceleration, once
+  Σ|a_h|² ≥ 3 (m/s²)²). First 90 s of open sky. `filter_mount()` in `experiments.py`; every
+  experiment and `tools/simulate.py` now use the estimated mount by default (`mount="known"` gives
+  the old behaviour; `--mount-err` forces the given error).
+- **Magnetometer** (`tunnelsim/magnetometer.py`, truth side, open sky only): 47 µT, inclination
+  56°, declination 6°, the car's own field 3 µT, soft iron 2 %, noise 0.4 µT at 25 Hz, all
+  [ASSUMED]. DESIGN A4 changed accordingly.
+- **Mount-yaw state** in the ESKF (`EskfConfig.mount_yaw_sigma`, set from the init: 6° after the
+  magnetometer only, 1° after the acceleration step [ASSUMED]) and, owner's option (a), in the
+  10-state filter (`Ekf10Config.mount_yaw_sigma`).
+- **Lateral-force speed row** in the 10-state filter (`Ekf10Config.lateral_speed`, on): in turns
+  f_y − b̂_y = v(ω − b_gz) − ψ_m f_x, threshold |ω| > max(0.02, 4σ_ω,1s) and (v·σ_ω,1s)² in R. The
+  fixed-threshold first form (710 m, 12 failures in 20 low-end S4 seeds) was not kept.
+- **Recovery and prompt metrics** (`tunnelsim/navmetrics.py`): time to 10 m and 5 m for good after
+  the first fix, and the error shown meanwhile; prompts at 1000/500/200 m and "now"
+  (D = max(30 m, 2 s·v̂) [ASSUMED]) with early/late, missed and vague (2σ > 100 m [ASSUMED]). In
+  `eskf_experiment` (`recovery_time`, `prompts`), `eval_sets` (`rec_*`, `prompt_*`) and the
+  supervisor metrics.
+- **Simulator:** the view in the address (`#tab=…&t=…&show=…&nav=…&k=…&lead=…&max=nav`); the
+  callout says "Exit A ahead, keep right" without a distance when 2σ > 100 m.
+- **Tools:** `eval_sets.py` variants `known`, `cup`, `noexc`, `cup-known`, `noexc-known`, `--only`,
+  resume, `--validation` 400–499; `ekf10_sets.py` variants v0.5.12 / lateral / v0.5.13 and
+  `--only-final`; `supervisor_eval.py` resume and validation 400–499.
+- **Tests:** two v0.5.11/0.5.12 mechanism tests pinned to `mount="known"` (they test the mechanism,
+  not the mount); a new mount test (cup holder, S1, error < 2.5°).
+
+How the numbers moved (0–299, six sets; every change from the estimated mount unless stated):
+- ESKF Note10, against v0.5.12 (true mount): within ±0.7 m of the v0.5.12 ranges on every
+  scenario except two. S4 portal 4.7–6.1 → 4.5–7.9 m (upper end; seed 271 below). S2 (S-bend)
+  diverge 3.5–4.6 → 4.2–5.2 m: S2 has the most curve before the diverge, where a residual mount
+  yaw acts through the lateral NHC row; the true-mount A/B was run on S1 and S4 only, so on S2 that
+  reading is not measured. 5 km portal 12.3–16.2 → 12.9–16.7 m. Worst (e/σ)² ≤ 0.38. Same-version A/B, true mount: S1 5.5–6.9 m, S4 4.7–6.1 m. Mount error rms
+  ≤ 0.7° per axis, yaw from mag+accel in 600 of 600.
+- Branch: 3000 → 2999 of 3000 (S4 seed 271 decided "main", 8.3 → 41.1 m).
+- Callouts > 1 s late, k = 1: 22 → 20 of 3000 (S5 17 → 15). Validation 6 of 1000, k = 1.3 none.
+- Straight-on S4 runs > 100 m: 39 → 34 of 300; 9 of 100 in validation.
+- No approach manoeuvre (magnetometer yaw, 5.8° rms): S1 portal 16.6–25.4 m, (e/σ)² 1.69: open.
+  The same with the true mount: 5.1–6.9 m.
+- 10-state alone, low-end S4: 94 → 93.3 m rms (22.0 → 19.6 m without failures), 2 → 1 runs
+  > 100 m (seed 200 fixed by the lateral row; seed 232 −1566 → −1581 m), (e/σ)² 5.1 → 5.0. With the
+  true mount the lateral row alone gave 27.9 m (seed 232 −340 m). Note10 S2 3.5 → 4.4 m ((e/σ)²
+  1.13 → 0.98; 6.0 m and 3.29 without the mount-yaw state). Low-end 5 km 16.0 → 18.0 m.
+  Validation low-end S4 19.0 → 17.4 m.
+- Supervisor, low-end S4 portal: 20.4–23.9 → 16.1–20.5 m in five sets (225 m in 200–249, seed 232);
+  validation 14.4 / 20.0 m. Low-end S2 9.9–11.6 → 9.0–9.7 m; Note10 S4 4.7–6.1 → 4.5–7.8 m; the rest
+  ±1 m. Exit step ≤ 1.1 m (Note10), ≤ 0.34 m (low-end), 7.0 m (pressure, S3).
+- New metrics, ESKF Note10: to 5 m median 10–18 s per set, 12–34 of 300 not within 60 s; "now"
+  prompt 2–48 m early on average, missed ≤ 1 of 50 (S4). Supervisor: to 5 m 12–19 s (Note10),
+  17–28 s (low-end), 36–52 s (pressure).
+SNAPSHOT_PLACEHOLDER
+
 ## v0.5.12 (2026-10-26): branch window, 10-state curve landmark and branch decision, one-way speed
 
 Seed tiers: 200–299 moved to feature design (the branch window came from seed 247); validation is

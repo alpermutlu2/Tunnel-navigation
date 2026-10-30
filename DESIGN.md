@@ -16,10 +16,10 @@ Source of truth for the final write-up and README.
 
 | # | Assumption | Rationale |
 |---|---|---|
-| A1 | Phone is fixed in a car mount (rigid, unknown but constant mounting angles) | Typical turn-by-turn use; makes NHC strong and lets mount pitch merge into accel bias (see 4.2) |
+| A1 | Phone is fixed in a car mount (rigid, unknown but constant mounting angles; estimated in open sky since v0.5.13, `tunnelsim/mount_init.py`) | Typical turn-by-turn use; makes NHC strong and lets mount pitch merge into accel bias (see 4.2) |
 | A2 | Sensors: GNSS, accelerometer, gyroscope, barometer, ambient light sensor of an average phone | Task: smartphone sensors only |
 | A3 | Map available: tunnel polyline, length, exit locations, speed limit. **Grade profile is NOT assumed** in the baseline | Horizontal geometry is standard nav-map content. Elevation is not: DEM-based elevation inside a tunnel gives the terrain or sea surface above it, not the roadway; tunnel incline is only sometimes tagged (e.g. OSM `incline`). Grade-map matching is an optional layer, reported as a function of map grade error (revised 2026-10-19) |
-| A4 | No magnetometer | Tunnel structure and car body distort it |
+| A4 | No magnetometer in the tunnel; in open sky only, to start the mount yaw (since v0.5.13) | Tunnel steel distorts it; in open sky the car's own field is fixed in the body and the GNSS course checks it ([ASSUMED] model, `tunnelsim/magnetometer.py`) |
 | A5 | No BLE beacons, no OBD / vehicle speed, no camera | Not available to an average user / not used by nav apps |
 | A6 | Barometer is not affected by airflow (closed cabin) | Baseline assumption. Cabin is not sealed (HVAC, piston effect), so a cabin pressure disturbance is added as a **sensitivity scenario** |
 | A7 | Tunnels are single lane, 500 m to 5 km | Given by the task |
@@ -377,6 +377,7 @@ Barometer as along-track measurement: `z = h_map(s) + b_h + n`, `∂h/∂s = sin
 ## 12. Decision log
 - 2026-10-17: Python core in HTML (Pyodide). Synthetic simulation primary; real data only for noise realism.
 - 2026-10-17: Fixed mount; no mag, BLE, OBD, camera. Map assumed available.
+- 2026-10-30: v0.5.13 (owner): the mount estimated on the approach (gravity tilt, magnetometer yaw, then the acceleration direction), a mount-yaw state in both filters, the magnetometer in open sky only; a lateral-force speed row in the 10-state filter; recovery and prompt metrics; BLE beacons rejected as an assumption. Validation tier 400–499.
 - 2026-10-17: IMU profiles from Suvorkin et al. 2024 (Note10 primary, MPU9250 low-end).
 - 2026-10-17: Straight, no-grade, no-curve tunnel kept as a mandatory scenario.
 - 2026-10-17: Truth generator implemented and verified by strapdown test. Scenarios S1 to S5 defined (S3 tunnel 3.5 km, symmetric V).
