@@ -147,6 +147,8 @@ class Ekf10Output:
     imu_class: np.ndarray
     branch_decision: np.ndarray = None   # (B,) final: +1 branch, −1 main, 0 not yet
     branch_time: np.ndarray = None       # (B,) time of the decision (NaN: none)
+    grad: np.ndarray = None              # (B,K) pressure-gradient state ĝ_h [m/m] (0 unless baro_grad)
+    sig_grad: np.ndarray = None          # (B,K) its σ
 
 
 class _RouteGrid:
@@ -281,7 +283,7 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
         lm_last = np.full(B, -np.inf)
     Fsum = np.zeros((B, NX, NX)); dt_sum = 0.0
     ev = {"gnss_pos_acc": 0, "gnss_pos_rej": 0, "heading": 0, "curv": 0, "zupt": 0, "baro": 0}
-    out = {k_: [] for k_ in ("t", "s", "v", "sig_s", "theta", "psi", "b_a")}
+    out = {k_: [] for k_ in ("t", "s", "v", "sig_s", "theta", "psi", "b_a", "g", "sig_g")}
 
     def update(sel, z, H, R, gate):
         """Scalar update on the batch members in sel; z = measurement - h(x)."""
@@ -538,6 +540,7 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
             out["t"].append(imu_t[kk]); out["s"].append(x[:, I_S].copy()); out["v"].append(x[:, I_V].copy())
             out["sig_s"].append(np.sqrt(P[:, I_S, I_S])); out["theta"].append(x[:, I_T].copy())
             out["psi"].append(x[:, I_PSI].copy()); out["b_a"].append(x[:, I_BA].copy())
+            out["g"].append(x[:, I_G].copy()); out["sig_g"].append(np.sqrt(np.maximum(P[:, I_G, I_G], 0.0)))
     st_ = lambda L: np.stack(L, 1)
     return Ekf10Output(np.array(out["t"]), st_(out["s"]), st_(out["v"]), st_(out["sig_s"]), st_(out["theta"]),
-                       st_(out["psi"]), st_(out["b_a"]), ev, cls, br10.copy(), br10_t.copy())
+                       st_(out["psi"]), st_(out["b_a"]), ev, cls, br10.copy(), br10_t.copy(), st_(out["g"]), st_(out["sig_g"]))
