@@ -858,7 +858,7 @@ checkboxes as the map.
 *Not taken:* BLE beacons in the tunnel. The owner rejected the assumption that a tunnel has them.
 
 **4.15 v0.5.14: the map grade as a measurement, the pressure gradient and the grade error as states**
-(owner 2026-11-04/05, after reviews 13 and 14; `Ekf10Config` / `EskfConfig` `grade_update`,
+(owner 2026-11-04/05, after two AI reviews of v0.5.13; `Ekf10Config` / `EskfConfig` `grade_update`,
 `baro_grad`, `grade_error_state`, `no_reverse_mode`; `eskf.HYBRID_DEFAULT`; `mapview.without_grade`;
 `tools/hybrid_ab.py`, `ekf10_ba_rw_ab.py`, `diag_seed232.py`; `reports/0.5.14/`). The design numbers
 are over seeds 50–69 (20 seeds, to look); the 300-seed numbers are marked.
@@ -880,7 +880,7 @@ low-end product it had not been measured.
   constant grade the gradient is unobservable without a second source of pitch. "Option 1 is done:
   a negative result."
 
-*The hybrid (owner, from reviews 13/14: "take the source, not the filter").* The map's road grade
+*The hybrid (owner, from a review: "take the source, not the filter").* The map's road grade
 becomes a weak measurement of pitch in an outage, once per second, and the barometer residual then
 goes to the gradient state:
 - 10-state: z = γ_map − θ̂ − k̂·γ_map, H_θ = 1, H_k = γ_map, H_s = −γ′ (0 under the curve s-guard).
@@ -1124,9 +1124,11 @@ SUPERVISOR_TABLE
   before the diverge; its source is not isolated. The hybrid stays off there, and the Note10 product
   is the ESKF.
 - **The hybrid on the ESKF with a low-end phone** was not measured and is off.
-- **The tunnel's pressure gradient in a real tunnel:** the two portals' GNSS heights against the
-  barometer's height change through the tunnel give the gradient per pass. 25 Pa/km is 2.1 m per km,
-  against a GNSS height error of a few metres [ASSUMED], so several passes per tunnel are needed.
+- **The tunnel's pressure gradient is [ASSUMED], and everything in §4.15 rests on it.** It can be
+  measured with a phone recording its barometer through a tunnel whose grade profile is known (the
+  difference between the barometer's height and the profile's is the gradient), or against the two
+  portals' GNSS heights. 25 Pa/km is 2.1 m per km, against a GNSS height error of a few metres
+  [ASSUMED], so the second way needs several passes per tunnel.
 - **The mount without an approach manoeuvre** (§4.14): the yaw rests on the magnetometer (5.8° rms)
   and the S1 portal is 16.6–25.4 m with (e/σ)² 1.69, inconsistent. A larger mount-yaw prior, or
   holding the NHC rows until a turn has refined the yaw, are the next things to try; not measured.
@@ -1211,6 +1213,11 @@ SUPERVISOR_TABLE
 | Comparison (§4.14) | Compared the repository with another case study and chose what to take: recovery and prompt metrics, the mount init, the lateral-force row, the permalink and σ-dependent wording. **Rejected BLE beacons**: a tunnel with beacons is not a fair assumption | CHANGELOG v0.5.13 |
 | Mount init (§4.14) | Designed it: tilt from the gravity mean ("complementary init"), yaw first from the magnetometer, then from the velocity and acceleration direction; noted that heading needs the car's direction, so the phone-to-car difference is the mount, and proposed the acceleration direction once the car moves | CHANGELOG v0.5.13 |
 | Mount-yaw state (§4.14) | Chose option (a), a mount-yaw state in the 10-state filter as well, after the measurement showed the estimated mount inconsistent there (Note10 S2 (e/σ)² 3.3) | CHANGELOG v0.5.13 |
+| Hybrid (§4.15) | Read a low-end gradient run, where the strongest candidate came last, as a product failure and had it measured; asked for the map grade as a source rather than a fourth filter, and did not take a shadow fourth filter; closed the gradient-state-alone and prior-σ results as a negative result | CHANGELOG v0.5.14 |
+| Grade error as a state (§4.15) | Proposed it after the R form averaged a 10 % grade error away; wrote the report's sentence on what a constant-grade tunnel can and cannot separate | CHANGELOG v0.5.14 |
+| One-way form (§4.15) | Asked for the mean-only form from the seed 232 trace; accepted the split (ESKF soft, 10-state mean-only) on two conditions: both forms on 300 seeds in the 10-state filter, and the report calling the split measured, its only basis being whether the s–v correlation can be trusted | CHANGELOG v0.5.14 |
+| Missing grade (§4.15) | Required that a map without a grade profile turn the hybrid off and give v0.5.13 exactly ("missing, not zero"), as a cell of the matrix before the 300-seed run | CHANGELOG v0.5.14 |
+| Note10 10-state (§4.15) | Proposed the accelerometer-bias hypothesis and its A/B; accepted that the trace does not support it and that ×10 is not taken | CHANGELOG v0.5.14 |
 | Low-end S4 mechanism | **Corrected the agent's diagnosis** (yaw drift at stops) from a trace: the filter loses speed while crawling, because pitch is weakly observable at low speed. Found that the in-browser page could not work on GitHub Pages because `*.zip` was git-ignored | §4.6, CHANGELOG v0.5.7 |
 
 ### 6.2 Choices the agent made
@@ -1263,6 +1270,12 @@ change. The author is ready to explain or change any of them:
 | The no-excitation mount case looked consistent with the mount-yaw state on 10 seeds ((e/σ)² 0.89); 300 seeds give 1.69 | the 300-seed run |
 | Two tests of the v0.5.11 mechanisms failed once the mount became estimated; they were testing with the true mount and are pinned to it | the test suite |
 | A statement on the supervisor table that seed 232 fails because the speed goes negative before the constraint acts; the trace shows the speed held at zero while the car moves | the agent's trace before the report went out |
+| v0.5.13's report put seed 232 down to a lock in the curve that the s-guard let through, made worse by a ~2° tilt error of the estimated mount; the landmark never fired, the s-guard was not involved, and the tilt error is roll 1.0°, pitch 0.1° (§4.15) | the agent's trace of every update in v0.5.14, asked for by a review |
+| A reviewer's hypothesis for the Note10 10-state overconfidence (the accelerometer bias's Gauss–Markov terms after stops) | the A/B and trace the reviewer asked for: not supported |
+| Two reviewer statements: "the tags stop at 0.5.9" (a lexical sort of the tag list) and "25 Pa/km ≈ 3 m/km" (2.1 m/km) | the agent; the author accepted both corrections |
+| A road without a grade profile became a zero grade in `MapView`, a wrong measurement once the grade is used as one | the author's "missing, not zero" check before the 300-seed run |
+| A branch-fit guard that could never fire: the branch decision is made before the turn, from the same wrong ŝ | the 20-seed A/B (no activation) |
+| Three mechanism tests (v0.5.11/12) and the ESKF's S4 seed 247 moved once the hybrid and the mean-only constraint became defaults; the tests are pinned to the v0.5.13 filter, and seed 247 led to keeping the soft form in the ESKF | the test suite |
 
 **Process controls,** used because generated code can be confidently wrong:
 - parameter tags;

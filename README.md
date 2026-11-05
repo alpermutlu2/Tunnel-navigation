@@ -26,7 +26,7 @@ the callout distance, all evaluated in the browser. Opened as a file or from Git
 (`https://alpermutlu2.github.io/Tunnel-navigation/sim/`) it needs no Python. Served by
 `tools/serve.py`, the same page finds the server and shows a **LIVE** bar: seed, IMU profile,
 vibration, tunnel pressure gradient, the filter's mount error, GNSS degradations, the cruise prior,
-the pressure-gradient state, sideslip and the stop detector. Each change re-runs truth → sensors →
+the hybrid (map grade, pressure-gradient and grade-error states; class default, on or off), sideslip and the stop detector. Each change re-runs truth → sensors →
 ESKF in Python for one seed (~7 s, standard library server, results cached) and loads the result in
 place. A **custom tunnel** row in the same bar builds a new scenario without code: tunnel length
 (0.5–5 km), grade inside the tunnel, speed, and one stop (duration and position); it appears as a
@@ -130,10 +130,12 @@ changes).
 ```bash
 python tools/evaluate.py                 # Monte Carlo, 50 seeds per scenario (~1 h on 2 cores)
 python tools/evaluate.py --seeds 20 S1 S4 --negative   # subset + car-goes-straight control
-python tools/eval_sets.py default       # ESKF on six sets of 50 seeds (0-299); variants known, cup, noexc (mount); --validation: 400-499 once
-python tools/ekf10_sets.py               # 10-state filter variants on 0-299 (v0.5.13); --validation: 400-499
+python tools/eval_sets.py default       # ESKF on six sets of 50 seeds (0-299); variants known, cup, noexc (mount); --validation: 500-599 once
+python tools/ekf10_sets.py               # 10-state filter on 0-299, shipped and soft one-way form (v0.5.14); --validation: 500-599
+python tools/hybrid_ab.py eskf 50 70     # the hybrid matrix (map grade, pressure gradient, grade error); ekf10 for the 10-state filter; v2: defaults and a map without grade
+python tools/summarise_300.py            # 300-seed results against v0.5.13
 python tools/compare_filters.py         # 4-, 10- and 16-state filters, 50 seeds, Note10 + low-end
-python tools/supervisor_eval.py sets:0-100   # supervisor (class rule, monitor) on seed ranges
+python tools/supervisor_eval.py sets:0-300   # supervisor (class rule, monitor) on seed ranges; low-end + gradient and the 3 % tunnel included
 python tools/failure_cases.py           # pressure gradient and 2x map error under the gate / re-association
 python -m pytest -q tests                # ~200 tests (+2 slow: --runslow)
 python tools/snapshot.py                 # reports/<version>/metrics.json (tests, truth, sensors, INS, budget, ESKF)
