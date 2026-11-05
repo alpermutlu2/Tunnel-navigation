@@ -11,7 +11,7 @@ for pg in (30,-30):
     ov=("imu_lowend", f"set:baro.tunnel_grad_pa_per_km={pg}")
     sc,tr,t,F,W,gnss,bt,bh=simulate_run("S1",seeds,ov)
     F,W,C,md=filter_mount(tr,t,F,W,gnss,seeds,"estimated",None)
-    o=run_ekf10(t,F,W,gnss,bt,bh,C,tr.lever_arm_b,get_scenario("S1").road,Ekf10Config(baro_grad=True,mount_yaw_sigma=np.deg2rad(md["yaw_sigma_deg"])),EskfConfig())
+    o=run_ekf10(t,F,W,gnss,bt,bh,C,tr.lever_arm_b,get_scenario("S1").road,Ekf10Config(baro_grad=True,mount_yaw_sigma=tuple(np.deg2rad(md["yaw_sigma_deg_b"]))),EskfConfig())
     kt=np.clip(np.round((o.t-tr.t[0])/tr.dt).astype(int),0,len(tr.t)-1)
     i_e=int(np.argmax(tr.in_tunnel)); te=tr.t[i_e]
     print("pg",pg,"true g_h in the filter convention [m/m]",round(-pg/11.8e3,5))

@@ -75,7 +75,7 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
     ecfg = _eskf_config(eskf)
     if mdiag is not None:
         from dataclasses import replace as _rp
-        ecfg = _rp(ecfg, mount_yaw_sigma=np.deg2rad(mdiag["yaw_sigma_deg"]))
+        ecfg = _rp(ecfg, mount_yaw_sigma=tuple(np.deg2rad(mdiag["yaw_sigma_deg_b"])))
     from tunnelsim.mapview import MapView
     mv_f = MapView(get_scenario(key).road, *(map_err or (0.0, 1.0)))
     out = run_eskf(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, ecfg, zupt_mask=zmask,

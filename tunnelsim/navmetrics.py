@@ -67,7 +67,9 @@ def prompts(t, s_hat, sig, s_true, v_hat, s_gore, k=1.0):
         d_true = s_gore - s_true[kf]
         # the moment the true car passes s_gore − D (D as fired)
         kt = np.array([int(np.argmax(s_true >= s_gore - Df[b])) for b in range(B)])
-        r = {"err_m": d_true - Df, "dt_s": t[kf] - t[kt], "fired": has,
+        # v0.5.14 (review): a prompt that never fired has no timing; it is counted in not_fired (and for
+        # "now" in missed), not scored at the last sample
+        r = {"err_m": np.where(has, d_true - Df, np.nan), "dt_s": np.where(has, t[kf] - t[kt], np.nan), "fired": has,
              "vague": 2.0 * sig[np.arange(B), kf] > VAGUE_2SIG_M}
         if name == "now":
             r["missed"] = (~has) | (d_true < 0.0)
@@ -79,10 +81,12 @@ def summarise_prompts(p):
     """Compact numbers per prompt over the batch."""
     out = {}
     for name, r in p.items():
-        e = r["err_m"]
-        out[name] = {"err_mean_m": round(float(np.mean(e)), 1), "err_p95_abs_m": round(float(np.percentile(np.abs(e), 95)), 1),
-                     "late_gt_1s": round(float(np.mean(r["dt_s"] > LATE_S)), 3),
-                     "vague": round(float(np.mean(r["vague"])), 3)}
+        e = r["err_m"]; f = r["fired"]
+        out[name] = {"err_mean_m": round(float(np.mean(e[f])), 1) if f.any() else None,
+                     "err_p95_abs_m": round(float(np.percentile(np.abs(e[f]), 95)), 1) if f.any() else None,
+                     "late_gt_1s": round(float(np.mean(np.where(f, r["dt_s"], -np.inf) > LATE_S)), 3),
+                     "not_fired": round(float(np.mean(~f)), 3),
+                     "vague": round(float(np.mean(r["vague"][f])), 3) if f.any() else None}
         if "missed" in r:
             out[name]["missed"] = round(float(np.mean(r["missed"])), 3)
     return out

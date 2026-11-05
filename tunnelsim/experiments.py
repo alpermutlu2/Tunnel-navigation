@@ -137,9 +137,12 @@ def filter_mount(tr, t, F, W, gnss, seed_ids, mount="known", mount_err_deg=None)
     diag = {"mode": mount, "err_rms_deg": np.sqrt((err ** 2).mean(0)).round(2).tolist(),
             "yaw_err_p95_deg": round(float(np.percentile(np.abs(err[:, 2]), 95)), 2),
             "yaw_from": {k_: sum(1 for i in info if i["yaw_from"] == k_) for k_ in ("mag", "mag+accel", "accel", "none")}}
-    # the ESKF's mount-yaw state prior: magnetometer only ~6° rms (measured, S1 10 seeds), with the
-    # velocity-direction step 0.5° rms, taken as 1° [ASSUMED]; the batch shares one scenario, so one value
-    diag["yaw_sigma_deg"] = 6.0 if diag["yaw_from"]["mag"] > len(info) / 2 else 1.0
+    # the mount-yaw state prior, per member (v0.5.14, review: a batch majority under-states the prior of
+    # a magnetometer-only member in a mixed batch): magnetometer only 6° (measured rms 5.8°, 300 seeds),
+    # with the velocity-direction step 1° (measured 0.6-0.7°) [ASSUMED], no yaw source at all 10° [ASSUMED]
+    sig_of = {"mag": 6.0, "mag+accel": 1.0, "accel": 1.0, "none": 10.0}
+    diag["yaw_sigma_deg_b"] = [sig_of[i["yaw_from"]] for i in info]
+    diag["yaw_sigma_deg"] = max(diag["yaw_sigma_deg_b"])                          # summary only
     return np.einsum("bij,bnj->bni", R, F), np.einsum("bij,bnj->bni", R, W), C_BP_NOMINAL, diag
 
 
@@ -209,7 +212,7 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
     cfg_e = eskf_cfg or EskfConfig()
     if mount_diag is not None:
         from dataclasses import replace as _rp
-        cfg_e = _rp(cfg_e, mount_yaw_sigma=np.deg2rad(mount_diag["yaw_sigma_deg"]))
+        cfg_e = _rp(cfg_e, mount_yaw_sigma=tuple(np.deg2rad(mount_diag["yaw_sigma_deg_b"])))
     out = run_eskf(t, F, W, gnss, bt, bh, C_bp_filter, tr.lever_arm_b, cfg_e, zupt_mask=zmask,
                    road_map=mv)
     i_e = int(np.argmax(tr.in_tunnel))
@@ -437,7 +440,7 @@ def ekf10_experiment(key, seeds=50, overrides=(), mount_err_deg=None, cfg10=None
     F, W, C_bp_f, mount_diag = filter_mount(tr, t, F, W, gnss, seed_ids, mount, mount_err_deg)
     if mount_diag is not None:
         from dataclasses import replace as _rp
-        cfg10 = _rp(cfg10 or Ekf10Config(), mount_yaw_sigma=np.deg2rad(mount_diag["yaw_sigma_deg"]))
+        cfg10 = _rp(cfg10 or Ekf10Config(), mount_yaw_sigma=tuple(np.deg2rad(mount_diag["yaw_sigma_deg_b"])))
     o = run_ekf10(t, F, W, gnss, bt, bh, C_bp_f, tr.lever_arm_b, road, cfg10 or Ekf10Config(), eskf_cfg or EskfConfig())
     kt = np.clip(np.round((o.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
     s_true = tr.s[kt]
@@ -549,7 +552,7 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
     if mount_diag is not None:
         from dataclasses import replace as _rp
         from .eskf import EskfConfig
-        eskf_cfg = _rp(eskf_cfg or EskfConfig(), mount_yaw_sigma=np.deg2rad(mount_diag["yaw_sigma_deg"]))
+        eskf_cfg = _rp(eskf_cfg or EskfConfig(), mount_yaw_sigma=tuple(np.deg2rad(mount_diag["yaw_sigma_deg_b"])))
     oe, s, g, cls, vv = _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, eskf_cfg=eskf_cfg)
     B = len(seed_ids)
     # estimator side: outage start / GNSS back, from the fixes alone

@@ -109,7 +109,7 @@ class EskfConfig:
     # leaves the car's heading right (the NHC aligns the assumed body x with the velocity) but rotates
     # the phone attitude by δψ_m, so in a curve δψ_m·a_lat leaks into the along-track speed. Rows:
     # NHC lateral ∂v_by/∂δψ_m = v_bx; map heading ∂ψ_body/∂δψ_m = −1 (body forward = Ĉ C_bpᵀ R_z(−ψ_m) e_x).
-    mount_yaw_sigma: float = 0.0
+    mount_yaw_sigma: float = 0.0       # rad; or a tuple, one per batch member (v0.5.14)
     no_reverse_sigma: float = 0.5     # m/s [ASSUMED]; default soft form since v0.5.12 (owner): R = (0.02 m/s)² hurt (Note10 S4 5.0 → 6.5 m)
     zupt_band_hz: tuple = (2.0, 18.0)  # road-vibration band, below the engine tone (E5)
     zupt_band_rms: float = 0.01       # m/s² threshold on the 1 s band RMS of |f|
@@ -387,7 +387,10 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     d = np.r_[[cfg.p0_pos] * 3, [cfg.p0_vel] * 3, cfg.p0_att_rp, cfg.p0_att_rp, cfg.p0_att_yaw,
               [cfg.p0_ba] * 3, [cfg.p0_bg] * 3, cfg.p0_bh] ** 2
     P[:, :NX, :NX] = np.diag(d)
-    P[:, IY, IY] = max(cfg.mount_yaw_sigma, 1e-9) ** 2
+    # v0.5.14 (review): the prior may be per member (one value per seed, from how its mount was found)
+    my_sig = np.broadcast_to(np.asarray(cfg.mount_yaw_sigma, float), (B,))
+    my_on = bool(np.max(my_sig) > 0)
+    P[:, IY, IY] = np.maximum(my_sig, 1e-9) ** 2
     # --- ZUPT detector
     if zupt_mask is None:
         still = zupt_detector(imu_t, f, cfg, fs)
@@ -714,7 +717,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             if out_m.any():
                 l_n = np.einsum("bij,j->bi", C, C_bp.T @ r_b)                     # phone -> R lever, nav
                 pR = p - l_n
-                fwd = np.einsum("bij,j->bi", C, C_bp.T @ np.array([1.0, 0.0, 0.0])) if cfg.mount_yaw_sigma <= 0 else \
+                fwd = np.einsum("bij,j->bi", C, C_bp.T @ np.array([1.0, 0.0, 0.0])) if not my_on else \
                     np.einsum("bij,jk,bk->bi", C, C_bp.T, np.stack([np.cos(my_hat), -np.sin(my_hat), np.zeros(B)], 1))
                 psi_hat = np.arctan2(fwd[:, 1], fwd[:, 0])
                 s_new = road_map.nearest(pR[:, :2], s_map)
@@ -809,7 +812,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                     H = np.zeros((B, 2, NA))
                     # heading: ψ̂ − (ψ_map(ŝ) + κ·d·ε̂); δz = δθ_z − κ tᵀδp − κ d δε (curve matching)
                     H[:, 0, 8] = 1.0
-                    if cfg.mount_yaw_sigma > 0:
+                    if my_on:
                         H[:, 0, IY] = -1.0
                     H[:, 0, 0:2] = -kap[:, None] * t2
                     H[:, 0, IE] = -kap * dist
@@ -835,7 +838,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         # NHC (body y, z velocity at R = 0)
         if (kk - i0) % n_nhc == 0:
             C_bn = C_bp @ np.swapaxes(C, 1, 2)                       # body <- nav
-            if cfg.mount_yaw_sigma > 0:
+            if my_on:
                 C_bn = _rz_b(my_hat) @ C_bn                          # body = R_z(ψ_m) C_bp · phone
             w_b = np.einsum("ij,bj->bi", C_bp, w[:, kk] - b_g)
             v_R = v - np.einsum("bij,bj->bi", C @ C_pb, np.cross(w_b, r_b))
@@ -843,7 +846,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             H = np.zeros((B, 2, NA))
             H[:, :, 3:6] = C_bn[:, 1:3]
             H[:, :, 6:9] = (C_bn @ skew_b(v_R))[:, 1:3]
-            if cfg.mount_yaw_sigma > 0:
+            if my_on:
                 H[:, 0, IY] = v_b[:, 0]
             z = v_b[:, 1:3] - np.einsum("bij,bj->bi", H, x)
             R = np.broadcast_to(np.eye(2) * cfg.nhc_sigma ** 2, (B, 2, 2)).copy()

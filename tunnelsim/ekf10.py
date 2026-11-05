@@ -118,7 +118,7 @@ class Ekf10Config:
     # mount rotated by ψ_m about the body z axis the forward and lateral forces mix: f_x = f'_x − ψ_m f'_y,
     # f_y = f'_y + ψ_m f'_x (f' as read through the estimated mount). Prior σ from how the mount was found
     # (magnetometer only ~6°, with the velocity-direction step ~1°); 0 = known mount, the state is frozen.
-    mount_yaw_sigma: float = 0.0
+    mount_yaw_sigma: float = 0.0          # rad; or a tuple, one per batch member (v0.5.14)
     lateral_omega_min: float = 0.02       # rad/s [ASSUMED]
     no_reverse_k: float = 0.0             # A/B: act only while v̂ < −k·σ_v (0 = owner's form)
     no_reverse_sigma: float = 0.5         # m/s [ASSUMED]; soft form, default since v0.5.12 (owner): R = (0.02 m/s)² gave 12 runs > 100 m in 300 (low-end S4), this 2
@@ -238,7 +238,7 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
     for i, s0 in ((I_S, cfg.p0_pos), (I_V, cfg.p0_vel), (I_H, cfg10.p0_h), (I_T, cfg.p0_att_rp), (I_PSI, cfg.p0_att_yaw),
                   (I_BA, cfg.p0_ba), (I_BGY, cfg.p0_bg), (I_BGZ, cfg.p0_bg), (I_BH, cfg.p0_bh), (I_SG, cfg10.gyro_scale_sigma)):
         P[:, i, i] = s0 ** 2
-    P[:, I_MY, I_MY] = max(cfg10.mount_yaw_sigma, 1e-9) ** 2
+    P[:, I_MY, I_MY] = np.maximum(np.broadcast_to(np.asarray(cfg10.mount_yaw_sigma, float), (B,)), 1e-9) ** 2   # per member allowed (v0.5.14)
     q = np.zeros(NX)
     q[I_V] = cfg.accel_noise ** 2
     q[I_T] = q[I_PSI] = cfg.gyro_noise ** 2
