@@ -222,7 +222,8 @@ v0.5.15 changes are in the supervisor and the 10-state filter.
   early on 5 km 19 of 100.
 - **Ranges:** low-end S2 (15.8 m), S4 (18.0 m) and S5 (12.6 m), Note10 S1 (7.8 m), and the Note10
   gradient and 3 % tunnel cases (S1 at 30 Pa/km 7.3 m, 3 % tunnel 4.6 m, −25 Pa/km 6.4 m) are above
-  their 300-seed portal ranges in one set each, by 0.5–3 m.
+  their 300-seed portal ranges in one set each, by 0.5–3 m, and low-end S3 (25.6 m) and S6 (15.4 m) by
+  0.3–0.4 m. Worst (e/σ)² 0.95 (low-end S3). No run that takes the exit is more than 100 m off.
 
 **3.1 Validation on untouched seeds** (500–599, v0.5.14 configuration, run once;
 `reports/0.5.14/validation_500-599.json`, `ekf10_validation_500-599.json`, `supervisor_validation.json`).
@@ -644,9 +645,11 @@ On low-end S4 the "err early" rule has a measured price: two callouts in three c
 early. At crawling speed 6 s is ~15 m, so in practice harmless, but it is what a σ that covers the
 error costs there.
 
-The straight-on control was run at filter level (ESKF `eval_sets`, 10-state `ekf10_sets`), not
-through the supervisor. The selection is by IMU class and each filter's branch decision is its
-own, so no difference is expected; it was not measured.
+The straight-on control was first run at filter level (ESKF `eval_sets`, 10-state `ekf10_sets`),
+not through the supervisor, on the expectation that the class selection changes nothing. v0.5.15
+ran it through the supervisor and the expectation did not hold for the Note10: S1 54–64 m rms at the
+portal with (e/σ)² up to 2.35 per set, against the research ESKF's 17–27 m and 0.40 (§3, §5; not
+traced).
 
 *Validation, seeds 400–499* (`reports/0.5.13/supervisor_validation.json`, run once; v0.5.14's on
 500–599 is in §3.1): the same picture. (The v0.5.12 validation on 300–399 is in `reports/0.5.12/`.)

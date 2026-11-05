@@ -61,7 +61,7 @@ Question it answers: *where does it break, and what did you do about it?*
   - at the portal it is still 115 m off.
 - **Hybrid back to "class default" (on):**
   - at the diverge, 3.5 m off with σ 8 m, and it decides "branch", the right one;
-  - at the portal, 0.4 m off.
+  - at the portal, under 1 m off (ESKF 0.4 m, the app's trace 0.7 m).
 - **Say:** "in a straight, constant-grade tunnel a pitch error and a pressure gradient give the same
   barometer signal. I did not add a filter, I added a source: the map's grade as a weak pitch
   measurement, with the gradient and the map's grade error as states. If the map has no grade, it

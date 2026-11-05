@@ -15,14 +15,14 @@ No algorithm changed except one constant; nothing was re-run for the numbers bel
 `supervisor_validation.json`). REPORT §3, §4.16, §5, §6.
 
 - **`CALLOUT_K_BY_CLASS`: low-end 0.5 → 0.7** (owner). v0.5.15's acceptance rule came out borderline
-  on the gradient cases (−25 Pa/km 1.0 % against the Note10's measured 0.76 %, inside the stated
-  1–2 %), and the S-bend, where σ_s is honest, had 16 of 300 callouts late at 0.5. Read strictly, the
+  on the gradient cases (−25 Pa/km 1.0 % against the Note10's measured 0.76 %, 16 of 2100 in REPORT
+  §4.16, or 0.67 % over all eight nominal cases; inside the stated 1–2 %), and the S-bend, where σ_s is honest, had 16 of 300 callouts late at 0.5. Read strictly, the
   rule gives 0.7: "late is worse than early". The simulator starts a low-end run at 0.7.
 - **Docs:** SUMMARY opens with one table of the product's numbers for both IMU classes; the
   consistency claim is scoped to the evaluated metrics where the car takes the exit; the branch
   statistic names its filter (ESKF "main" in 600 of 600; the low-end 10-state filter never decides
   "main"); a Note10 car going straight on through the supervisor is reported as not consistent
-  ((e/σ)² 2.35–2.54, not traced; §3, §5). README's page count corrected. `docs/DEMO.md`: the demo
+  ((e/σ)² up to 2.35 on S1 and 2.54 on 5 km per set, not traced; §3, §4.12, §5). README's page count corrected. `docs/DEMO.md`: the demo
   script for the interview.
 - **Tests:** `test_callout_k_by_class` expects 0.7.
 

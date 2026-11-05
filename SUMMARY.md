@@ -16,17 +16,18 @@ exit. The app has the map, so the real unknown is the **distance along the road*
 shifts the callout by 1 s at 80 km/h.
 
 **The product at a glance** (what the screen shows: the supervisor of §Supervisor, 300 seeds, ranges of
-per-set rms over the cases; REPORT §4.16):
+per-set rms; per class eight nominal cases (S1–S6, 5 km, a 3 % 5 km tunnel) and, in brackets, four
+with a tunnel pressure gradient; REPORT §4.16):
 
 | | Note10 class (ESKF, k = 1) | low-end class (10-state, k = 0.7) |
 |---|---|---|
-| along-track error at the exit branch | 2.3–39 m | 9.5–48 m |
-| along-track error at the portal | 1.5–16.5 m | 7.5–25 m (pressure gradient: 13–26 m) |
+| along-track error at the exit branch | 2.3–39 m (2.2–38 m) | 9.5–48 m (10–63 m) |
+| along-track error at the portal | 1.5–16.5 m (1.4–6.6 m) | 7.5–25 m (13–26 m) |
 | worst mean (e/σ)² at the portal, car takes the exit | 0.34 | 0.76 |
-| callouts more than 1 s late | 16 of 2400 (14 on braking) | 8 of 2400; 1 of 1200 with a gradient |
-| callouts more than 5 s early | 5 of 2400 | 96 of 2400 (59 on 5 km); 38 of 1200 |
-| branch shown, car takes it | right in 2400 of 2400 | right in 3600 of 3600 |
-| car goes straight on | "main" in 900 of 900; 54–141 m at the portal, (e/σ)² up to 2.5: **not consistent** | "main" never decided (900 of 900); drawn on the main tunnel; 22–95 m, consistent |
+| callouts more than 1 s late | 16 of 2400, 14 on braking (1 of 1200) | 8 of 2400 (1 of 1200) |
+| callouts more than 5 s early | 5 of 2400 (0 of 1200) | 96 of 2400, 59 on 5 km (38 of 1200) |
+| branch shown, car takes it | right in 3600 of 3600 | right in 3600 of 3600 |
+| car goes straight on (S1, S4, 5 km) | "main" in 900 of 900; 54–141 m at the portal, (e/σ)² up to 2.5 per set: **not consistent** | "main" never decided (900 of 900); drawn on the main tunnel; 22–95 m, consistent |
 
 A measured error budget set the direction:
 - Free integration of a Galaxy Note10 IMU [MEAS] drifts 1.2–1.5 km, because pitch errors leak
@@ -55,7 +56,7 @@ information:
 - **Map in the tunnel:** heading and lateral position against the route, with the map's own
   offset and length errors as states.
 - **Callout rule:** announce when ŝ + k·σ_s reaches the callout point, so the callout errs early
-  (k = 1; 0.7 on a low-end phone, whose σ is larger than its error).
+  (k = 1; 0.7 on a low-end phone, whose σ is 4–6 times its error on flat tunnels).
   The voice says the estimated distance, rounded to 50 m.
 - **Clean exit:** GNSS re-enters gradually, so the car does not jump on the screen.
 - **IMU class detection:** at start-up the IMU class is detected from gyro noise and the filter
@@ -113,7 +114,8 @@ map grade became a measurement (11.6–15.7 and 8.9–11.8 m before).
 - **Consistent where the car takes the exit.** In these scenarios the filter's uncertainty covers its
   error at the portal: mean (e/σ)² ≤ 0.37 in every set, conservative, and every run within 2σ. That
   is a claim about these metrics, not every moment or every mismatch: a Note10 car going straight on
-  is not consistent through the supervisor ((e/σ)² 2.35–2.54, not traced), nor is the mount without
+  is not consistent through the supervisor ((e/σ)² up to 2.35 on S1 and 2.54 on 5 km per set, not
+  traced), nor is the mount without
   an approach manoeuvre (1.69).
 - **Callout.** Without the rule, 0–66 % of callouts come more than 1 s late; with k = 1, 13 of
   3000. k = 1.3 cuts them to 5 of 3000 (2 of 1000 in validation), at 0.1–0.8 s more advance. Prompts at 1000, 500 and 200 m and "now" follow the same rule; when the shown 2σ is over
@@ -195,7 +197,7 @@ The app runs all three and shows one (REPORT §4.12):
    becomes optimistic, and on 5 km the map then does worse than no map.
 5. **A low-end IMU** (MPU9250 class [MEAS]) works with its own tuning, with the fast gyro bias
    terms treated as white noise and a looser cruise test:
-   - the ESKF alone, at k = 1: 10–25 m at the portal in steady and long tunnels, consistent
+   - the ESKF alone, at k = 1 (v0.5.8, 30 seeds): 10–25 m at the portal in steady and long tunnels, consistent
      ((e/σ)² 0.2–0.6), no late callouts;
    - stop-and-go fails for the ESKF (~0.9 km). At crawling speed the vehicle constraints see a pitch
      error only through v·δθ, so the cheap gyro's tilt leaks gravity into the speed. The supervisor
