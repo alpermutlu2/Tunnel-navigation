@@ -903,8 +903,9 @@ goes to the gradient state:
 tunnel [ASSUMED, DESIGN A3]. As white noise in R a 10 % error was averaged away and the callouts came
 late. On a tunnel of constant grade, a map grade error and a pressure gradient cannot be told apart:
 the filter knows their sum, not the share of each, and σ says so. They separate where the grade
-changes. This is the third time a map error carried as a state beat the same error as noise in R
-(after the map offset and scale states of §4.11 and the mount yaw of §4.14).
+changes. The owner reads this as the third confirmation of the decision to carry map errors as
+states rather than as noise in R (the map's offset and length errors became states for the same
+reason, §2, §4.5).
 
 | 20 seeds, diverge rms | grade right | grade 10 % too steep, k in R | grade 10 % too steep, k as a state |
 |---|---|---|---|
@@ -973,7 +974,8 @@ form, and its mean-only cell in all 34 with the shipped form.
 The curve landmark never fires and the s-guard is not involved. The estimated mount's error on that
 phone is roll 1.04°, pitch 0.14°. v0.5.13 had it as a lock in the curve that the s-guard let
 through, made worse by a ~2° tilt error; both were wrong (§6.3). With the hybrid, seed 232 ends at
-17 m (grade row only) or 26 m (grade row and gradient state), and seed 200 at 17 m (was 62 m).
+17 m (grade row only) or 26 m (grade row and gradient state) on the 20-seed trace, and 16 m in the
+300-seed run with the shipped form; seed 200 at 11–17 m (was 62 m).
 
 *The one-way constraint, two forms* (owner). The constraint is an inequality; written as a soft
 equality measurement (z = 0 − v̂, R = 0.5² (m/s)², v0.5.12–13) it also moves ŝ and P through the

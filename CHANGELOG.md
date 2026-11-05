@@ -66,7 +66,11 @@ How the numbers moved (0–299, six sets of 50):
   tunnels (S1 0.8 → 2.5 s, S5 → 4.1–4.6 s with 16–34 % > 5 s early, 5 km → 5.5–6.1 s with 64–86 %),
   likely the gradient state's prior σ (not retuned). Note10 rest within ±0.6 m.
 - VALIDATION_CHANGELOG
-- SNAPSHOT_CHANGELOG
+- Snapshot (`metrics.json`, Note10 ESKF, 20 seeds): S3 diverge 11.74 → 2.51 m, portal 9.06 → 1.73 m
+  (the V profile is the map grade the row now uses); S4 diverge 30.03 → 21.59 m; S5 diverge 25.28 →
+  28.66 m and 5 km 20.65 → 23.16 m (the hybrid's cost, as on 300 seeds); portal on S1, S2, S4 and the
+  S6 family +0.4–0.8 m (S6 5.35 → 6.11 m), within the 300-seed ranges; (e/σ)² within ±0.1. Callout
+  late fraction S3 and S4 0.05 → 0. Truth, sensors, INS and budget unchanged. Tests 201 → 206.
 
 ## v0.5.13 (2026-10-30): mount estimated in open sky, lateral-force speed row, recovery and prompt metrics
 
