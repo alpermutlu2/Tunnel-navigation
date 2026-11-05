@@ -7,6 +7,50 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.15 (2026-11-05): "main first" while the branch is "not yet", paused map rows, callout k by class
+
+From a decision deck after v0.5.14 (owner: K1–K4). Design on seeds 50–99 / 50–69 (`reports/0.5.14/`
+decision material, `reports/0.5.15/k2_pause_ab_50-69.json`), numbers on 0–299, validation 600–699 run
+once (`ekf10_validation_600-699.json`, `supervisor_validation.json`). The ESKF is unchanged (S4 0–49:
+every seed as in v0.5.14), so its 300-seed sets were not re-run. REPORT §4.16.
+
+- **K1, the drawn point** (`tunnelsim/display.py`; supervisor `display`; simulator `app_xy`): the main
+  tunnel until "branch" is decided ("main first"), the move across rate-limited at 2 m/s (the gap to
+  the target road closes at the follower's rate while the point moves with the roads). "No re-route
+  while not yet" is an [ASSUMED] product rule the policy rests on.
+- **K2, the 10-state filter's map rows while "not yet"** (`Ekf10Config.pause_undecided`, on): heading,
+  curvature-gyro and grade rows paused while the decision is "not yet" and ŝ is past the diverge, as
+  the ESKF pauses its map layer. `pause_pre_sigma_k` (the ESKF's window) measured, not kept.
+- **K3, callout margin by IMU class** (`supervisor.CALLOUT_K_BY_CLASS`: Note10 1, low-end 0.5;
+  `callout_k`): the supervisor's callout and prompts use the class k; `callout_k_sweep` records 0.5 / 0.7 /
+  1 on the same track. Rests on the [ASSUMED] gradient prior σ_g; the lasting fix is σ_g measured in a
+  real tunnel. The simulator starts each run at its class k.
+- **`supervisor_experiment(branch=False)`**: the car goes straight on; `supervisor_eval.py` gains
+  straight-on S1, S4, 5 km for both classes; validation 600–699 in all three tools.
+- **Tools:** `notyet_display.py`, `lowend_timing_ab.py`, `trace_notyet_ekf10.py`, `k2_pause_ab.py`,
+  `k1_rate_sweep.py`, `summarise_v0515.py`; `ekf10_sets.py` variants v0.5.15 / no_pause.
+- **Tests:** `tests/test_v0515.py` (class k, paused rows on a straight-on car, main first and the
+  crossing limit).
+
+How the numbers moved (0–299, six sets of 50, through the supervisor unless stated):
+- Drawn point, straight on (largest distance from the car's road, mean per set): Note10 S1 / S4 / 5 km
+  12.8–13.3 / 32.9–35.7 / 30.8–32.0 → 0.6 / 0.7–3.5 / 1.0–3.2 m; low-end 242–246 / 185–190 / 413–423 →
+  0.6 / 0.4–1.6 / 1.5–6.7 m. Taking the branch: Note10 0.5–3.4 → 2.5–6.7 m; low-end 0.3–6.7 → 3.7–12.9 m
+  (p95 up to 39 m in the long and gradient cases). Largest step across ≤ 1.1 m (6–35 m without the
+  limit).
+- 10-state, straight on (20 seeds, along-track at the portal): low-end 5 km 753 → 77 m, 3 % tunnel
+  370 → 53 m, S1/S2/S6 70–71 → 23–29 m, S4 49 → 56 m; Note10 S1 39 → 22 m. "Main" still never decided
+  for a low-end car (300/300 undecided on S1, S4, 5 km). Branch cases: decision time, branch share,
+  failures unchanged; low-end portal ranges move by up to ~2 m; Note10 10-state S4 6.4–16.0 → 6.5–8.5 m,
+  (e/σ)² 3.1 → 1.3, branch 295 → 300.
+- Low-end callouts (k 1 → 0.5): S1 −2.3…−2.5 → −1.1…−1.3 s; 5 km −5.5…−6.1 → −2.4…−3.0 s, more than 5 s
+  early 230 → 7 of 300, "now" prompt 135–150 → 57–73 m early; S5 −4.1…−4.6 → −1.5…−2.0 s. Late > 1 s:
+  gradient cases 0, 0, 0 and 3 of 300 (rule: ≤ the Note10's 1–2 % at k = 1, met); S2 3 → 16 of 300, S4
+  0 → 4, 5 km 0 → 2 (S2 open, §5).
+- Note10 product: unchanged (ESKF unchanged, k = 1).
+- VALIDATION_LINE
+- SNAPSHOT_LINE
+
 ## v0.5.14 (2026-11-05): the map grade as a measurement, pressure-gradient and grade-error states
 
 Started from a custom low-end run with a tunnel pressure gradient, where the 10-state filter, the

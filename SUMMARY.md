@@ -103,7 +103,10 @@ map grade became a measurement (11.6–15.7 and 8.9–11.8 m before).
 - **Exit branch.** Recognised in 3000 of 3000 runs that take it. When the car goes straight on,
   "main" is reported in 600 of 600. Such a car has no curve to correct it: on stop-and-go, 5 of 300
   straight-on runs are more than 100 m off at the exit (34 in v0.5.13), until GNSS returns. Until
-  "main" is decided (11–12 s on stop-and-go) the car is shown on the branch, at its farthest 32–36 m off on average.
+  "main" is decided (11–12 s on stop-and-go) the car was shown on the branch, 32–36 m off; since
+  v0.5.15 it is drawn on the main tunnel until "branch" is decided (≤ 4 m), and a car that does take
+  the branch is drawn on the main tunnel for those 3–4 s. The app must not re-route meanwhile
+  [ASSUMED].
 - **Exit.** The largest jump at the exit is under 6.3 m (p95); the shown position is under 5 m
   for good a median 10–17 s after the first fix.
 - **Mount.** Estimated on the approach to ~0.6° per axis rms, it costs nothing measurable when the
@@ -188,10 +191,13 @@ The app runs all three and shows one (REPORT §4.12):
    - stop-and-go fails for the ESKF (~0.9 km). At crawling speed the vehicle constraints see a pitch
      error only through v·δθ, so the cheap gyro's tilt leaks gravity into the speed. The supervisor
      selects the 10-state filter there (12–15 m in all six sets in v0.5.14);
-   - the price of the map grade on a low-end phone: a σ much larger than the error on flat tunnels,
-     so callouts come 2–6 s early on average (5 km: most more than 5 s early), and +3–5 m at the
-     portal on three scenarios. The gradient state's assumed prior is the likely source; not
-     retuned.
+   - the price of the map grade on a low-end phone: a σ 4–6 times the error on flat tunnels, from
+     the gradient state's assumed prior. With k = 1 callouts came 2–6 s early; since v0.5.15 the
+     low-end phone uses k = 0.5 (5 km: 6 → 3 s early), with no late callout in the gradient cases
+     but 16 of 300 late on the S-bend (open). The lasting fix is the gradient measured in a real
+     tunnel;
+   - a car going straight on: the 10-state filter never decides "main". Since v0.5.15 it pauses its
+     map rows meanwhile (5 km: 753 → 77 m) and the car is drawn on the main tunnel.
 6. **Levelling from gravity** (an extra update) was tried and left off: it helps one scenario and
    hurts five.
 
@@ -245,6 +251,9 @@ The app runs all three and shows one (REPORT §4.12):
     source instead of another filter, made the map's grade error a state, required that a map
     without grade give the old filter exactly, and set the one-way constraint's form per filter on
     the condition that both forms ran on 300 seeds.
+  - **"Not yet" and callout timing (v0.5.15):** chose "main first" for the drawn point with the
+    follower's limit across, approved pausing the 10-state filter's map rows, and accepted k = 0.5 on
+    a low-end phone under an acceptance rule he set (the agent's first rule could not fail).
 - **Detail:** REPORT §6 lists every intervention and the choices the agent made. It also lists
   the AI-side errors and what caught them: the author, AI reviews, the agent's own tests, or the
   consistency metric.
