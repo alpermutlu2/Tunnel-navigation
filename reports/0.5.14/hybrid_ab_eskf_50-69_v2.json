@@ -1,0 +1,356 @@
+{
+ "S1/note10/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 12.9,
+   "nees_div": 0.237,
+   "late1": 0.0,
+   "portal": 5.381,
+   "nees": 0.115,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 13.6,
+   "nees_div": 0.321,
+   "late1": 0.0,
+   "portal": 5.688,
+   "nees": 0.136,
+   "fail": 0
+  }
+ },
+ "S1/set:baro.tunnel_grad_pa_per_km=30/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 14.39,
+   "nees_div": 0.303,
+   "late1": 0.0,
+   "portal": 4.807,
+   "nees": 0.091,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 113.1,
+   "nees_div": 22.072,
+   "late1": 0.0,
+   "portal": 103.5,
+   "nees": 13.343,
+   "fail": 12
+  }
+ },
+ "S1/set:baro.tunnel_grad_pa_per_km=-30/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 19.96,
+   "nees_div": 0.549,
+   "late1": 0.0,
+   "portal": 6.435,
+   "nees": 0.166,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 129.7,
+   "nees_div": 23.744,
+   "late1": 1.0,
+   "portal": 59.14,
+   "nees": 13.209,
+   "fail": 0
+  }
+ },
+ "S3/note10/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 2.465,
+   "nees_div": 0.096,
+   "late1": 0.0,
+   "portal": 2.086,
+   "nees": 0.112,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 14.13,
+   "nees_div": 0.338,
+   "late1": 0.0,
+   "portal": 10.69,
+   "nees": 0.253,
+   "fail": 0
+  }
+ },
+ "S3/set:baro.tunnel_grad_pa_per_km=30/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 2.255,
+   "nees_div": 0.081,
+   "late1": 0.0,
+   "portal": 2.075,
+   "nees": 0.11,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 154.7,
+   "nees_div": 30.344,
+   "late1": 0.0,
+   "portal": 110.9,
+   "nees": 9.27,
+   "fail": 12
+  }
+ },
+ "S3/set:baro.tunnel_grad_pa_per_km=-30/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 2.794,
+   "nees_div": 0.12,
+   "late1": 0.0,
+   "portal": 2.304,
+   "nees": 0.138,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 0.85,
+   "main": 0.15,
+   "diverge": 161.8,
+   "nees_div": 30.119,
+   "late1": 1.0,
+   "portal": 65.09,
+   "nees": 5.672,
+   "fail": 1
+  }
+ },
+ "custom:L=5000,g=3,v=110/note10/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 15.69,
+   "nees_div": 0.142,
+   "late1": 0.0,
+   "portal": 2.812,
+   "nees": 0.045,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 25.77,
+   "nees_div": 0.383,
+   "late1": 0.0,
+   "portal": 17.47,
+   "nees": 0.475,
+   "fail": 0
+  }
+ },
+ "custom:L=5000,g=3,v=110/set:baro.tunnel_grad_pa_per_km=25/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 17.49,
+   "nees_div": 0.186,
+   "late1": 0.0,
+   "portal": 2.286,
+   "nees": 0.035,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 202.3,
+   "nees_div": 21.359,
+   "late1": 0.0,
+   "portal": 59.31,
+   "nees": 2.134,
+   "fail": 1
+  }
+ },
+ "custom:L=5000,g=3,v=110/set:baro.tunnel_grad_pa_per_km=-25/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 31.68,
+   "nees_div": 0.511,
+   "late1": 0.0,
+   "portal": 2.755,
+   "nees": 0.042,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 0.0,
+   "main": 0.55,
+   "diverge": 252.0,
+   "nees_div": 22.438,
+   "late1": 1.0,
+   "portal": 94.47,
+   "nees": 6.252,
+   "fail": 8
+  }
+ },
+ "S1-5km/note10/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 21.61,
+   "nees_div": 0.155,
+   "late1": 0.0,
+   "portal": 14.56,
+   "nees": 0.268,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 23.08,
+   "nees_div": 0.209,
+   "late1": 0.0,
+   "portal": 14.74,
+   "nees": 0.286,
+   "fail": 0
+  }
+ },
+ "S1-5km/set:baro.tunnel_grad_pa_per_km=30/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 18.18,
+   "nees_div": 0.109,
+   "late1": 0.0,
+   "portal": 13.13,
+   "nees": 0.217,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 300.7,
+   "nees_div": 35.055,
+   "late1": 0.0,
+   "portal": 199.3,
+   "nees": 13.224,
+   "fail": 20
+  }
+ },
+ "S2/note10/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 4.568,
+   "nees_div": 0.358,
+   "late1": 0.0,
+   "portal": 3.855,
+   "nees": 0.191,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 4.919,
+   "nees_div": 0.424,
+   "late1": 0.0,
+   "portal": 4.056,
+   "nees": 0.221,
+   "fail": 0
+  }
+ },
+ "S4/note10/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 29.67,
+   "nees_div": 0.24,
+   "late1": 0.0,
+   "portal": 6.803,
+   "nees": 0.158,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 35.14,
+   "nees_div": 0.284,
+   "late1": 0.0,
+   "portal": 6.618,
+   "nees": 0.151,
+   "fail": 0
+  }
+ },
+ "S5/note10/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 28.18,
+   "nees_div": 0.572,
+   "late1": 0.0,
+   "portal": 5.995,
+   "nees": 0.166,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 24.83,
+   "nees_div": 0.604,
+   "late1": 0.0,
+   "portal": 6.51,
+   "nees": 0.205,
+   "fail": 0
+  }
+ },
+ "S6/note10/branch": {
+  "default": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 14.64,
+   "nees_div": 0.275,
+   "late1": 0.0,
+   "portal": 6.495,
+   "nees": 0.158,
+   "fail": 0
+  },
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 15.14,
+   "nees_div": 0.384,
+   "late1": 0.0,
+   "portal": 6.475,
+   "nees": 0.17,
+   "fail": 0
+  }
+ },
+ "S4/note10/straight": {
+  "default": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 43.99
+  },
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 53.45
+  }
+ },
+ "S1/set:baro.tunnel_grad_pa_per_km=30/straight": {
+  "default": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 18.93
+  },
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 203.7
+  }
+ }
+}

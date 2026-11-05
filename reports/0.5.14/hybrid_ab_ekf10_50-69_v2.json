@@ -1,0 +1,710 @@
+{
+ "S1/imu_lowend/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 11.55,
+   "nees_div": 0.389,
+   "late1": 0.0,
+   "portal": 6.329,
+   "nees": 0.118,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 11.55,
+   "nees_div": 0.389,
+   "late1": 0.0,
+   "portal": 6.329,
+   "nees": 0.118,
+   "fail": 0
+  }
+ },
+ "S1/imu_lowend+set:baro.tunnel_grad_pa_per_km=30/branch": {
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 95.56,
+   "nees_div": 67.574,
+   "late1": 0.0,
+   "portal": 181.0,
+   "nees": 91.112,
+   "fail": 20
+  },
+  "nograde_soft": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 95.56,
+   "nees_div": 67.574,
+   "late1": 0.0,
+   "portal": 181.0,
+   "nees": 91.112,
+   "fail": 20
+  }
+ },
+ "S1/imu_lowend+set:baro.tunnel_grad_pa_per_km=-30/branch": {
+  "nograde": {
+   "branch": 0.55,
+   "main": 0.45,
+   "diverge": 125.5,
+   "nees_div": 35.65,
+   "late1": 1.0,
+   "portal": 246.0,
+   "nees": 244.866,
+   "fail": 20
+  },
+  "nograde_soft": {
+   "branch": 0.55,
+   "main": 0.45,
+   "diverge": 125.5,
+   "nees_div": 35.65,
+   "late1": 1.0,
+   "portal": 246.0,
+   "nees": 244.866,
+   "fail": 20
+  }
+ },
+ "S3/imu_lowend/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 19.57,
+   "nees_div": 0.887,
+   "late1": 0.0,
+   "portal": 14.31,
+   "nees": 0.199,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 19.57,
+   "nees_div": 0.887,
+   "late1": 0.0,
+   "portal": 14.31,
+   "nees": 0.199,
+   "fail": 0
+  }
+ },
+ "S3/imu_lowend+set:baro.tunnel_grad_pa_per_km=30/branch": {
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 142.8,
+   "nees_div": 126.919,
+   "late1": 0.0,
+   "portal": 381.1,
+   "nees": 159.389,
+   "fail": 20
+  },
+  "nograde_soft": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 142.8,
+   "nees_div": 126.919,
+   "late1": 0.0,
+   "portal": 381.1,
+   "nees": 159.389,
+   "fail": 20
+  }
+ },
+ "S3/imu_lowend+set:baro.tunnel_grad_pa_per_km=-30/branch": {
+  "nograde": {
+   "branch": 0.0,
+   "main": 0.3,
+   "diverge": 212.8,
+   "nees_div": 68.508,
+   "late1": 1.0,
+   "portal": 566.6,
+   "nees": 2523.029,
+   "fail": 20
+  },
+  "nograde_soft": {
+   "branch": 0.0,
+   "main": 0.3,
+   "diverge": 212.8,
+   "nees_div": 68.508,
+   "late1": 1.0,
+   "portal": 571.6,
+   "nees": 3407.933,
+   "fail": 20
+  }
+ },
+ "custom:L=5000,g=3,v=110/imu_lowend/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 36.91,
+   "nees_div": 1.361,
+   "late1": 0.0,
+   "portal": 35.85,
+   "nees": 2.164,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 36.91,
+   "nees_div": 1.361,
+   "late1": 0.0,
+   "portal": 35.85,
+   "nees": 2.164,
+   "fail": 0
+  }
+ },
+ "custom:L=5000,g=3,v=110/imu_lowend+set:baro.tunnel_grad_pa_per_km=25/branch": {
+  "nograde": {
+   "branch": 0.05,
+   "main": 0.95,
+   "diverge": 184.7,
+   "nees_div": 182.902,
+   "late1": 0.0,
+   "portal": 404.5,
+   "nees": 212.503,
+   "fail": 20
+  },
+  "nograde_soft": {
+   "branch": 0.05,
+   "main": 0.95,
+   "diverge": 184.7,
+   "nees_div": 182.902,
+   "late1": 0.0,
+   "portal": 404.5,
+   "nees": 212.503,
+   "fail": 20
+  }
+ },
+ "custom:L=5000,g=3,v=110/imu_lowend+set:baro.tunnel_grad_pa_per_km=-25/branch": {
+  "nograde": {
+   "branch": 0.55,
+   "main": 0.2,
+   "diverge": 237.8,
+   "nees_div": 27.131,
+   "late1": 1.0,
+   "portal": 479.7,
+   "nees": 74.774,
+   "fail": 19
+  },
+  "nograde_soft": {
+   "branch": 0.55,
+   "main": 0.2,
+   "diverge": 237.8,
+   "nees_div": 27.131,
+   "late1": 1.0,
+   "portal": 479.7,
+   "nees": 74.774,
+   "fail": 19
+  }
+ },
+ "S1-5km/imu_lowend/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 21.22,
+   "nees_div": 0.404,
+   "late1": 0.0,
+   "portal": 20.62,
+   "nees": 0.376,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 21.22,
+   "nees_div": 0.404,
+   "late1": 0.0,
+   "portal": 20.62,
+   "nees": 0.376,
+   "fail": 0
+  }
+ },
+ "S1-5km/imu_lowend+set:baro.tunnel_grad_pa_per_km=30/branch": {
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 282.0,
+   "nees_div": 375.993,
+   "late1": 0.0,
+   "portal": 524.3,
+   "nees": 337.488,
+   "fail": 20
+  },
+  "nograde_soft": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 282.0,
+   "nees_div": 375.993,
+   "late1": 0.0,
+   "portal": 524.3,
+   "nees": 337.488,
+   "fail": 20
+  }
+ },
+ "S2/imu_lowend/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 10.92,
+   "nees_div": 0.43,
+   "late1": 0.0,
+   "portal": 8.924,
+   "nees": 0.418,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 10.92,
+   "nees_div": 0.43,
+   "late1": 0.0,
+   "portal": 8.924,
+   "nees": 0.418,
+   "fail": 0
+  }
+ },
+ "S4/imu_lowend/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 65.47,
+   "nees_div": 0.168,
+   "late1": 0.0,
+   "portal": 22.53,
+   "nees": 1.3,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 62.86,
+   "nees_div": 0.286,
+   "late1": 0.0,
+   "portal": 22.16,
+   "nees": 1.542,
+   "fail": 0
+  }
+ },
+ "S5/imu_lowend/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 17.07,
+   "nees_div": 0.402,
+   "late1": 0.0,
+   "portal": 9.375,
+   "nees": 0.288,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 17.07,
+   "nees_div": 0.402,
+   "late1": 0.0,
+   "portal": 9.375,
+   "nees": 0.288,
+   "fail": 0
+  }
+ },
+ "S6/imu_lowend/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 11.91,
+   "nees_div": 0.383,
+   "late1": 0.0,
+   "portal": 5.747,
+   "nees": 0.098,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 11.91,
+   "nees_div": 0.383,
+   "late1": 0.0,
+   "portal": 5.747,
+   "nees": 0.098,
+   "fail": 0
+  }
+ },
+ "S4/imu_lowend/straight": {
+  "nograde": {
+   "branch": 0.0,
+   "main": 0.0,
+   "horiz": 339.3
+  },
+  "nograde_soft": {
+   "branch": 0.0,
+   "main": 0.0,
+   "horiz": 337.1
+  }
+ },
+ "S1/imu_lowend+set:baro.tunnel_grad_pa_per_km=30/straight": {
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 334.9
+  },
+  "nograde_soft": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 334.9
+  }
+ },
+ "S1/note10/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 11.85,
+   "nees_div": 1.646,
+   "late1": 0.0,
+   "portal": 4.998,
+   "nees": 0.513,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 11.85,
+   "nees_div": 1.646,
+   "late1": 0.0,
+   "portal": 4.998,
+   "nees": 0.513,
+   "fail": 0
+  }
+ },
+ "S1/set:baro.tunnel_grad_pa_per_km=30/branch": {
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 95.76,
+   "nees_div": 684.822,
+   "late1": 0.0,
+   "portal": 180.8,
+   "nees": 373.457,
+   "fail": 20
+  },
+  "nograde_soft": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 95.76,
+   "nees_div": 684.822,
+   "late1": 0.0,
+   "portal": 180.8,
+   "nees": 373.457,
+   "fail": 20
+  }
+ },
+ "S1/set:baro.tunnel_grad_pa_per_km=-30/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 128.5,
+   "nees_div": 36.228,
+   "late1": 1.0,
+   "portal": 207.7,
+   "nees": 1146.946,
+   "fail": 20
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 128.5,
+   "nees_div": 36.228,
+   "late1": 1.0,
+   "portal": 207.7,
+   "nees": 1146.946,
+   "fail": 20
+  }
+ },
+ "S3/note10/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 15.4,
+   "nees_div": 1.287,
+   "late1": 0.0,
+   "portal": 9.843,
+   "nees": 0.532,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 15.4,
+   "nees_div": 1.287,
+   "late1": 0.0,
+   "portal": 9.843,
+   "nees": 0.532,
+   "fail": 0
+  }
+ },
+ "S3/set:baro.tunnel_grad_pa_per_km=30/branch": {
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 144.8,
+   "nees_div": 1357.403,
+   "late1": 0.0,
+   "portal": 360.5,
+   "nees": 483.286,
+   "fail": 20
+  },
+  "nograde_soft": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 144.8,
+   "nees_div": 1357.403,
+   "late1": 0.0,
+   "portal": 360.5,
+   "nees": 483.286,
+   "fail": 20
+  }
+ },
+ "S3/set:baro.tunnel_grad_pa_per_km=-30/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 180.9,
+   "nees_div": 59.533,
+   "late1": 1.0,
+   "portal": 267.3,
+   "nees": 279.551,
+   "fail": 20
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 180.9,
+   "nees_div": 59.533,
+   "late1": 1.0,
+   "portal": 267.3,
+   "nees": 279.551,
+   "fail": 20
+  }
+ },
+ "custom:L=5000,g=3,v=110/note10/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 31.45,
+   "nees_div": 0.571,
+   "late1": 0.0,
+   "portal": 14.65,
+   "nees": 0.947,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 31.45,
+   "nees_div": 0.571,
+   "late1": 0.0,
+   "portal": 14.65,
+   "nees": 0.947,
+   "fail": 0
+  }
+ },
+ "custom:L=5000,g=3,v=110/set:baro.tunnel_grad_pa_per_km=25/branch": {
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 176.6,
+   "nees_div": 958.291,
+   "late1": 0.0,
+   "portal": 391.4,
+   "nees": 511.942,
+   "fail": 20
+  },
+  "nograde_soft": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 176.6,
+   "nees_div": 958.291,
+   "late1": 0.0,
+   "portal": 391.4,
+   "nees": 511.942,
+   "fail": 20
+  }
+ },
+ "custom:L=5000,g=3,v=110/set:baro.tunnel_grad_pa_per_km=-25/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 246.7,
+   "nees_div": 28.541,
+   "late1": 1.0,
+   "portal": 444.6,
+   "nees": 28.04,
+   "fail": 20
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 246.7,
+   "nees_div": 28.541,
+   "late1": 1.0,
+   "portal": 444.6,
+   "nees": 28.04,
+   "fail": 20
+  }
+ },
+ "S1-5km/note10/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 24.56,
+   "nees_div": 0.32,
+   "late1": 0.0,
+   "portal": 8.556,
+   "nees": 0.366,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 24.56,
+   "nees_div": 0.32,
+   "late1": 0.0,
+   "portal": 8.556,
+   "nees": 0.366,
+   "fail": 0
+  }
+ },
+ "S1-5km/set:baro.tunnel_grad_pa_per_km=30/branch": {
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 289.7,
+   "nees_div": 4845.305,
+   "late1": 0.0,
+   "portal": 531.8,
+   "nees": 928.451,
+   "fail": 20
+  },
+  "nograde_soft": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 289.7,
+   "nees_div": 4845.305,
+   "late1": 0.0,
+   "portal": 531.8,
+   "nees": 928.451,
+   "fail": 20
+  }
+ },
+ "S2/note10/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 4.28,
+   "nees_div": 2.025,
+   "late1": 0.0,
+   "portal": 3.804,
+   "nees": 0.743,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 4.28,
+   "nees_div": 2.025,
+   "late1": 0.0,
+   "portal": 3.804,
+   "nees": 0.743,
+   "fail": 0
+  }
+ },
+ "S4/note10/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 31.83,
+   "nees_div": 1.835,
+   "late1": 0.0,
+   "portal": 5.912,
+   "nees": 0.651,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 33.89,
+   "nees_div": 3.641,
+   "late1": 0.0,
+   "portal": 4.73,
+   "nees": 0.424,
+   "fail": 0
+  }
+ },
+ "S5/note10/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 20.59,
+   "nees_div": 0.622,
+   "late1": 0.0,
+   "portal": 2.75,
+   "nees": 0.381,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 20.59,
+   "nees_div": 0.622,
+   "late1": 0.0,
+   "portal": 2.75,
+   "nees": 0.381,
+   "fail": 0
+  }
+ },
+ "S6/note10/branch": {
+  "nograde": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 12.82,
+   "nees_div": 2.038,
+   "late1": 0.0,
+   "portal": 4.498,
+   "nees": 0.389,
+   "fail": 0
+  },
+  "nograde_soft": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 12.82,
+   "nees_div": 2.038,
+   "late1": 0.0,
+   "portal": 4.498,
+   "nees": 0.389,
+   "fail": 0
+  }
+ },
+ "S4/note10/straight": {
+  "nograde": {
+   "branch": 0.0,
+   "main": 0.45,
+   "horiz": 185.8
+  },
+  "nograde_soft": {
+   "branch": 0.0,
+   "main": 0.55,
+   "horiz": 189.3
+  }
+ },
+ "S1/set:baro.tunnel_grad_pa_per_km=30/straight": {
+  "nograde": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 334.4
+  },
+  "nograde_soft": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 334.4
+  }
+ }
+}
