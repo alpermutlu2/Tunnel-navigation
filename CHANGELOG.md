@@ -35,7 +35,8 @@ How the numbers moved (low-end, through the supervisor, k 0.5 → 0.7; 0–299 u
   2 → 38. Validation: 5 km more than 5 s early 1 → 19 of 100.
 - Note10 product, positions, branch decisions, the drawn point: unchanged (k does not enter the
   filters).
-- Snapshot (`metrics.json`, Note10 ESKF, 20 seeds): SNAPSHOT_RESULT
+- Snapshot (`metrics.json`, Note10 ESKF, 20 seeds): no metric moved (k does not enter the filters). Tests
+  209 passed (with `--runslow`). Site rebuilt: the low-end tabs start at k = 0.7.
 
 ## v0.5.15 (2026-11-05): "main first" while the branch is "not yet", paused map rows, callout k by class
 
