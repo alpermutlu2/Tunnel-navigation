@@ -164,7 +164,8 @@ seed 271 decided "main"). When the car goes straight on, "main" is reported in 6
   - The exit curve brings the portal error down to 2.5–16 m.
   - The filter is consistent: mean (e/σ)² ≤ 0.37 in every set, and every run is within 2σ at the
     portal.
-  - Low-end phones: §4.12 and §4.15 (the 10-state filter is shown there; SUPERVISOR_LOWEND_S4).
+  - Low-end phones: §4.12 and §4.15 (the 10-state filter is shown there: S4 12–15 m at the portal
+    in all six sets, no run over 100 m).
 - **Callout.** "The right moment" is read as *never late, and only as early as the uncertainty
   requires*: a late callout can make the driver miss the exit.
   - **Without the rule (k = 0):** 0–66 % of callouts come more than 1 s late (worst set per
@@ -588,6 +589,10 @@ along-track error; time to 5 m is the median per set from the first fix after th
 | low-end S4, v0.5.12 | 54–139 m | 20–24 m in five sets, 225 m in one | 24 / 0.70 | ≤ 2 % | 60–74 % | 26–46 % | – |
 | low-end S4, v0.5.11 (0–299) | 40–229 m | 89–335 m | 59 / 12.9 | 6 % | ≤ 86 % | 36 % | – |
 | pressure 30 Pa/km, S1 / S3 | 105–154 m | 96–106 m | 13.4 / 2.1, 8.5 / 1.06 | 0 % | 4 % / 100 % | 28 % / 72 % | 49–52 / 36–38 |
+| **v0.5.14** (§4.15): Note10, S1–S6, 5 km | 2.3–39.0 m | 1.5–16.5 m | ≤ 0.39 / ≤ 0.34 | ≤ 10 % (S5) | ≤ 6 % | ≤ 4 % | 0–20 |
+| v0.5.14: low-end, S1, S2, S3, S5, S6, 5 km | 9.5–45.9 m | 6.8–25.2 m | ≤ 0.70 / ≤ 0.69 | ≤ 4 % | ≤ 86 % (5 km), ≤ 34 % (S5), 0 % (rest) | ≤ 2 % | 17–27 |
+| v0.5.14: low-end S4 | 34–45 m | 12.1–15.0 m | 0.41 / 0.10 | 0 % | 20–30 % | 16–38 % | 21–26 |
+| v0.5.14: pressure 30 Pa/km, S1 / S3, Note10 and low-end | 2.2–36.4 m | 1.4–25.1 m | ≤ 0.68 / ≤ 0.66 | 0 % | ≤ 2 % | ≤ 4 % | 8–29 |
 
 - **Against v0.5.12** the rows moved by the estimated mount and the 10-state filter's new rows
   (§4.14): low-end S4 portal 20.4–23.9 → 16.1–20.5 m in the five good sets, low-end S2 9.9–11.6 →
@@ -1057,7 +1062,51 @@ Low-end S4 portal error of the seeds in question, v0.5.13 / mean-only / soft: 11
   tunnel by 3–15 m at the top of the range; the portal on S1 and S6 by 4–5 m. What the product shows
   (the supervisor's follower) is in the next table.
 
-SUPERVISOR_TABLE
+*300 seeds, what the app shows* (`supervisor_sets_0-299.json`; class rule with the majority
+monitor: the ESKF on a Note10, the 10-state filter on a low-end phone). Portal rms per set, the
+largest mean (e/σ)² of the shown σ, the branch shown, callouts > 1 s late (k = 1) of 300. The cases
+marked * were not in v0.5.13's 300-seed run; their v0.5.13 value is the 20-seed measurement that
+started this work (`supervisor_lowend_pressure_50-69.json`).
+
+| case | v0.5.13 | v0.5.14 |
+|---|---|---|
+| Note10, S1 at 30 Pa/km | 96–104 m, 2.12, branch 0/300 | **5.3–6.6 m, 0.16, 300/300** |
+| Note10, S3 at 30 Pa/km | 99–106 m, 1.06, branch 0/300 | **1.4–1.8 m, 0.07, 300/300** |
+| Note10, 3 % tunnel at ±25 Pa/km * | +25: 59 m, "main" 20/20 | 2.6–3.4 m (+25), 4.0–5.4 m (−25), 300/300 each |
+| low-end, S1 at 30 Pa/km * | 181 m, "main" 20/20 | **12.2–16.4 m, 0.41, 300/300** |
+| low-end, S3 at 30 Pa/km * | 381 m, "main" 20/20 | **18.1–25.1 m, 0.66, 300/300** |
+| low-end, 3 % tunnel at ±25 Pa/km * | +25: 405 m, "main" 19/20 | 17.4–23.1 m (+25), 12.4–16.7 m (−25), 300/300 each |
+| Note10 S3 | 9.1–12.1 m | 1.5–1.8 m |
+| Note10 S4 | 4.5–7.8 m, branch 299/300, 3 late | 4.7–6.2 m, 300/300, 2 late |
+| Note10 S5 | 6.6–9.1 m, 17 late | 6.5–8.4 m, 14 late |
+| Note10 S1, S2, S6, 5 km | – | within ±0.6 m |
+| low-end S4 | 16.1–224.7 m (seed 232), branch 299/300, 2 late | **12.1–15.0 m, 0.10, 300/300, 0 late** |
+| low-end S3 | 17.5–22.8 m, 5 late | 19.6–25.2 m, 0 late (diverge 16–23 → 9.5–13 m) |
+| low-end S1 | 8.8–10.5 m | 10.4–15.0 m |
+| low-end S2 | 9.0–9.7 m, 0 late | 9.9–12.7 m, 3 late |
+| low-end S5 | 7.9–10.4 m, 3 late | 6.8–12.3 m, 0 late |
+| low-end S6 | 8.2–10.8 m | 12.1–15.6 m |
+| low-end 5 km | 15.9–19.6 m | 12.8–18.7 m |
+
+- **The gradient no longer breaks either product:** 100 m at the portal and the wrong branch in
+  every run (Note10) become 1.4–6.6 m and the right branch in every run; on a low-end phone, from
+  181–405 m to 12–25 m. The majority monitor, which in v0.5.13 only raised σ there, has nothing to
+  catch.
+- **Low-end S4 has no failure** and its shown σ is honest ((e/σ)² ≤ 0.10 with the monitor, 0.41
+  without).
+- **What it costs on a low-end phone, in accuracy:** +2–5 m at the portal on S1, S2 and S6 (top of
+  the range), and 3 late callouts on S2 where there were none; S3, S4 and S5 lose their late
+  callouts (5, 2, 3 → 0).
+- **And in timing, which is the larger cost:** on flat tunnels the shown σ_s grows much more than
+  the error ((e/σ)² at the diverge 0.03–0.06 on S1, S5, S6 and 5 km, 20 seeds), so the k·σ rule calls out earlier. Mean
+  callout advance, v0.5.13 → v0.5.14: S1 0.6–0.8 → 2.3–2.5 s, S6 0.7–0.9 → 2.4–2.6 s, S5 0.6–1.1 →
+  4.1–4.6 s (16–34 % of callouts more than 5 s early, from 0), the 5 km tunnel 1.6–2.0 → 5.5–6.1 s
+  (64–86 % more than 5 s early, from 0); the "now" prompt comes 63–69 m early on S1 (16–21 m) and
+  135–150 m on the 5 km tunnel (37–49 m). On S4 it goes the other way: 6.3–7.4 → 3.8–4.3 s, 56–76 %
+  → 20–30 % more than 5 s early. The likely source is the gradient state's prior, σ_g = 3·10⁻³
+  (≈ 35 Pa/km [ASSUMED]), which adds σ_g·d of barometer offset over a tunnel of length d; not
+  traced. Its σ was not retuned in v0.5.14 (§5). The follower brings the shown position under 5 m in a median of 17–28 s after the exit
+  per set, as in v0.5.13; with a gradient 19–30 s (v0.5.13 on a Note10: 36–52 s).
 
 ## 5. Limitations and next steps
 
@@ -1116,7 +1165,10 @@ SUPERVISOR_TABLE
   The grade row now holds θ̂ on the map's (flat) grade. This rests on the map having a grade
   profile: without one the filter is v0.5.13's, seed 232 included.
 - **The hybrid's cost on a low-end phone** (§4.15): standalone, the diverge rises by 3–15 m at the
-  top of the range on S1, S2, S5, S6 and the 5 km tunnel; not traced.
+  top of the range on S1, S2, S5, S6 and the 5 km tunnel, and on flat tunnels σ_s grows far more than
+  the error, so the callouts come 2–6 s early on average (5 km: 64–86 % more than 5 s early). The
+  gradient state's prior (≈ 35 Pa/km [ASSUMED]) is the likely source and was not retuned; a real
+  tunnel's gradient (below) would set it.
 - **The hybrid needs the map's grade.** A 10 % scale error is carried as a state; a wrong profile
   shape (a misplaced crest, a missing dip) is not simulated.
 - **Note10 with the 10-state filter, stop-and-go** (§4.15): with the hybrid it is overconfident on S4
