@@ -14,7 +14,7 @@ for pg in (30,-30):
     o=run_ekf10(t,F,W,gnss,bt,bh,C,tr.lever_arm_b,get_scenario("S1").road,Ekf10Config(baro_grad=True,mount_yaw_sigma=np.deg2rad(md["yaw_sigma_deg"])),EskfConfig())
     kt=np.clip(np.round((o.t-tr.t[0])/tr.dt).astype(int),0,len(tr.t)-1)
     i_e=int(np.argmax(tr.in_tunnel)); te=tr.t[i_e]
-    print("pg",pg,"true g_h [m/m]",round(pg/11.8e3,5))
+    print("pg",pg,"true g_h in the filter convention [m/m]",round(-pg/11.8e3,5))
     for dt in (10,30,60,90,120,150):
         k=int(np.argmin(abs(o.t-(te+dt))))
         print(f"  t+{dt:3d}: g_hat {np.round(o.grad[:,k]*1e3,2)} e-3  sig {np.round(o.sig_grad[:,k]*1e3,2)} e-3  e_s {np.round(o.s[:,k]-tr.s[kt[k]],0)}  e_v {np.round(o.v[:,k]-tr.v[kt[k]],2)}")
