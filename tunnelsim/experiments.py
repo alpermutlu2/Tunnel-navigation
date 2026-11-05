@@ -468,6 +468,7 @@ def ekf10_experiment(key, seeds=50, overrides=(), mount_err_deg=None, cfg10=None
     s_call = ex.s - CALLOUT_LEAD_M
     k_div = int(np.argmax(s_true >= ex.s)); k_ct = int(np.argmax(s_true >= s_call))
     res["at_diverge"] = stats(e[:, k_div])
+    res["consistency_diverge"] = {"mean_norm_sq": round(float(np.mean((e[:, k_div] / o.sig_s[:, k_div]) ** 2)), 3)}
     res["callout_k"] = {}
     for kk_ in (0.0, CALLOUT_K):
         m = (o.s + kk_ * o.sig_s) >= s_call
