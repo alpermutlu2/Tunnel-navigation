@@ -1,0 +1,25 @@
+Supervisor, class rule with the majority monitor (v0.5.13 -> v0.5.14): portal range, worst (e/σ)², branch
+  S1-5km/lowend                            15.9–19.6 m, 0.43, branch 1.00           -> 12.8–18.7 m, 0.39, branch 1.00
+  S1-5km/note10                            13.2–17.1 m, 0.38, branch 1.00           -> 12.7–16.5 m, 0.34, branch 1.00
+  S1/lowend                                8.8–10.5 m, 0.32, branch 1.00            -> 10.4–15.0 m, 0.30, branch 1.00
+  S1/lowend_pressure30                     –                                        -> 12.2–16.4 m, 0.41, branch 1.00
+  S1/note10                                5.7–7.4 m, 0.22, branch 1.00             -> 5.9–7.3 m, 0.20, branch 1.00
+  S1/pressure30                            96.2–103.9 m, 2.12, branch 0.00          -> 5.3–6.6 m, 0.16, branch 1.00
+  S2/lowend                                9.0–9.7 m, 0.52, branch 1.00             -> 9.9–12.7 m, 0.32, branch 1.00
+  S2/note10                                4.2–5.5 m, 0.34, branch 1.00             -> 4.4–5.6 m, 0.32, branch 1.00
+  S3/lowend                                17.5–22.8 m, 0.52, branch 1.00           -> 19.6–25.2 m, 0.69, branch 1.00
+  S3/lowend_pressure30                     –                                        -> 18.1–25.1 m, 0.66, branch 1.00
+  S3/note10                                9.1–12.1 m, 0.29, branch 1.00            -> 1.5–1.8 m, 0.08, branch 1.00
+  S3/pressure30                            99.0–106.1 m, 1.06, branch 0.00          -> 1.4–1.8 m, 0.07, branch 1.00
+  S4/lowend                                16.1–224.7 m, 0.60, branch 0.98–1.00     -> 12.1–15.0 m, 0.10, branch 1.00
+  S4/note10                                4.5–7.8 m, 0.14, branch 0.98–1.00        -> 4.7–6.2 m, 0.13, branch 1.00
+  S5/lowend                                7.9–10.4 m, 0.48, branch 1.00            -> 6.8–12.3 m, 0.31, branch 1.00
+  S5/note10                                6.6–9.1 m, 0.39, branch 1.00             -> 6.5–8.4 m, 0.32, branch 1.00
+  S6/lowend                                8.2–10.8 m, 0.34, branch 1.00            -> 12.1–15.6 m, 0.33, branch 1.00
+  S6/note10                                6.3–8.3 m, 0.28, branch 1.00             -> 6.7–8.5 m, 0.27, branch 1.00
+  custom:L=5000,g=3,v=110/lowend           –                                        -> 14.6–20.1 m, 0.57, branch 1.00
+  custom:L=5000,g=3,v=110/lowend_pressure-25 –                                        -> 12.4–16.7 m, 0.37, branch 1.00
+  custom:L=5000,g=3,v=110/lowend_pressure25 –                                        -> 17.4–23.1 m, 0.69, branch 1.00
+  custom:L=5000,g=3,v=110/note10           –                                        -> 2.9–3.8 m, 0.05, branch 1.00
+  custom:L=5000,g=3,v=110/pressure-25      –                                        -> 4.0–5.4 m, 0.08, branch 1.00
+  custom:L=5000,g=3,v=110/pressure25       –                                        -> 2.6–3.4 m, 0.04, branch 1.00
