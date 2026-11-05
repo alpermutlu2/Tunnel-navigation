@@ -7,6 +7,61 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.14 (2026-11-05): the map grade as a measurement, pressure-gradient and grade-error states
+
+Started from a custom low-end run with a tunnel pressure gradient, where the 10-state filter, the
+low-end product, came last (181–524 m at the portal, "main" in 19–20 of 20). Design on seeds 50–69
+(20 seeds, `reports/0.5.14/hybrid_ab_*.json`), numbers on 0–299, validation 500–599 run once
+(`validation_500-599.json`, `ekf10_validation_500-599.json`, `supervisor_validation.json`).
+REPORT §4.15.
+
+- **Map grade as a pitch measurement** (`grade_update`), in an outage at 1 Hz. 10-state:
+  z = γ_map − θ̂ − k̂·γ_map (θ is the path pitch, suspension pitch in R). ESKF: the vertical velocity,
+  v_u = (1 − k̂)·γ_map·|v_h|. Skipped on the main tunnel after a "main" decision.
+- **Tunnel pressure-gradient state** (`baro_grad`) in the 10-state filter too (the ESKF had it,
+  off), with the grade row as its partner: alone it was unobservable in a straight tunnel.
+- **Map grade-error state** (`grade_error_state`): the map's grade = (1 + k)·the road's, k ~ N(0, 0.1²)
+  per tunnel. As white noise in R a 10 % error was averaged away (low-end 3 % tunnel 137 m, 60 % late;
+  Note10 ESKF 136 m, 100 % late); as a state 91 m / 0 % and 20 m.
+- **Defaults by filter and IMU class** (`eskf.HYBRID_DEFAULT`, `resolve_hybrid`): on in the two
+  products, the ESKF on a Note10-class phone and the 10-state filter on a low-end one; off on the
+  ESKF with a low-end phone (not measured) and on the 10-state filter with a Note10 (S4 overconfident).
+  `grade_update` / `baro_grad` default to None (the class default); True/False still override.
+- **A map without a grade profile turns the hybrid off** (`mapview.without_grade`, `map_has_grade`,
+  `MapView.has_grade`; owner: missing, not zero). Until now such a road became a zero grade. Matrix
+  cell: identical to v0.5.13 in 17/17 ESKF and 34/34 10-state cases.
+- **One-way constraint, per filter** (`no_reverse_mode`): "mean" (v̂ to 0, P untouched) in the
+  10-state filter, from the seed 232 trace; "soft" (v0.5.12–13) kept in the ESKF, where mean-only
+  cost S4 (seed 247 −3 → −144 m). Measured, not derived; both forms on 300 seeds below.
+- **Per-member mount-yaw prior** (`mount_yaw_sigma` may be a tuple): the batch took its majority's.
+- **Prompts that never fire** are "not fired" and left out of the error (`navmetrics`).
+- **Coverage** (`experiments.coverage`): share within 1σ and 2σ at the diverge and the portal, in
+  `eskf_experiment`, `ekf10_experiment`, `eval_sets`, `ekf10_sets`.
+- **Not kept:** a branch-fit guard (never fired); the gradient state alone (costs nominal); prior-σ
+  sweeps (unobservable); accel-bias random walk ×10 for the Note10 10-state filter (fixes its S4
+  consistency but has no physical basis, and the trace does not support the hypothesis behind it).
+- **Tools:** `hybrid_ab.py` (and `v2` cells), `ekf10_ba_rw_ab.py`, `trace_ba_rw_s4.py`,
+  `diag_seed232.py`, `trace_ekf10_grade.py`, `supervisor_pressure_lowend.py`, `ekf10_baro_grad_ab.py`,
+  `ekf10_grad_trace.py`, `summarise_300.py`; `ekf10_sets.py` variants v0.5.14 / soft;
+  `supervisor_eval.py` low-end + gradient and the 3 % tunnel at ±25 Pa/km; validation 500–599;
+  `serve.py` hybrid selector; a debug hook in `run_ekf10` (every update, every landmark evaluation).
+- **Tests:** class defaults, the map without grade (identical tracks), the no-grade proxy; three
+  mechanism tests (seeds 63, 247, 15) pinned to the v0.5.13 filter.
+
+How the numbers moved (0–299, six sets of 50):
+- ESKF Note10: S3 diverge 11.6–15.7 → 2.6–3.3 m, portal 8.9–11.8 → 1.7–2.1 m; S4 diverge
+  35.0–48.4 → 28.3–35.9 m, branch 299 → 300 of 300; S4 straight on, runs > 100 m 34 → 5 (portal
+  51–76 → 40–50 m); S5 diverge 24.8–35.6 → 27.7–38.6 m (the cost); the rest within ±1 m. Late
+  callouts k = 1: 20 → 13 of 3000. Every run within 2σ at the portal.
+- 10-state low-end: S4 1 → 0 runs > 100 m (seed 232 −1581 → 16 m), portal 16.1–224.7 → 12.1–15.0 m,
+  worst (e/σ)² 25 → 0.41; S3 diverge 16–23 → 9.5–12.8 m; the diverge rises on S1, S2, S5, S6 and the
+  5 km tunnel by 3–15 m at the top of the range. Soft form: S4 18.1–21.8 m, (e/σ)² 1.12; seeds 113,
+  125, 255 stay under 25 m with mean-only. Note10 10-state: S4 4.8–23.7 → 6.4–16.0 m (mean-only),
+  the rest unchanged.
+- SUPERVISOR_CHANGELOG
+- VALIDATION_CHANGELOG
+- SNAPSHOT_CHANGELOG
+
 ## v0.5.13 (2026-10-30): mount estimated in open sky, lateral-force speed row, recovery and prompt metrics
 
 From a comparison with another case-study repository; the owner chose items 1, 2, 3, 4 and 6 and
