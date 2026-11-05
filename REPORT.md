@@ -7,7 +7,7 @@ tunnel. The navigation app has to keep showing the car, call out an exit inside 
 right moment, and recover cleanly when the car comes out.
 
 All results come from simulation. The main results are six independent sets of 50 seeds
-(`tools/eval_sets.py`, `reports/0.5.13/`) plus a held-out validation set of 100; §3 explains the
+(`tools/eval_sets.py`, `reports/0.5.14/`) plus a held-out validation set of 100; §3 explains the
 three seed tiers. Earlier sections quote 30–50 seeds where they say so. Every parameter is tagged [MEAS] (measured,
 cited), [SPEC] (datasheet) or [ASSUMED] (chosen here); §2.2 lists the assumptions and
 `tunnelsim/profiles.py` holds every value. The simulator runs interactively (`python tools/serve.py`) or one page per run
@@ -32,13 +32,15 @@ A measured error budget set the design (`DESIGN.md` §4, 200 seeds, 180 s):
 
 The estimator is an error-state Kalman filter (`tunnelsim/eskf.py`). It runs on 100 Hz IMU data.
 Its 16 core states are position, velocity, attitude, accelerometer bias, gyro bias and barometer
-offset. Cruise mode adds 2 states and the map layer adds 2 more.
+offset. Cruise mode adds 2 states, the map layer 2 more, and the mount yaw, the tunnel's pressure
+gradient and the map's grade error one each (§4.14, §4.15).
 
 | Layer | Role |
 |---|---|
 | GNSS position and velocity; χ² gate; R inflated for correlated noise; small bias random walks | Calibrate biases and attitude before the outage (robust over optimal) |
 | Non-holonomic constraint (NHC): no lateral or vertical body velocity | Holds pitch. Lateral row skipped while \|ω_z\|·v > 0.3 m/s², because of sideslip in curves (§4.3) |
 | Barometer, 1 s average modelled at the window centre | Vertical channel and pitch |
+| Map grade in the tunnel (v0.5.14): the road's grade as a weak measurement of the vertical velocity, once per second; the tunnel's pressure gradient and the map's grade scale error as per-tunnel states; off where the map has no grade profile | Pitch from the map, so the barometer's residual can go to the pressure gradient (§4.4, §4.15) |
 | ZUPT from an IMU stop detector | Stop-and-go traffic |
 | Cruise prior: speed = v_ref + d, d Gauss–Markov (σ 0.5 m/s, τ 60 s) | A stated model of the driver, not a measurement (§4.2) |
 | Map in the tunnel: 1 Hz heading and cross-track against the route polyline; map lateral offset (σ 2 m) and length error (σ 0.5 %) as states; paused around the diverge until the in-loop branch decision | Heading and lateral position; along-track information where the road curves, bounded by the map's own uncertainty (§4.5) |
@@ -94,8 +96,8 @@ overconfident.
 | IMU | Galaxy Note10 (LSM6DSR) Allan terms; turn-on bias 10 mg | [MEAS]; [SPEC] |
 | IMU | Shape of the bias drift (three Gauss–Markov terms), vibration levels | [ASSUMED] |
 | GNSS | 3 m horizontal, 0.1 m/s, correlated (30 s / 10 s); fade before the portal; 30 m exit multipath | [ASSUMED] |
-| Barometer | 0.1 m white + 0.1 m offset drift (60 s); closed cabin; no tunnel pressure gradient (30 Pa/km tested, §4.4) | [ASSUMED] |
-| Map | Route polyline with the diverge; lateral offset σ 2 m and length error σ 0.5 % (§4.5); no grade profile | [ASSUMED] |
+| Barometer | 0.1 m white + 0.1 m offset drift (60 s); closed cabin; no tunnel pressure gradient in the nominal runs (±25–30 Pa/km tested, §4.4, §4.15) | [ASSUMED] |
+| Map | Route polyline with the diverge; lateral offset σ 2 m and length error σ 0.5 % (§4.5); a grade profile where the map has one, with a 10 % scale error σ (§4.15); without one the grade layer is off | [ASSUMED] |
 | Vehicle | Sideslip 0.4°/(m/s²) with a 0.2 s lag; suspension pitch 1.5°/g | [ASSUMED] |
 | Driver | In cruise the speed wanders like a Gauss–Markov process, σ 0.5 m/s, τ 60 s (the filter's model) | [ASSUMED] |
 | Exit | 20° branch over 150 m at about 0.73 of the tunnel; callout 300 m before it, k = 1 | [ASSUMED] |
@@ -120,36 +122,38 @@ the result when the car comes out.
   113 and 114, and its first form's error was found on all of 0–199. In v0.5.12, 200–299 moved
   down to this tier: the branch window of §4.13 came from seed 247, so those seeds are no longer
   held out.
-- **Validation, 400–499:** run once on the v0.5.13 configuration and not used to change anything
+- **Validation, 500–599:** run once on the v0.5.14 configuration and not used to change anything
   (§3.1). Each version's validation set is spent once: 200–299 (v0.5.11, `reports/0.5.11/`),
-  300–399 (v0.5.12, `reports/0.5.12/`); neither was used to design v0.5.13.
+  300–399 (v0.5.12), 400–499 (v0.5.13); none was used to design v0.5.14.
 - **Method:** 20 seeds to look, 300 for the number. Four times a 10–50-seed result was optimistic
   ("1 in 500" late callouts on 0–49; low-end S4 failures 35 → 0 on 20 seeds against 35 → 6 on 300;
   the mount without a manoeuvre, (e/σ)² 0.89 on 10 seeds against 1.69 on 300).
 
-The ranges below are over six independent sets of 50 seeds (0–299), final configuration: since
-v0.5.13 the filters use the mount estimated on the approach, not the true one (§4.14;
-`reports/0.5.13/eval_sets_300_default.json`).
+The ranges below are over six independent sets of 50 seeds (0–299), final configuration: the
+mount estimated on the approach (§4.14) and, since v0.5.14, the map grade as a pitch measurement
+with the pressure-gradient and grade-error states (§4.15; `reports/0.5.14/eval_sets_300_default.json`).
+Against v0.5.13: S3 11.6–15.7 → 2.6–3.3 m at the diverge (its V profile is the grade the filter now
+uses), S4 35.0–48.4 → 28.3–35.9 m, S5 24.8–35.6 → 27.7–38.6 m; the rest within ±1 m.
 
 | | S1 | S2 | S3 | S4 | S5 | S6s | S6 | S6L | S1-1km | S1-5km |
 |---|---|---|---|---|---|---|---|---|---|---|
 | | 3 km straight | S-bend | V-profile | stop-and-go | braking | wander ±1 km/h | ±2 km/h | ±4 km/h | 1 km | 5 km |
-| along-track at diverge, rms [m] | 11.5–16.9 | 4.2–5.2 | 11.6–15.7 | 35.0–48.4 | 24.8–35.6 | 11.9–17.6 | 11.6–18.4 | 11.3–18.1 | 4.1–5.4 | 24.5–38.3 |
-| along-track at portal, rms [m] | 5.6–7.1 | 4.0–5.5 | 8.9–11.8 | 4.5–7.9 | 6.2–8.7 | 6.0–7.5 | 6.0–8.0 | 5.7–8.0 | 2.4–3.2 | 12.9–16.7 |
-| portal p95, worst set [m] | 15 | 10 | 23 | 12 | 16 | 15 | 16 | 15 | 7 | 30 |
+| along-track at diverge, rms [m] | 10.7–16.1 | 3.9–5.1 | 2.6–3.3 | 28.3–35.9 | 27.7–38.6 | 11.5–17.4 | 11.4–18.3 | 10.8–18.3 | 4.0–5.4 | 25.8–37.8 |
+| along-track at portal, rms [m] | 5.7–7.1 | 4.3–5.4 | 1.7–2.1 | 4.6–6.2 | 6.2–8.0 | 6.3–7.8 | 6.4–8.1 | 6.0–8.1 | 2.4–3.2 | 12.4–16.1 |
+| portal p95, worst set [m] | 14 | 10 | 4 | 12 | 15 | 14 | 17 | 16 | 7 | 29 |
 | runs > 100 m off at the portal (of 300) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| mean (e/σ)² at portal, worst set | 0.22 | 0.38 | 0.28 | 0.14 | 0.37 | 0.23 | 0.27 | 0.26 | 0.36 | 0.37 |
-| callout > 1 s late, worst set: k = 0 / 1 / 1.3 / 1.65 | 12 / 0 / 0 / 0 % | 0 / 0 / 0 / 0 % | 10 / 0 / 0 / 0 % | 46 / 4 / 4 / 2 % | 56 / 12 / 6 / 0 % | 10 / 0 / 0 / 0 % | 14 / 0 / 0 / 0 % | 8 / 0 / 0 / 0 % | 0 / 0 / 0 / 0 % | 46 / 4 / 0 / 0 % |
-| callout mean, k = 1 [s] (− early) | -0.6…-0.8 | -0.3 | -0.8…-1.0 | -2.1…-2.5 | -0.3…-0.8 | -0.6…-0.8 | -0.6…-0.8 | -0.6…-0.9 | -0.1…-0.2 | -1.2…-1.6 |
-| largest exit step p95, worst set [m] | 4.4 | 6.3 | 4.1 | 4.1 | 4.6 | 4.4 | 4.2 | 4.3 | 4.9 | 4.3 |
-| shown position under 5 m after the first fix, median per set [s] (v0.5.13) | 13–17 | 12–16 | 11–17 | 11–18 | 12–14 | 13–16 | 12–17 | 12–17 | 0–16 | 10–12 |
-| "now" prompt: mean true distance minus the target [m] (+ early), missed (of 300) | 15–21, 0 | 6–7, 0 | 16–21, 0 | 40–48, 2 | 2–11, 0 | 14–20, 0 | 14–20, 0 | 14–22, 0 | 4–5, 0 | 26–36, 0 |
+| mean (e/σ)² at portal, worst set | 0.20 | 0.37 | 0.11 | 0.13 | 0.30 | 0.23 | 0.25 | 0.24 | 0.33 | 0.33 |
+| runs within 2σ at the portal (v0.5.14) | 100 % | 100 % | 100 % | 100 % | 100 % | 100 % | 100 % | 100 % | 100 % | 100 % |
+| callout > 1 s late, worst set: k = 0 / 1 / 1.3 / 1.65 | 12 / 0 / 0 / 0 % | 0 / 0 / 0 / 0 % | 0 / 0 / 0 / 0 % | 32 / 4 / 2 / 2 % | 66 / 10 / 6 / 0 % | 12 / 0 / 0 / 0 % | 12 / 0 / 0 / 0 % | 10 / 0 / 0 / 0 % | 0 / 0 / 0 / 0 % | 46 / 0 / 0 / 0 % |
+| callout mean, k = 1 [s] (− early) | -0.7…-0.9 | -0.2…-0.3 | -0.4 | -2.1…-2.5 | -0.4…-1.0 | -0.7…-0.9 | -0.7…-0.9 | -0.7…-1.0 | -0.1…-0.2 | -1.3…-1.7 |
+| largest exit step p95, worst set [m] | 4.2 | 6.3 | 4.8 | 3.9 | 4.6 | 4.5 | 4.2 | 4.5 | 4.9 | 5.3 |
+| shown position under 5 m after the first fix, median per set [s] | 13–17 | 12–16 | 0–16 | 11–16 | 12–14 | 13–16 | 13–17 | 12–16 | 0–16 | 10–12 |
+| "now" prompt: mean true distance minus the target [m] (+ early), missed (of 300) | 17–22, 0 | 6–8, 0 | 8–9, 0 | 42–49, 2 | 3–14, 1 | 16–22, 0 | 17–23, 0 | 16–24, 0 | 4–6, 0 | 28–38, 0 |
 
 Cross-track error at the portal is 1.3–3 m (v0.5.10, 50 seeds), the map's own lateral uncertainty.
-Branch decision: the branch is reported in 2999 of 3000 runs that take it (S4 seed 271 decided
-"main", 41 m off at the portal; 3000 of 3000 with the true mount). When the car goes straight on,
-"main" is reported in 599 of 600 on 0–299 and in 200 of 200 in validation; one run stayed
-undecided and none reported the branch.
+Branch decision: the branch is reported in 3000 of 3000 runs that take it (v0.5.13: 2999, S4
+seed 271 decided "main"). When the car goes straight on, "main" is reported in 600 of 600 on 0–299
+(v0.5.13: 599, one run undecided); none reported the branch.
 
 - **Showing the car.**
   - Along the road, in a straight tunnel at steady speed: 12–18 m after 1.5–2 min, 25–50 m with
@@ -158,37 +162,36 @@ undecided and none reported the branch.
     better than the map here. Without the map layer, the cross-track error was 26 m on S1 and
     106 m at 5 km, because heading is not observable in a straight tunnel.
   - The exit curve brings the portal error down to 2.5–16 m.
-  - The filter is consistent: mean (e/σ)² ≤ 0.38 in every set.
-  - Low-end phones: §4.12 (the 10-state filter is shown there, 16–21 m at the portal on S4 in five
-    of six sets in v0.5.13).
+  - The filter is consistent: mean (e/σ)² ≤ 0.37 in every set, and every run is within 2σ at the
+    portal.
+  - Low-end phones: §4.12 and §4.15 (the 10-state filter is shown there; SUPERVISOR_LOWEND_S4).
 - **Callout.** "The right moment" is read as *never late, and only as early as the uncertainty
   requires*: a late callout can make the driver miss the exit.
-  - **Without the rule (k = 0):** 0–56 % of callouts come more than 1 s late (worst set per
-    scenario; 0 % only on the S-bend and the 1 km tunnel).
-  - **With k = 1:** 20 of 3000 callouts are more than 1 s late (15 on S5, 3 on S4, 2 at 5 km),
+  - **Without the rule (k = 0):** 0–66 % of callouts come more than 1 s late (worst set per
+    scenario; 0 % on the S-bend, the V profile and the 1 km tunnel).
+  - **With k = 1:** 13 of 3000 callouts are more than 1 s late (11 on S5, 2 on S4; v0.5.13: 20),
     and on average they come 0.1–2.5 s early. The development set alone gave "1 in 500"; over 300
-    seeds S5 is at 2–12 % per set.
-  - **With k = 1.3:** 5 of 3000 (3 on S5, 2 on S4); with k = 1.65, 1 (S4). In the v0.5.13
-    validation, k = 1 gives 6 of 1000 and k = 1.3 none (§3.1). The cost is 0.3–0.9 s more advance (S4: 2.2 →
-    3.0 → 4.0 s early on average).
+    seeds S5 is at 2–10 % per set.
+  - **With k = 1.3:** 5 of 3000 (4 on S5, 1 on S4); with k = 1.65, 1 (S4). VALIDATION_K. The cost is
+    0.3–0.9 s more advance (S4: 2.3 → 3.1 → 4.0 s early on average).
   - **Why k = 1 stays:** σ_s is about twice the real error ((e/σ)² 0.1–0.4), so k = 1 is in effect
-    ~2σ. The k = 1.3 row is the measured alternative; it cuts the late callouts fourfold (20 → 5 in 3000).
+    ~2σ. The k = 1.3 row is the measured alternative; it cuts the late callouts from 13 to 5 in 3000.
   - k has to be chosen again once σ is calibrated on real data. The voice says the estimated
     distance rounded to 50 m.
 - **Branch.**
   - Car takes the branch: the in-loop decision reports it 2–3.5 s after the diverge.
-  - Car goes straight on (negative control, map with the branch): "main" in 599 of 600. The
-    portal error then stays at the no-map value: S1 18–28 m rms, S4 52–79 m rms, because there is
-    no exit curve. Until "main" is decided (5 s on S1, 13 s on S4 after the diverge) the screen
-    shows the car on the branch, up to 38 m from the road it is on (§4.13).
-  - **On S4, 34 of 300 straight-on runs are more than 100 m off at the portal** (3, 5, 7, 9, 2
-    and 8 per set; 9 of 100 in validation). About one stop-and-go drive in eight stays in the main
-    tunnel and is shown more than 100 m off when it comes out. This is the measured cost of "the map's
-    along-track gain comes only from curves": with no curve before the exit, nothing corrects the
-    dead reckoning until GNSS returns, and then the exit follower.
+  - Car goes straight on (negative control, map with the branch): "main" in 600 of 600. The
+    portal error then stays at the no-map value: S1 17–27 m rms, S4 40–50 m rms, because there is
+    no exit curve. Until "main" is decided (5 s on S1, 11–12 s on S4 after the diverge) the screen
+    shows the car on the branch, up to 36 m from the road it is on (§4.13).
+  - **On S4, 5 of 300 straight-on runs are more than 100 m off at the portal** (0, 0, 2, 0, 2 and 1
+    per set; v0.5.13: 34). This is the cost of "the map's along-track gain comes only from curves":
+    with no curve before the exit, nothing corrects the dead reckoning until GNSS returns, and then
+    the exit follower. v0.5.14 cut it sevenfold (§4.15); why, on a flat tunnel, is not traced.
 - **Recovery.** The largest step at the exit is ≤ 6.3 m (p95, worst set). The time until the shown
-  position is under 5 m for good is a median of 10–18 s per set (v0.5.13; the supervisor's
-  follower in §4.12); 12–34 runs of 300 per scenario are not under 5 m within 60 s.
+  position is under 5 m for good is a median of 10–17 s per set (0 s in some sets of S3 and the
+  1 km tunnel, where the error is already under 5 m; the supervisor's follower in §4.12); 12–33 runs
+  of 300 per scenario are not under 5 m within 60 s.
 
 **3.1 Validation on untouched seeds** (400–499, v0.5.13 configuration, run once;
 `reports/0.5.13/validation_400-499.json`, `ekf10_validation_400-499.json`, `supervisor_validation.json`).
@@ -251,7 +254,9 @@ the error at the diverge is 110–120 m, (e/σ)² 9–14, and the branch decisio
 state fixes that case (19 m) but costs accuracy on normal roads (S5 23 → 109 m). The reason is
 structural: on a straight tunnel with a constant grade, a constant pitch error and a gradient
 both give a height error linear in s, and the barometer cannot tell them apart. The state is off
-by default; the gradient should be measured in a real tunnel.
+by default; the gradient should be measured in a real tunnel. **v0.5.14:** with the map's grade as
+a measurement of pitch, the barometer's residual has somewhere to go, and the state is on in both
+products where the map has a grade profile (§4.15): S3 at 30 Pa/km 155 → 2.3 m on a Note10.
 
 **4.5 What the map adds depends on the map.** Map errors drawn per seed from the prior (1×) and
 from twice the prior (2×), 30 seeds (`reports/0.5.2/map_random_stress_30.json`):
@@ -852,6 +857,208 @@ checkboxes as the map.
 
 *Not taken:* BLE beacons in the tunnel. The owner rejected the assumption that a tunnel has them.
 
+**4.15 v0.5.14: the map grade as a measurement, the pressure gradient and the grade error as states**
+(owner 2026-11-04/05, after reviews 13 and 14; `Ekf10Config` / `EskfConfig` `grade_update`,
+`baro_grad`, `grade_error_state`, `no_reverse_mode`; `eskf.HYBRID_DEFAULT`; `mapview.without_grade`;
+`tools/hybrid_ab.py`, `ekf10_ba_rw_ab.py`, `diag_seed232.py`; `reports/0.5.14/`). The design numbers
+are over seeds 50–69 (20 seeds, to look); the 300-seed numbers are marked.
+
+*How it started.* A custom run (5 km, 3 % grade, 110 km/h, a low-end phone, 25 Pa/km) put the
+strongest candidate, the 10-state filter, last. The supervisor measurement on 20 seeds
+(`supervisor_lowend_pressure_50-69.json`): with a low-end phone and a tunnel pressure gradient the
+10-state filter is 181–524 m off at the portal and decides "main" in 19–20 of 20 runs, while the 1D
+filter is at 11–31 m. On a Note10 the ESKF without a gradient state is 59 m at the portal of the
+custom tunnel, with "main" in 20 of 20. The pressure gradient of §4.4 was known for the ESKF; for the
+low-end product it had not been measured.
+
+*What did not work.*
+- **A branch-fit guard** (compare the branch and main fits before accepting the decision): never
+  fired. The decision is made before the turn, from a wrong ŝ, and both fits agree with it. Removed.
+- **The gradient state alone in the 10-state filter** (the ESKF's state, ḃ_h = g_h·v per tunnel):
+  fixes the gradient cases but costs nominal accuracy. Not a default.
+- **Any prior σ for the gradient state:** none fixed the diverge, because in a straight tunnel with a
+  constant grade the gradient is unobservable without a second source of pitch. "Option 1 is done:
+  a negative result."
+
+*The hybrid (owner, from reviews 13/14: "take the source, not the filter").* The map's road grade
+becomes a weak measurement of pitch in an outage, once per second, and the barometer residual then
+goes to the gradient state:
+- 10-state: z = γ_map − θ̂ − k̂·γ_map, H_θ = 1, H_k = γ_map, H_s = −γ′ (0 under the curve s-guard).
+  θ is the path pitch (ḣ = v·sin θ), so no mount offset enters; it is propagated with the body's pitch
+  rate, so the suspension pitch k_susp·a goes into R, with the grade's spread over ±σ_s.
+- ESKF: h = v_u − (1 − k̂)·γ_map·|v_h| = 0 (the velocity's direction, which the barometer's height
+  rate sees); H_δv = [−(1−k̂)γ v_h/|v_h|, 1], H_δk = γ|v_h|, H_δp = −(1−k̂)γ′|v_h|·tᵀ; R = |v_h|²(σ₀² + spread²).
+- Gate χ²₁ 10.83; skipped on the main tunnel after a "main" decision (its grade is not in the map).
+
+*The grade error as a state (owner).* The map's grade is (1 + k)·the road's, k ~ N(0, 0.1²) per
+tunnel [ASSUMED, DESIGN A3]. As white noise in R a 10 % error was averaged away and the callouts came
+late. On a tunnel of constant grade, a map grade error and a pressure gradient cannot be told apart:
+the filter knows their sum, not the share of each, and σ says so. They separate where the grade
+changes. This is the third time a map error carried as a state beat the same error as noise in R
+(after the map offset and scale states of §4.11 and the mount yaw of §4.14).
+
+| 20 seeds, diverge rms | grade right | grade 10 % too steep, k in R | grade 10 % too steep, k as a state |
+|---|---|---|---|
+| low-end 10-state, 3 % tunnel | 24 m | 137 m, 60 % late | 91 m, 0 % late |
+| low-end, 3 % tunnel, +25 Pa/km | 38 m | 121 m | 44 m |
+| low-end, 3 % tunnel, −25 Pa/km | 54 m | 151 m, 85 % late | 130 m, 5 % late |
+| Note10 10-state, 3 % tunnel | 17 m | 142 m, 100 % late, 14 runs > 100 m at the portal | 23 m |
+| Note10 ESKF, 3 % tunnel | 16 m | 136 m, 100 % late | 20 m |
+| Note10 ESKF, 3 % tunnel, −25 Pa/km | 32 m | 142 m, 100 % late | 43 m |
+
+*The two products on one matrix* (20 seeds; diverge rms, then the share of runs on the wrong branch
+or "main" where the car takes the branch). v0.5.13 against the shipped hybrid (`hybrid_ab_*.json`):
+
+| case | low-end 10-state, v0.5.13 | low-end 10-state, hybrid | Note10 ESKF, v0.5.13 | Note10 ESKF, hybrid |
+|---|---|---|---|---|
+| S1, +30 Pa/km | 96 m, 20/20 "main" | 36 m, 0 | 113 m, 20/20 "main" | 14 m, 0 |
+| S1, −30 Pa/km | 126 m | 40 m | 130 m, 100 % late | 20 m |
+| S3, +30 Pa/km | 143 m, 20/20 "main" | 10 m | 155 m, 20/20 "main" | 2.3 m |
+| S3, −30 Pa/km | 213 m | 14 m | 162 m | 2.8 m |
+| 3 % tunnel, +25 Pa/km | 185 m, 19/20 "main" | 38 m | 202 m, 20/20 "main" | 17.5 m |
+| 3 % tunnel, −25 Pa/km | 238 m | 54 m | 252 m | 32 m |
+| 5 km, +30 Pa/km | 282 m, 20/20 "main" | 39 m | 301 m, 20/20 "main" | 18 m |
+| straight on, S1 +30 Pa/km (portal, horizontal) | 335 m | 252 m | 204 m | 19 m |
+| S3 nominal | 20 m | 10 m | 14 m | 2.5 m |
+| 3 % tunnel nominal | 37 m | 24 m | 26 m | 16 m |
+| S1 nominal | 11.6 m | 13.7 m | 13.6 m | 12.9 m |
+| S2 nominal | 10.9 m | 19.0 m | 4.9 m | 4.6 m |
+| S4 nominal | 63 m | 40 m | 35 m | 30 m |
+| straight on, S4 (portal, horizontal) | 337 m | 190 m | 54 m | 44 m |
+| S5 nominal | 17 m | 26 m | 25 m | 28 m |
+| S6 nominal | 11.9 m | 13.8 m | 15.1 m | 14.6 m |
+| 5 km nominal | 21 m | 35 m (portal 21 → 9 m) | 23 m | 22 m |
+
+- Every hybrid cell is consistent at the diverge ((e/σ)² ≤ 0.83) and decides the branch in 20/20.
+- **The cost:** on a low-end phone S2 11 → 19 m, S5 17 → 26 m and the 5 km diverge 21 → 35 m. The likely
+  reason, not traced: the gradient state takes part of the barometer's height information in every
+  tunnel, flat ones too.
+- **The ESKF on a Note10 is the news:** the wrong exit in a gradient tunnel goes from 20/20 to 0,
+  S3 from 155 m to 2.5 m, for +3 m on S5.
+- The low-end car that goes straight on is still 190–252 m off at the portal (§5).
+
+*Where the hybrid is on* (`eskf.HYBRID_DEFAULT`): the two products, the ESKF on a Note10-class
+phone and the 10-state filter on a low-end one (the supervisor's class rule, §4.12). It is off on
+the ESKF with a low-end phone (not measured) and on the 10-state filter with a Note10 (not
+consistent, below). A config can still set it by hand.
+
+*A map without a grade profile turns it off* (owner: "missing, not zero"). Until now a road
+without a grade became a zero grade in `MapView`; a zero grade would be a wrong measurement of a
+flat road. `MapView.has_grade` and `without_grade(road)` now say whether the map has the profile;
+without it the grade row and the gradient state are both off (the gradient state alone costs
+nominal accuracy), and the result is the v0.5.13 filter's, bit for bit. Checked as a cell of the
+matrix (`hybrid_ab_*_50-69_v2.json`): the ESKF with the shipped defaults and a map without grade
+equals the v0.5.13 cell in all 17 cases, every metric (that cell was computed before the change);
+the 10-state filter with a map without grade equals its v0.5.13 cell in all 34 cases with the soft
+form, and its mean-only cell in all 34 with the shipped form.
+
+*Seed 232, the mechanism* (low-end S4; `tools/diag_seed232.py`, a record of every update,
+`diag_seed232_{estimated,known}.txt`). It has two steps:
+1. **The crawl leaves v̂ low.** Then the barometer rows, linearised at a wrong θ̂ (+1.8°), read the
+   flat height as a speed excess and drive v̂ from 12.6 to ~2 m/s in 20 s (the error goes from
+   −260 to −900 m).
+2. **A strong speed row then collapses σ_s** through the s–v correlation: the one-way constraint's
+   equality form with the estimated mount (σ_s 450 → 54 m at −1018 m), or the lateral-force row with
+   the true mount (615 → 66 m, −920 → −282 m).
+
+The curve landmark never fires and the s-guard is not involved. The estimated mount's error on that
+phone is roll 1.04°, pitch 0.14°. v0.5.13 had it as a lock in the curve that the s-guard let
+through, made worse by a ~2° tilt error; both were wrong (§6.3). With the hybrid, seed 232 ends at
+17 m (grade row only) or 26 m (grade row and gradient state), and seed 200 at 17 m (was 62 m).
+
+*The one-way constraint, two forms* (owner). The constraint is an inequality; written as a soft
+equality measurement (z = 0 − v̂, R = 0.5² (m/s)², v0.5.12–13) it also moves ŝ and P through the
+s–v correlation. "Mean-only" moves v̂ to 0 and leaves P alone.
+- **10-state filter: mean-only.** In seed 232 the speed error came from the barometer in the last
+  20 s, so the s–v correlation was wrong and the soft form collapsed σ_s.
+- **ESKF: soft.** There the speed error is long dead-reckoning drift, the correlation is right and
+  the soft row corrects the position too. S4 seed 247: soft −3 m, mean-only −144 m (−87 m with the
+  hybrid); 20 seeds of S4, diverge 35 → 50 m and the straight-on portal 53 → 71 m with mean-only.
+- **Measured, not derived.** The split is about whether the s–v correlation can be trusted, not
+  about the filter, and it rests on two seeds (232, 247) and the 300-seed run of both forms below.
+  The soft form had rescued low-end S4 seeds 113, 125 and 255 in v0.5.12, partly by correcting the
+  position through the correlation; whether mean-only loses them is in the 300-seed table.
+
+*The 10-state filter with a Note10 phone stays without the hybrid.* With the hybrid it is better
+almost everywhere (S3 15 → 3.6 m, the 3 % tunnel 31 → 17 m, every gradient case under 30 m), but on
+S4 it is overconfident: diverge 16.8 m with (e/σ)² 19, 60 % of runs within 2σ, branch 19/20.
+- **The accelerometer-bias A/B** (`ekf10_ba_rw_ab_50-69.json`, a reviewer's hypothesis: after the
+  stops the bias moves by its Gauss–Markov terms, which the random walk does not cover): ×3 the random
+  walk leaves (e/σ)² at 14.6; ×10 brings it to 1.7 with 95 % within 2σ and the portal 12.4 → 5.1 m,
+  for S5 17.7 → 22.2 m and the S4 diverge 16.8 → 20.2 m. ×10 is ~7 times the measured Note10 bias
+  instability, with no physical basis. Not taken.
+- **The trace does not support the hypothesis** (`trace_ba_rw_s4.txt`). b̂_a moves by 3·10⁻⁴ m/s².
+  The error builds in the crawl and the acceleration after the last stop (seed 59: v̂ ~1 m/s high,
+  the error 2.5 → 44 m in 80 s), and σ_s does not cover it. In the curve before the diverge the
+  heading and yaw-rate rows then lock ŝ with that error: 10 of 20 runs arrive with σ_s ≈ 3.5 m and
+  e ≈ 17 m. ×10 helps only because the larger σ_v keeps σ_s near 30 m at the curve. The source of
+  the speed error is not isolated; the suspension pitch on acceleration explains at most a third
+  (2.6 % of Δv, ~0.3 of the ~1 m/s). Open (§5).
+- The Note10 product is the ESKF (§4.12), so the delivered behaviour does not change.
+
+*Also in v0.5.14.*
+- **Per-member mount-yaw prior** (review): the batch used one prior, set by its majority (6° if most
+  yaws came from the magnetometer only, else 1°), so one phone's init changed the others' prior. Now
+  one per seed. With the approach manoeuvre every yaw comes from the acceleration step (600/600 in
+  §4.14), so the default sets do not move.
+- **Prompts that never fire** were scored with the distance at the end of the run; they are now
+  "not fired" and left out of the error (`navmetrics.summarise_prompts`).
+- **Coverage** (§5 of v0.5.13): beside the mean of (e/σ)², the share of runs within 1σ and 2σ at
+  the diverge and the portal, in every experiment's output.
+- **The branch guard** is not re-introduced: with the hybrid every gradient case decides the branch
+  in 20/20 (it was to come back if wrong exits remained).
+- **Naming.** "10-state" stays: 10 base states, plus the mount yaw and the optional gradient and
+  grade-error states.
+
+*300 seeds, the ESKF on a Note10* (`eval_sets_300_default.json`, six sets of 50, against
+`reports/0.5.13/`; the nominal scenarios, so the gradient cases are in the supervisor table below):
+
+| scenario | diverge, v0.5.13 → v0.5.14 | portal | runs > 100 m | worst (e/σ)² | branch | > 1 s late, k = 1 |
+|---|---|---|---|---|---|---|
+| S3 (V profile) | 11.6–15.7 → **2.6–3.3 m** | 8.9–11.8 → **1.7–2.1 m** | 0 → 0 | 0.28 → 0.11 | 300 → 300 | 0 → 0 |
+| S4 (stop-and-go) | 35.0–48.4 → **28.3–35.9 m** | 4.5–7.9 → 4.6–6.2 m | 0 → 0 | 0.14 → 0.13 | 299 → 300 | 3 → 2 |
+| S4 straight on (horizontal) | – | 51.0–75.7 → **40.2–49.9 m** | **34 → 5** | 0.52 → 0.30 | – | – |
+| S5 (braking) | 24.8–35.6 → 27.7–38.6 m | 6.2–8.7 → 6.2–8.0 m | 0 → 0 | 0.37 → 0.30 | 300 → 300 | 15 → 11 |
+| S1-5km | 24.5–38.3 → 25.8–37.8 m | 12.9–16.7 → 12.4–16.1 m | 0 → 0 | 0.37 → 0.33 | 300 → 300 | 2 → 0 |
+| S1, S1-1km, S2, S6, S6s, S6L | within ±1 m | within ±0.5 m | 0 → 0 | ≤ 0.37 | 300 → 300 | 0 → 0 |
+
+- **S3 drops by a factor of 4–5:** its V profile is the map grade the row now uses.
+- **S4 and the straight-on control improve** with the soft form kept: 34 straight-on runs over
+  100 m become 5, and the S4 branch miss of v0.5.13 (seed 271) is gone. S4 is flat, so the row
+  measures a zero grade there; that it holds the vertical velocity in the crawl is the likely
+  reason, not traced.
+- **The cost is S5,** +3 m at the diverge, with fewer late callouts (15 → 11).
+- 100 % of runs are within 2σ at the portal in every scenario (98–100 % for S4 straight on).
+
+*300 seeds, the 10-state filter, both one-way forms* (`ekf10_sets_300.json`; v0.5.14 = the shipped
+defaults: hybrid on for low-end, mean-only). Portal rms per set, runs > 100 m, worst (e/σ)², diverge:
+
+| | v0.5.13 | v0.5.14 (mean-only) | soft form |
+|---|---|---|---|
+| low-end S4 | 16.1–224.7 m, 1, 25.1, div 54–126 m | **12.1–15.0 m, 0, 0.41, div 34–45 m** | 18.1–21.8 m, 0, 1.12, div 59–70 m |
+| low-end S4 straight on (horizontal) | 300–427 m | 188–193 m | 206–214 m |
+| Note10 S4 (no hybrid) | 4.8–23.7 m, 0, 6.06 | 6.4–16.0 m, 0, 3.10 | = v0.5.13 |
+| low-end S3 | 17.5–22.8 m, div 16–23 m | 19.6–25.2 m, div 9.5–12.8 m | = mean-only |
+| low-end S1 | 8.8–10.5 m, div 10.9–13.6 m | 10.4–15.0 m, div 13.3–17.7 m | = mean-only |
+| low-end S2 | 9.0–9.7 m, div 11.1–14.0 m | 9.9–12.7 m, div 15.9–22.0 m | = mean-only |
+| low-end S5 | 7.9–10.4 m, div 15.7–25.1 m | 6.8–12.3 m, div 22.5–37.1 m | = mean-only |
+| low-end S6 | 8.2–10.8 m, div 11.2–13.9 m | 12.1–15.6 m, div 13.3–17.4 m | = mean-only |
+| low-end 5 km | 15.9–19.6 m, div 19.8–30.8 m | 12.8–18.7 m, div 29.4–45.9 m | = mean-only |
+| other Note10 scenarios | – | = v0.5.13 (no hybrid, no reversal) | = v0.5.13 |
+
+Low-end S4 portal error of the seeds in question, v0.5.13 / mean-only / soft: 113: 21 / 4 / 24 m,
+125: 32 / 22 / 27 m, 200: 62 / 11 / 15 m, **232: −1581 / 16 / 26 m**, 255: 10 / 7 / 14 m.
+- **The two forms differ only on S4** (the others have no backward speed to remove), and there
+  mean-only is the better one on 300 seeds: 12–15 against 18–22 m, (e/σ)² 0.41 against 1.12.
+- **Seeds 113, 125 and 255 did not come back** with mean-only (4, 22 and 7 m), so the intermediate
+  form (soft without the barometer row's speed information) is not needed.
+- **Low-end S4 has no run over 100 m for the first time,** and its (e/σ)² falls from 25 to 0.41.
+- **The cost on a low-end phone, standalone:** the diverge rises on S1, S2, S5, S6 and the 5 km
+  tunnel by 3–15 m at the top of the range; the portal on S1 and S6 by 4–5 m. What the product shows
+  (the supervisor's follower) is in the next table.
+
+SUPERVISOR_TABLE
+
 ## 5. Limitations and next steps
 
 - **Simulation only.** The IMU noise terms are measured. The time shape of the noise, vibration,
@@ -900,29 +1107,43 @@ checkboxes as the map.
   diverge on a mid-range phone and is the better filter on a low-end one. Since v0.5.12 it has its
   own branch decision (§4.13). Before it could replace the ESKF it still needs:
   - a capped re-acquisition at the exit (8–39 m steps; the supervisor's follower covers it today);
-  - consistency in stop-and-go ((e/σ)² 5.1 on low-end S4, 4.8 on Note10 S4 in validation);
+  - consistency in stop-and-go on a Note10 ((e/σ)² up to 3.1 on S4 over 300 seeds; on a low-end
+    phone 0.41 since v0.5.14);
   - the map-error stress of §4.4.
-- **Low-end stop-and-go, what is left** (§4.13, §4.14): 1 run of 300 more than 100 m off in the
-  10-state filter, seed 232 (−1581 m). Seed 200 was fixed by the lateral row. The trace shows the
-  crawl speed loss and then a wrong lock at ~4σ in the curve; why the s-guard let it through is
-  open, and the estimated mount's tilt error (~2° on that phone) makes it worse. "Low-end works"
-  is not claimed until it is understood.
+- **Low-end stop-and-go, what is left** (§4.13–§4.15): no run of 300 more than 100 m off in the
+  10-state filter since v0.5.14 (seed 232 −1581 → 16 m, (e/σ)² 25 → 0.41). Its mechanism is known
+  (§4.15): the barometer rows at a wrong θ̂ drive v̂ down, then a strong speed row collapses σ_s.
+  The grade row now holds θ̂ on the map's (flat) grade. This rests on the map having a grade
+  profile: without one the filter is v0.5.13's, seed 232 included.
+- **The hybrid's cost on a low-end phone** (§4.15): standalone, the diverge rises by 3–15 m at the
+  top of the range on S1, S2, S5, S6 and the 5 km tunnel; not traced.
+- **The hybrid needs the map's grade.** A 10 % scale error is carried as a state; a wrong profile
+  shape (a misplaced crest, a missing dip) is not simulated.
+- **Note10 with the 10-state filter, stop-and-go** (§4.15): with the hybrid it is overconfident on S4
+  ((e/σ)² 19). An unmodelled speed error after the stops is hidden by the σ collapse in the curve
+  before the diverge; its source is not isolated. The hybrid stays off there, and the Note10 product
+  is the ESKF.
+- **The hybrid on the ESKF with a low-end phone** was not measured and is off.
+- **The tunnel's pressure gradient in a real tunnel:** the two portals' GNSS heights against the
+  barometer's height change through the tunnel give the gradient per pass. 25 Pa/km is 2.1 m per km,
+  against a GNSS height error of a few metres [ASSUMED], so several passes per tunnel are needed.
 - **The mount without an approach manoeuvre** (§4.14): the yaw rests on the magnetometer (5.8° rms)
   and the S1 portal is 16.6–25.4 m with (e/σ)² 1.69, inconsistent. A larger mount-yaw prior, or
   holding the NHC rows until a turn has refined the yaw, are the next things to try; not measured.
 - **The magnetometer model is [ASSUMED]** (field, the car's own field, soft iron, noise). A real
   car's field at a dashboard mount can be several times larger; recordings would set it.
 - **Low-end, a car that goes straight on** (§4.13): the 10-state decision never leaves "not yet"
-  and the car is drawn on the branch through the tunnel, 302–439 m off at the portal. Next step,
+  and the car is drawn on the branch through the tunnel, 188–193 m off at the portal on S4 (v0.5.13:
+  300–427 m) and 249–251 m on S1. Next step,
   not measured: while "not yet", show the car on the main tunnel instead of the route.
 - **Recovery is now measured as time** (§4.14), not only as the largest step. The follower closes
   a gap at ≤ 2 m/s, so the pressure gradient's 100 m takes ~50 s to show right. Whether 10–28 s to
   5 m is acceptable for guidance after the exit is a product question.
 - **Coverage, not only the mean of (e/σ)².** (e/σ)² is the along-track scalar, not the full-state
-  NEES, and a small mean does not show that rare large errors are covered. At the portal 100 % of
-  Note10 runs are within 2σ (20 seeds); P(|e| ≤ σ) and P(|e| ≤ 2σ) over time before the diverge,
-  and separately for the nominal, 2× map error and pressure-gradient cases and for the
-  supervisor's σ_disp, are the next check.
+  NEES, and a small mean does not show that rare large errors are covered. Since v0.5.14 every
+  output has the share within 1σ and 2σ at the diverge and the portal: 100 % within 2σ at the
+  portal for the Note10 ESKF in every scenario on 300 seeds. Over time before the diverge, for the
+  2× map error and for the supervisor's σ_disp it is still next.
 - **The one-way assumption** (§4.13): a car does not reverse in a one-way tunnel [ASSUMED]. It is
   weaker than the hard map constraint, but a two-way tunnel or a car backing out of a jam breaks it.
 - **The main tunnel after the diverge is straight in every scenario** and straight in the map object.
@@ -931,7 +1152,7 @@ checkboxes as the map.
   or measured. Most Istanbul tunnels curve after a branch.
 - **The 12 s gyro noise on a low-end phone (~5°) is the size of the 5° turn threshold.** The branch
   gate keeps false turns from moving s; on its own the threshold would not.
-- **The validation tier is one set of 100 seeds per version** (§3.1, 400–499 for v0.5.13); claims on
+- **The validation tier is one set of 100 seeds per version** (§3.1, 500–599 for v0.5.14); claims on
   rarer failures (1 in 300 in §4.14) need more.
 - **A car that stays in the main tunnel has no curve to correct it.** On S4, 11 % of such runs are
   more than 100 m off at the portal (§3). Only GNSS at the exit, through the follower, fixes it;
