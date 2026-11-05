@@ -196,7 +196,7 @@ def _min_clothoid(road, step=0.5):
 
 
 def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf10Config = Ekf10Config(),
-              cfg: EskfConfig = EskfConfig()) -> Ekf10Output:
+              cfg: EskfConfig = EskfConfig(), debug: list = None) -> Ekf10Output:
     """imu_t (N,); f, w (B,N,3) phone frame; gnss as for run_eskf (t (M,), pos/vel (B,M,3), acc_pos_h,
     acc_pos_v, acc_vel (B,M)); baro_t (L,), baro_h (B,L); C_bp the filter's mount (body <- phone);
     r_b the lever arm of the IMU from R in the body frame; road_map the route as the filter knows it."""
@@ -286,7 +286,14 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
     out = {k_: [] for k_ in ("t", "s", "v", "sig_s", "theta", "psi", "b_a", "g", "sig_g")}
 
     def update(sel, z, H, R, gate):
-        """Scalar update on the batch members in sel; z = measurement - h(x)."""
+        """Scalar update on the batch members in sel; z = measurement - h(x). debug (a list, diagnosis
+        only): one record per call with the caller's tag and s, σ_s, v before and after."""
+        if debug is not None:
+            import sys as _sys
+            _rec = {"t": float(imu_t[kk]), "line": _sys._getframe(1).f_lineno, "sel": sel.copy(),
+                    "s0": x[:, I_S].copy(), "sig0": np.sqrt(P[:, I_S, I_S]), "v0": x[:, I_V].copy(),
+                    "z": np.asarray(z, float).copy(), "Hs": H[:, I_S].copy(), "Hv": H[:, I_V].copy(),
+                    "S": np.einsum("bi,bij,bj->b", H, P, H) + np.broadcast_to(R, (B,)), "guard": None}
         Hs, Ps = H[sel], P[sel]
         S = np.einsum("bi,bij,bj->b", Hs, Ps, Hs) + R[sel]
         ok = (z[sel] ** 2 / S < gate) if gate is not None else np.ones(int(sel.sum()), bool)
@@ -296,6 +303,10 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
         x[idx] += K * z[sel][:, None]
         IKH = np.eye(NX) - K[:, :, None] * Hs[:, None, :]
         P[idx] = IKH @ Ps @ np.swapaxes(IKH, 1, 2) + R[sel][:, None, None] * K[:, :, None] * K[:, None, :]
+        if debug is not None:
+            okb = np.zeros(B, bool); okb[idx] = ok
+            _rec.update(ok=okb, s1=x[:, I_S].copy(), sig1=np.sqrt(P[:, I_S, I_S]), v1=x[:, I_V].copy())
+            debug.append(_rec)
         return ok
 
     for k in range(i0, N - 1):
@@ -462,6 +473,12 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
                         far = np.abs(cur - cur[ar, jb][:, None]) > np.maximum(3.0 * sig_a, 20.0)[:, None]
                         J2 = np.where(far, J, np.inf).min(axis=1)
                         go &= (J2 - J[ar, jb] > CHI2_1_999)
+                    if debug is not None:
+                        debug.append({"t": float(imu_t[kk]), "line": "landmark_eval", "cand_lo": cur[:, 0].copy(),
+                                      "cand_hi": cur[:, -1].copy(), "best": cur[ar, jb].copy(), "go": go.copy(),
+                                      "plaus": plaus.copy(), "dJ": (J[:, mid] - J[ar, jb]).copy(), "Jbest": J[ar, jb].copy(),
+                                      "chi_n": float(chi_n), "edge": ((jb == 0) | (jb == cfg10.landmark_n - 1)).copy(),
+                                      "br10": br10.copy(), "seen": seen.copy()})
                     if go.any():
                         Hl = np.zeros((B, NX)); Hl[:, I_S] = 1.0
                         update(go, np.where(go, cur[ar, jb] - lever - x[:, I_S], 0.0), Hl, sig_a ** 2, None)

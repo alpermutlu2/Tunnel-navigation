@@ -1,0 +1,72 @@
+mount known, seed 232: tunnel 200-538 s; diverge s = 5733 m; mount diag None
+  t+    0: e_s     -2.1  σ_s    1.5  v̂ 16.72  v 16.67  θ̂ -0.37°
+  t+   30: e_s     -3.3  σ_s    4.8  v̂  1.31  v  1.64  θ̂  0.51°
+  t+   60: e_s     -3.8  σ_s    7.2  v̂  7.91  v  7.88  θ̂ -0.14°
+  t+   90: e_s     -3.2  σ_s   22.9  v̂  8.31  v  8.33  θ̂  0.68°
+  t+  120: e_s     -0.2  σ_s   38.8  v̂  8.52  v  8.33  θ̂ -0.54°
+  t+  150: e_s      6.3  σ_s   41.8  v̂ -0.00  v  0.00  θ̂ -0.05°
+  t+  180: e_s      6.1  σ_s   41.8  v̂ -0.00  v  0.00  θ̂ -0.01°
+  t+  210: e_s     -7.1  σ_s   66.8  v̂  3.72  v  4.17  θ̂  0.51°
+  t+  240: e_s    -48.4  σ_s  226.1  v̂ 12.87  v 14.10  θ̂  0.87°
+  t+  270: e_s   -167.8  σ_s  499.8  v̂ 13.85  v 16.67  θ̂  0.17°
+  t+  300: e_s   -562.0  σ_s  713.0  v̂  8.91  v 16.67  θ̂  1.76°
+  t+  330: e_s   -328.9  σ_s   83.7  v̂ 15.38  v 16.67  θ̂  0.65°
+
+updates in the tunnel that cut σ_s by more than 15 % (or move s by > 20 m):
+  t+  55.7 baro       e     -2.3 ->     -3.3  σ    6.8 ->    5.6  v  3.05-> 2.41  z  0.0832  z²/S   0.06  H_s  0 H_v  0.0187  ok True
+  t+ 281.7 baro       e   -242.8 ->   -283.5  σ  608.4 ->  593.2  v 12.86->12.39  z -0.2966  z²/S   0.09  H_s  0 H_v -0.0101  ok True
+  t+ 284.7 baro       e   -306.5 ->   -344.1  σ  618.8 ->  606.5  v 11.78->11.39  z -0.2786  z²/S   0.09  H_s  0 H_v -0.0173  ok True
+  t+ 298.7 baro       e   -451.5 ->   -531.9  σ  732.0 ->  700.1  v 10.41-> 9.37  z -0.3176  z²/S   0.14  H_s  0 H_v -0.0196  ok True
+  t+ 299.7 baro       e   -539.3 ->   -559.7  σ  712.7 ->  709.2  v  9.07-> 8.99  z -0.2144  z²/S   0.08  H_s  0 H_v -0.0181  ok True
+  t+ 301.7 baro       e   -583.0 ->   -666.4  σ  734.7 ->  709.0  v  8.26-> 7.12  z -0.3009  z²/S   0.19  H_s  0 H_v -0.0277  ok True
+  t+ 302.7 baro       e   -676.2 ->   -787.6  σ  722.8 ->  681.9  v  6.65-> 4.91  z -0.2952  z²/S   0.22  H_s  0 H_v -0.0282  ok True
+  t+ 303.7 baro       e   -799.6 ->   -919.8  σ  695.9 ->  615.3  v  4.43-> 2.27  z -0.1977  z²/S   0.14  H_s  0 H_v -0.0279  ok True
+  t+ 303.7 lateral    e   -919.8 ->   -281.6  σ  615.3 ->   65.9  v  2.27->15.96  z -0.6137  z²/S   1.09  H_s  0 H_v -0.0446  ok True
+
+per update type in the tunnel: count, total Δs, product of σ ratios
+  baro         337  Δs   -657.2 m  σ×0.0698
+  lateral        4  Δs    643.2 m  σ×0.105
+  no_reverse   341  Δs     -0.2 m  σ×0.869
+  curvature    337  Δs    -33.5 m  σ×0.986
+  zupt        5169  Δs     -0.1 m  σ×0.987
+  heading      337  Δs     -3.5 m  σ×0.999
+
+landmark evaluations (true position against the candidate window):
+  t+ 273.7 window [   3477,    6709]  true    5275 (inside)  best    5093  J    1.7 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 274.7 window [   3460,    6743]  true    5291 (inside)  best    5101  J    1.7 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 275.7 window [   3441,    6789]  true    5308 (inside)  best    5115  J    1.8 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 276.7 window [   3416,    6822]  true    5325 (inside)  best    5119  J    1.8 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 277.7 window [   3389,    6855]  true    5341 (inside)  best    5122  J    2.2 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 278.7 window [   3382,    6907]  true    5358 (inside)  best    5144  J    2.2 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 279.7 window [   3384,    6903]  true    5375 (inside)  best    5143  J    1.8 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 291.7 window [   3195,    7178]  true    5575 (inside)  best    5784  J    2.5 (χ²n 33.1)  ΔJ    1.0  edge False  br10 0  go False
+  t+ 292.7 window [   3193,    7208]  true    5591 (inside)  best    5769  J    3.1 (χ²n 33.1)  ΔJ    0.9  edge False  br10 0  go False
+  t+ 293.7 window [   3170,    7254]  true    5608 (inside)  best    5756  J    4.1 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 294.7 window [   3146,    7266]  true    5625 (inside)  best    5206  J    4.2 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 295.7 window [   3121,    7297]  true    5641 (inside)  best    5209  J    4.0 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 296.7 window [   3092,    7340]  true    5658 (inside)  best    5216  J    3.7 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 297.7 window [   3071,    7387]  true    5675 (inside)  best    5229  J    3.5 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 298.7 window [   3059,    7260]  true    5691 (inside)  best    5159  J    3.6 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 299.7 window [   3021,    7276]  true    5708 (inside)  best    5148  J    3.8 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 300.7 window [   2986,    7314]  true    5725 (inside)  best    5979  J    3.4 (χ²n 33.1)  ΔJ    0.9  edge False  br10 0  go False
+  t+ 301.7 window [   2948,    7202]  true    5741 (inside)  best    5075  J    3.7 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 302.7 window [   2925,    7016]  true    5758 (inside)  best    4970  J    3.2 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 303.7 window [   3009,    6701]  true    5775 (inside)  best    4855  J    4.8 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 306.7 window [   5349,    5744]  true    5825 (OUTSIDE)  best    5546  J   19.3 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 307.7 window [   5366,    5763]  true    5841 (OUTSIDE)  best    5565  J   23.5 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 308.7 window [   5385,    5783]  true    5858 (OUTSIDE)  best    5584  J   26.1 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 309.7 window [   5400,    5802]  true    5875 (OUTSIDE)  best    5601  J   26.3 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 310.7 window [   5414,    5821]  true    5891 (OUTSIDE)  best    5617  J   26.1 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 311.7 window [   5428,    5839]  true    5908 (OUTSIDE)  best    5633  J   25.8 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 312.7 window [   5442,    5858]  true    5925 (OUTSIDE)  best    5650  J   27.3 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 313.7 window [   5455,    5876]  true    5941 (OUTSIDE)  best    5666  J   31.2 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 314.7 window [   5469,    5895]  true    5958 (OUTSIDE)  best    5682  J   36.0 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 315.7 window [   5483,    5913]  true    5975 (OUTSIDE)  best    5698  J   34.9 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 316.7 window [   5496,    5931]  true    5991 (OUTSIDE)  best    5714  J   28.0 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 317.7 window [   5510,    5950]  true    6008 (OUTSIDE)  best    5730  J   23.0 (χ²n 33.1)  ΔJ    0.0  edge False  br10 0  go False
+  t+ 325.7 window [   5593,    6072]  true    6141 (OUTSIDE)  best    5741  J    3.5 (χ²n 33.1)  ΔJ   37.7  edge False  br10 0  go False
+  t+ 326.7 window [   5601,    6085]  true    6158 (OUTSIDE)  best    5746  J    3.8 (χ²n 33.1)  ΔJ   42.4  edge False  br10 0  go False
+  t+ 328.7 window [   5619,    6114]  true    6191 (OUTSIDE)  best    5755  J    3.9 (χ²n 33.1)  ΔJ   41.0  edge False  br10 0  go False
+  t+ 330.7 window [   5642,    6148]  true    6225 (OUTSIDE)  best    5760  J    4.7 (χ²n 33.1)  ΔJ   34.4  edge False  br10 0  go False
+
+portal: e_s 1.8 (end of run); branch decision [0]
