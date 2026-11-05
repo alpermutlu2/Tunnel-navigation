@@ -12,7 +12,7 @@ from tunnelsim.mapview import MapView
 
 def test_callout_k_by_class():
     k = SV.callout_k(np.array(["note10", "mpu9250", "other"]))
-    assert k.tolist() == [1.0, 0.5, 1.0]
+    assert k.tolist() == [1.0, 0.7, 1.0]   # v0.5.16: low-end 0.7
 
 
 def test_paused_rows_keep_a_straight_on_car_from_being_pulled_back():

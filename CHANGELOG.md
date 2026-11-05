@@ -7,6 +7,36 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.16 (2026-11-05): low-end callout margin k = 0.7; scoped consistency claims; freeze
+
+The closing version. From two final reviews of v0.5.15 (owner's decision on k; the rest is documentation).
+No algorithm changed except one constant; nothing was re-run for the numbers below, which are the
+`callout_k_sweep` of v0.5.15 on the same tracks (`reports/0.5.15/supervisor_sets_0-299.json`,
+`supervisor_validation.json`). REPORT §3, §4.16, §5, §6.
+
+- **`CALLOUT_K_BY_CLASS`: low-end 0.5 → 0.7** (owner). v0.5.15's acceptance rule came out borderline
+  on the gradient cases (−25 Pa/km 1.0 % against the Note10's measured 0.76 %, inside the stated
+  1–2 %), and the S-bend, where σ_s is honest, had 16 of 300 callouts late at 0.5. Read strictly, the
+  rule gives 0.7: "late is worse than early". The simulator starts a low-end run at 0.7.
+- **Docs:** SUMMARY opens with one table of the product's numbers for both IMU classes; the
+  consistency claim is scoped to the evaluated metrics where the car takes the exit; the branch
+  statistic names its filter (ESKF "main" in 600 of 600; the low-end 10-state filter never decides
+  "main"); a Note10 car going straight on through the supervisor is reported as not consistent
+  ((e/σ)² 2.35–2.54, not traced; §3, §5). README's page count corrected. `docs/DEMO.md`: the demo
+  script for the interview.
+- **Tests:** `test_callout_k_by_class` expects 0.7.
+
+How the numbers moved (low-end, through the supervisor, k 0.5 → 0.7; 0–299 unless stated):
+- Callouts more than 1 s late: S2 16 → 4 of 300, S5 1 → 0, 5 km 2 → 0, S4 4 → 4; gradient cases
+  3 → 1 of 1200 (−25 Pa/km 3 → 1); all low-end cases 26 → 9 of 3600. Validation 600–699: gradient
+  cases 2 → 0 of 400, S2 4 → 3 of 100, S4 2 → 1.
+- Advance: 5 km mean −2.4…−3.0 → −3.7…−4.3 s, more than 5 s early 7 → 59 of 300 (k = 1: 230), "now"
+  prompt 57–73 → 89–105 m early; S4 more than 5 s early 14 → 32; S5 0 → 5; 3 % tunnel at +25 Pa/km
+  2 → 38. Validation: 5 km more than 5 s early 1 → 19 of 100.
+- Note10 product, positions, branch decisions, the drawn point: unchanged (k does not enter the
+  filters).
+- Snapshot (`metrics.json`, Note10 ESKF, 20 seeds): SNAPSHOT_RESULT
+
 ## v0.5.15 (2026-11-05): "main first" while the branch is "not yet", paused map rows, callout k by class
 
 From a decision deck after v0.5.14 (owner: K1–K4). Design on seeds 50–99 / 50–69 (`reports/0.5.14/`

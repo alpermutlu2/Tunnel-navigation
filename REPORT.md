@@ -152,8 +152,9 @@ uses), S4 35.0–48.4 → 28.3–35.9 m, S5 24.8–35.6 → 27.7–38.6 m; the r
 
 Cross-track error at the portal is 1.3–3 m (v0.5.10, 50 seeds), the map's own lateral uncertainty.
 Branch decision: the branch is reported in 3000 of 3000 runs that take it (v0.5.13: 2999, S4
-seed 271 decided "main"). When the car goes straight on, "main" is reported in 600 of 600 on 0–299
-(v0.5.13: 599, one run undecided); none reported the branch.
+seed 271 decided "main"). When the car goes straight on, the ESKF (the Note10 product) reports "main"
+in 600 of 600 on 0–299 (v0.5.13: 599, one run undecided); none reported the branch. On a low-end
+phone the 10-state filter never decides "main" for such a car (§4.16).
 
 - **Showing the car.**
   - Along the road, in a straight tunnel at steady speed: 11–18 m after 1.5–2 min, 28–39 m with
@@ -162,8 +163,11 @@ seed 271 decided "main"). When the car goes straight on, "main" is reported in 6
     better than the map here. Without the map layer, the cross-track error was 26 m on S1 and
     106 m at 5 km, because heading is not observable in a straight tunnel.
   - The exit curve brings the portal error down to 1.7–16 m.
-  - The filter is consistent: mean (e/σ)² ≤ 0.37 in every set, and every run is within 2σ at the
-    portal.
+  - The filter is consistent where the car takes the exit, in the scenarios evaluated: mean (e/σ)²
+    at the portal ≤ 0.37 in every set, and every run within 2σ at the portal. That is a claim about
+    these metrics, not about every moment or every model mismatch: a Note10 car going straight on,
+    through the supervisor, is not consistent ((e/σ)² 2.35–2.54, below), nor is the mount without an
+    approach manoeuvre (1.69, §4.14).
   - Low-end phones: §4.12 and §4.15 (the 10-state filter is shown there: S4 12–15 m at the portal
     in all six sets, no run over 100 m).
 - **Callout.** "The right moment" is read as *never late, and only as early as the uncertainty
@@ -180,8 +184,9 @@ seed 271 decided "main"). When the car goes straight on, "main" is reported in 6
     ~2σ. The k = 1.3 row is the measured alternative; it cuts the late callouts from 13 to 5 in 3000.
   - k has to be chosen again once σ is calibrated on real data. The voice says the estimated
     distance rounded to 50 m.
-  - **On a low-end phone k = 0.5 since v0.5.15** (§4.16): there the hybrid's σ_s is 4–6 times the
-    error, so k = 0.5 leaves the margin k = 1 leaves here. It rests on the [ASSUMED] gradient prior.
+  - **On a low-end phone k = 0.7 since v0.5.16** (§4.16): there the hybrid's σ_s is 4–6 times the
+    error on flat tunnels, so k = 1 announced 2–6 s early. v0.5.15 shipped 0.5; the owner's acceptance
+    rule, read strictly, moved it to 0.7. It rests on the [ASSUMED] gradient prior.
 - **Branch.**
   - Car takes the branch: the in-loop decision reports it 2–3.5 s after the diverge.
   - Car goes straight on (negative control, map with the branch): "main" in 600 of 600. The
@@ -190,6 +195,11 @@ seed 271 decided "main"). When the car goes straight on, "main" is reported in 6
     screen showed the car on the branch meanwhile, at its farthest 32–36 m from the road it is on on
     average per set (p95 39–54 m; §4.13). Since v0.5.15 it is drawn on the main tunnel until
     "branch" is decided: 0.7–3.5 m (§4.16).
+  - **Through the supervisor the straight-on Note10 car is not consistent.** The v0.5.15 straight-on
+    cases (300 seeds) show the shown error at the portal at 54–64 m (S1) and 122–141 m (5 km) rms, with
+    (e/σ)² 2.35 and 2.54 (S4 0.64; validation up to 2.22; low-end straight on 0.05–0.43). σ does not
+    cover the error there. Neither the mechanism nor the difference from the research filter's
+    negative control above (S1 17–27 m) was traced (§5).
   - **On S4, 5 of 300 straight-on runs are more than 100 m off at the portal** (0, 0, 2, 0, 2 and 1
     per set; v0.5.13: 34). This is the cost of "the map's along-track gain comes only from curves":
     with no curve before the exit, nothing corrects the dead reckoning until GNSS returns, and then
@@ -207,7 +217,9 @@ v0.5.15 changes are in the supervisor and the 10-state filter.
 - **K1:** a car going straight on is drawn 0.4–2.5 m from its road on average (v0.5.14's route policy:
   13–420 m); a low-end car taking the branch 3–14 m (p95 up to 40 m on 5 km), as in §4.16.
 - **K3:** the low-end gradient cases have 2 of 400 callouts more than 1 s late at k = 0.5 (the 3 %
-  tunnel at −25 Pa/km); the S-bend 4 of 100 (k = 0.7: 3; k = 1: 0), as on 0–299.
+  tunnel at −25 Pa/km); the S-bend 4 of 100 (k = 0.7: 3; k = 1: 0), as on 0–299. At k = 0.7, shipped
+  since v0.5.16 (same tracks): gradient cases 0 of 400, S-bend 3 of 100, S4 1 of 100; more than 5 s
+  early on 5 km 19 of 100.
 - **Ranges:** low-end S2 (15.8 m), S4 (18.0 m) and S5 (12.6 m), Note10 S1 (7.8 m), and the Note10
   gradient and 3 % tunnel cases (S1 at 30 Pa/km 7.3 m, 3 % tunnel 4.6 m, −25 Pa/km 6.4 m) are above
   their 300-seed portal ranges in one set each, by 0.5–3 m.
@@ -1222,9 +1234,9 @@ every metre of a flat tunnel, where nothing can take it out; σ_s grows to 4–6
 - **An adaptive prior** (open σ_g only when the barometer residual shows a gradient) does not work in a
   straight tunnel: there the gradient is observable only where the grade changes or in a curve, so the
   trigger cannot fire where it is needed (owner). Not taken.
-- **k by class (shipped):** k = 0.5 on a low-end phone, 1 on a Note10. On a Note10 σ_s is 1.6–3 times
+- **k by class (shipped):** 1 on a Note10; on a low-end phone 0.5 in v0.5.15, 0.7 since v0.5.16 (below). On a Note10 σ_s is 1.6–3 times
   the error, so k = 1 leaves a margin of 1.6–3 rms errors; on the low-end hybrid σ_s is 4–6 times the
-  error, and k = 0.5 leaves 2–3. **The callout margin k is set by IMU class; it rests on the [ASSUMED]
+  error, and k = 0.5 leaves 2–3 (0.7: 3–4). **The callout margin k is set by IMU class; it rests on the [ASSUMED]
   σ_g, and the lasting fix is σ_g measured in a real tunnel.** It is the second class-dependent
   setting, after the one-way constraint's form (§4.15).
 - **Acceptance (owner).** In a gradient tunnel σ_s is closer to honest ((e/σ)² ~0.2, σ_e ≈ 0.45 σ), so
@@ -1235,17 +1247,23 @@ every metre of a flat tunnel, where nothing can take it out; σ_s grows to 4–6
   each; the 3 % tunnel at +25 Pa/km 0 of 300, at −25 Pa/km 3 of 300 (1.0 %); pooled 3 of 1200
   (0.25 %). The Note10 at k = 1 measures 16 of 2100 nominal (0.76 %; S5 14 of 300, 4.7 %). Against the
   owner's 1–2 % and the pooled share the rule holds; against the measured 0.76 % the −25 Pa/km case
-  alone is above it. In validation: 2 of 400 pooled, 2 of 100 at −25 Pa/km. k = 0.5 stays pending the
-  owner's reading (§5).
+  alone is above it. In validation: 2 of 400 pooled, 2 of 100 at −25 Pa/km. **The owner read the rule
+  strictly (v0.5.16): k = 0.7.**
 - **But one nominal case shows the risk the rule was written for:** the low-end S-bend S2, where the
   curves keep σ_s honest, has 16 of 300 callouts late at k = 0.5 (5.3 %), against 4 at k = 0.7 and 3
-  at k = 1. Low-end S4: 4 of 300 at 0.5 and 0.7, 0 at 1. The rule covers the gradient cases only, so
-  S2 is reported for the owner's decision with the rule's reading (§5).
+  at k = 1. Low-end S4: 4 of 300 at 0.5 and 0.7, 0 at 1. The rule covers the gradient cases only; S2
+  is the nominal case behind it.
+- **v0.5.16: k = 0.7 (owner: "late is worse than early").** On the same tracks: gradient cases 1 of 1200
+  late (validation 0 of 400), S2 4 of 300 (validation 3 of 100), every low-end case 9 of 3600. The price
+  is advance on long and flat tunnels: on 5 km 59 of 300 callouts more than 5 s early (7 at 0.5; 230 at
+  k = 1), mean −3.7…−4.3 s, the "now" prompt 89–105 m early; the 3 % tunnel at +25 Pa/km 38 of 300 more
+  than 5 s early. Accepted knowingly; k is chosen again once σ_g is measured. The change is one constant;
+  the numbers are the sweep's, so nothing was re-run.
 
 The k sweep on the same tracks (low-end, 300 seeds; late > 1 s / more than 5 s early, of 300, mean
 callout, mean "now" prompt early):
 
-| low-end | k = 0.5 (shipped) | k = 0.7 | k = 1 (v0.5.14) |
+| low-end | k = 0.5 (v0.5.15) | k = 0.7 (shipped, v0.5.16) | k = 1 (v0.5.14) |
 |---|---|---|---|
 | S1 | 0 / 0, −1.1…−1.3 s, 29–35 m | 0 / 0, −1.6…−1.8 s, 43–49 m | 0 / 0, −2.3…−2.5 s, 63–69 m |
 | S2 | **16** / 0, −0.1…−0.3 s, 2–5 m | 4 / 0, −0.4…−0.6 s, 7–10 m | 3 / 0, −0.8…−1.0 s, 15–18 m |
@@ -1255,7 +1273,7 @@ callout, mean "now" prompt early):
 | 30 Pa/km S1 / S3 | 0 / 0 and 0 / 0 | 0 / 0 and 0 / 0 | 0 / 1 and 0 / 0 |
 | 3 % tunnel +25 / −25 Pa/km | 0 / 2 and 3 / 0 | 0 / 38 and 1 / 0 | 0 / 192 and 0 / 0 |
 
-On the 5 km tunnel the "now" prompt comes 57–73 m early instead of 135–150 m.
+On the 5 km tunnel the "now" prompt comes 89–105 m early at k = 0.7 (57–73 m at 0.5, 135–150 m at 1).
 
 ## 5. Limitations and next steps
 
@@ -1343,12 +1361,14 @@ On the 5 km tunnel the "now" prompt comes 57–73 m early instead of 135–150 m
 - **"Main first" costs a car taking the branch on a low-end phone** (§4.16): drawn on the main tunnel
   for the 3–4 s until "branch" is decided, 8–16 m from its road on average (p95 27–42 m) in the long and
   gradient cases. The policy rests on an [ASSUMED] product rule: no re-route while "not yet".
-- **k = 0.5 on a low-end phone** (§4.16): the owner's rule holds against his stated 1–2 % and the
-  pooled gradient share (0.25 %), but the 3 % tunnel at −25 Pa/km (1.0 %) is above the measured Note10
-  share (0.76 %). And on the S-bend
-  (S2), where σ_s is honest, 16 of 300 callouts are more than 1 s late (k = 0.7: 4; k = 1: 3). Whether
-  that is acceptable, or k = 0.7, is open. It rests on the [ASSUMED] σ_g; measuring σ_g in a real
-  tunnel is the lasting fix.
+- **k = 0.7 on a low-end phone, accepted knowingly** (§4.16, v0.5.16): the owner's rule, read
+  strictly, gave 0.7 over 0.5. The price: on the 5 km tunnel 59 of 300 callouts come more than 5 s
+  early (mean ~4 s), against 16 of 300 more than 1 s late on the S-bend at 0.5. It rests on the
+  [ASSUMED] σ_g; measuring σ_g in a real tunnel is the lasting fix, and k is chosen again then.
+- **A Note10 car going straight on is not consistent through the supervisor** (§3): (e/σ)² 2.35 (S1)
+  and 2.54 (5 km), the error 54–141 m rms at the portal with no curve to correct it. Not traced. The
+  candidate: after "main" the map rows on the main geometry lower σ_s although a straight road gives
+  no along-track information (the cross-track row may reach it through the lateral uncertainty).
 - **Recovery is now measured as time** (§4.14), not only as the largest step. The follower closes
   a gap at ≤ 2 m/s, so the pressure gradient's 100 m takes ~50 s to show right. Whether 10–28 s to
   5 m is acceptable for guidance after the exit is a product question.
@@ -1431,7 +1451,7 @@ On the 5 km tunnel the "now" prompt comes 57–73 m early instead of 135–150 m
 | Note10 10-state (§4.15) | Proposed the accelerometer-bias hypothesis and its A/B; accepted that the trace does not support it and that ×10 is not taken | CHANGELOG v0.5.14 |
 | "Not yet" display (§4.16) | Chose "main first" after a decision deck; required the follower's 2 m/s limit across as well, and that "no re-route while not yet" be written as an [ASSUMED] product rule the policy rests on | CHANGELOG v0.5.15 |
 | 10-state rows while "not yet" (§4.16) | Approved pausing them (symmetric, safe), not running them on the main geometry; added that the "never decided" count be reported and predicted it would not change | CHANGELOG v0.5.15 |
-| Callout k by class (§4.16) | Accepted k = 0.5 on a condition he set: the low-end gradient cases' late share over 300 seeds must not exceed the Note10's at k = 1, else 0.7; required the sentence that k rests on the assumed σ_g; ruled the adaptive prior structurally impossible in a straight tunnel | CHANGELOG v0.5.15 |
+| Callout k by class (§4.16) | Accepted k = 0.5 on a condition he set: the low-end gradient cases' late share over 300 seeds must not exceed the Note10's at k = 1, else 0.7; required the sentence that k rests on the assumed σ_g; ruled the adaptive prior structurally impossible in a straight tunnel. On the borderline result read the rule strictly and set k = 0.7 | CHANGELOG v0.5.15, v0.5.16 |
 | Low-end S4 mechanism | **Corrected the agent's diagnosis** (yaw drift at stops) from a trace: the filter loses speed while crawling, because pitch is weakly observable at low speed. Found that the in-browser page could not work on GitHub Pages because `*.zip` was git-ignored | §4.6, CHANGELOG v0.5.7 |
 
 ### 6.2 Choices the agent made

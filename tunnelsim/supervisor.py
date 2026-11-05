@@ -47,7 +47,11 @@ HANDOVER_RATE = 2.0                         # m/s [ASSUMED]: as the ESKF's re-ac
 # the assumed σ_g; the lasting fix is σ_g measured in a real tunnel. Acceptance (owner): over 300 seeds the
 # low-end gradient cases' share of callouts > 1 s late must not exceed the Note10's at k = 1 (1-2 %);
 # else 0.7.
-CALLOUT_K_BY_CLASS = {"note10": 1.0, "mpu9250": 0.5}
+# v0.5.16 (owner 2026-11-05): 0.7. Over 300 seeds the gradient cases came out at the rule's edge (3 of 1200
+# late, 1.0 % at -25 Pa/km against the Note10's measured 0.76 %), and the S-bend, where σ_s is honest, had
+# 16 of 300 late at 0.5 (4 at 0.7). "Late is worse than early": the price is 59 of 300 callouts more than
+# 5 s early on the 5 km tunnel (7 at 0.5). Numbers from the k sweep on the same traces (no re-run).
+CALLOUT_K_BY_CLASS = {"note10": 1.0, "mpu9250": 0.7}
 
 
 def callout_k(imu_class):

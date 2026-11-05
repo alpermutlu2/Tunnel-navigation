@@ -5,7 +5,7 @@ Phone-based position estimation through a GNSS outage in a road tunnel (single l
 the right moment, and recover cleanly when the car comes out. Only the phone's own sensors
 (accelerometer, gyroscope, barometer, GNSS) and the navigation map are used.
 
-**Write-up:** [`SUMMARY.md`](SUMMARY.md) (about two pages) and the full [`REPORT.md`](REPORT.md):
+**Write-up:** [`SUMMARY.md`](SUMMARY.md) (about six pages; the product's numbers in one table at the top) and the full [`REPORT.md`](REPORT.md):
 approach, what is simulated, assumptions, results, where it breaks and why, AI usage.
 
 ## Quick start
@@ -18,7 +18,7 @@ python tools/simulate.py S1          # or a single self-contained page: sim_S1_s
 
 **For a demo:** `tools/serve.py` is the main path (a changed parameter re-runs truth → sensors →
 estimators); the pre-run static page is the fallback; the in-browser Pyodide mode is experimental and
-nothing should depend on it.
+nothing should depend on it. The interview demo script, with fallbacks: [`docs/DEMO.md`](docs/DEMO.md).
 
 **One page, two modes.** [`docs/sim/index.html`](docs/sim/index.html) holds every scenario as a
 tab (pre-run drives, seed 0), a map-layer on/off switch and sliders for the callout margin k·σ and

@@ -15,6 +15,19 @@ showing the car, call out an exit inside the tunnel at the right moment, and rec
 exit. The app has the map, so the real unknown is the **distance along the road**. A 22 m error
 shifts the callout by 1 s at 80 km/h.
 
+**The product at a glance** (what the screen shows: the supervisor of §Supervisor, 300 seeds, ranges of
+per-set rms over the cases; REPORT §4.16):
+
+| | Note10 class (ESKF, k = 1) | low-end class (10-state, k = 0.7) |
+|---|---|---|
+| along-track error at the exit branch | 2.3–39 m | 9.5–48 m |
+| along-track error at the portal | 1.5–16.5 m | 7.5–25 m (pressure gradient: 13–26 m) |
+| worst mean (e/σ)² at the portal, car takes the exit | 0.34 | 0.76 |
+| callouts more than 1 s late | 16 of 2400 (14 on braking) | 8 of 2400; 1 of 1200 with a gradient |
+| callouts more than 5 s early | 5 of 2400 | 96 of 2400 (59 on 5 km); 38 of 1200 |
+| branch shown, car takes it | right in 2400 of 2400 | right in 3600 of 3600 |
+| car goes straight on | "main" in 900 of 900; 54–141 m at the portal, (e/σ)² up to 2.5: **not consistent** | "main" never decided (900 of 900); drawn on the main tunnel; 22–95 m, consistent |
+
 A measured error budget set the direction:
 - Free integration of a Galaxy Note10 IMU [MEAS] drifts 1.2–1.5 km, because pitch errors leak
   gravity.
@@ -41,7 +54,8 @@ information:
   τ 60 s), not a measurement.
 - **Map in the tunnel:** heading and lateral position against the route, with the map's own
   offset and length errors as states.
-- **Callout rule:** announce when ŝ + 1·σ_s reaches the callout point, so the callout errs early.
+- **Callout rule:** announce when ŝ + k·σ_s reaches the callout point, so the callout errs early
+  (k = 1; 0.7 on a low-end phone, whose σ is larger than its error).
   The voice says the estimated distance, rounded to 50 m.
 - **Clean exit:** GNSS re-enters gradually, so the car does not jump on the screen.
 - **IMU class detection:** at start-up the IMU class is detected from gyro noise and the filter
@@ -96,13 +110,17 @@ Ranges over six sets of 50 seeds (0–299):
 The V-profile tunnel (S3) is 2.6–3.3 m at the exit branch and 1.7–2.1 m at the portal since the
 map grade became a measurement (11.6–15.7 and 8.9–11.8 m before).
 
-- **Consistent.** The filter's own uncertainty covers its error everywhere: mean (e/σ)² ≤ 0.37 in
-  every set, conservative, and every run is within 2σ at the portal.
+- **Consistent where the car takes the exit.** In these scenarios the filter's uncertainty covers its
+  error at the portal: mean (e/σ)² ≤ 0.37 in every set, conservative, and every run within 2σ. That
+  is a claim about these metrics, not every moment or every mismatch: a Note10 car going straight on
+  is not consistent through the supervisor ((e/σ)² 2.35–2.54, not traced), nor is the mount without
+  an approach manoeuvre (1.69).
 - **Callout.** Without the rule, 0–66 % of callouts come more than 1 s late; with k = 1, 13 of
   3000. k = 1.3 cuts them to 5 of 3000 (2 of 1000 in validation), at 0.1–0.8 s more advance. Prompts at 1000, 500 and 200 m and "now" follow the same rule; when the shown 2σ is over
   100 m the prompt names no distance ("Exit A ahead, keep right").
-- **Exit branch.** Recognised in 3000 of 3000 runs that take it. When the car goes straight on,
-  "main" is reported in 600 of 600. Such a car has no curve to correct it: on stop-and-go, 5 of 300
+- **Exit branch.** Recognised in 3000 of 3000 runs that take it. When the car goes straight on, the
+  ESKF (Note10) reports "main" in 600 of 600; on a low-end phone the 10-state filter never decides
+  "main" for such a car (below). Such a car has no curve to correct it: on stop-and-go, 5 of 300
   straight-on runs are more than 100 m off at the exit (34 in v0.5.13), until GNSS returns. Until
   "main" is decided (11–12 s on stop-and-go) the car was shown on the branch, 32–36 m off; since
   v0.5.15 it is drawn on the main tunnel until "branch" is decided (≤ 7 m), and a car that does take
@@ -116,21 +134,14 @@ map grade became a measurement (11.6–15.7 and 8.9–11.8 m before).
 - **Validation on 100 untouched seeds (500–599),** run once, nothing changed after: no run more
   than 100 m off; inside the ranges except single sets at the edge (S2 and 1 km portal, ≤ 0.2 m);
   7 of 1000 callouts more than 1 s late with k = 1; the pressure-gradient cases right in every run.
-- **Branch window.** v0.5.11's validation found one S4 run 110 m off: its dead-reckoning error
-  (−220 m) put the turn outside the branch decision's fixed 100 m window. The window now grows
-  with σ_s (max(100 m, 2σ_s)); the run is 3 m off and nothing else moved. Those seeds are now a
-  design tier.
+- **Branch window.** A validation run 110 m off (the turn outside the decision's fixed 100 m
+  window) made the window grow with σ_s; the run is 3 m off and nothing else moved.
 - **Seed tiers and method.** A callout claim of "1 in 500 late" made on 0–49 became 22 in 3000;
   a low-end failure count of 35 → 0 on 20 seeds was 35 → 6 on 300. 20 seeds to look, 300 for the
   number.
-- **A failure found on new seeds and fixed.**
-  - Found: in 2 of 200 runs on S4 the filter ended ~600 m off with a small σ. It reached the exit
-    curve far behind the car, and the map update at the wrong point wrote the curve into yaw.
-  - Fixed: re-association along the arc (the yaw says where in the curve the car is). It removes
-    those failures (0 in 200, S4 portal p95 11 m) and keeps the straight-on control and the
-    known-failure cases unchanged.
-  - An innovation gate stays as a safety net. On its own it had traded the two failures for three
-    smaller ones.
+- **A failure found on new seeds and fixed.** In 2 of 200 S4 runs the filter reached the exit curve
+  far behind the car and wrote the curve into yaw (~600 m off, small σ). Re-association along the
+  arc removes them (0 in 200); an innovation gate stays as a safety net.
 
 ## Three filter sizes
 
@@ -152,13 +163,11 @@ The app runs all three and shows one (REPORT §4.12):
 - **Class rule:** ESKF on a Note10-class phone, 10-state on a low-end one.
 - **Majority monitor:** raises the shown σ when the selected filter disagrees with both others.
 - **Follower at the exit:** no jump on the screen.
-- **Rehearsing short outages in open sky could not tell the filters apart** and was dropped.
 - **What the monitor can and cannot see:** it catches failures where the models differ (a tunnel
   pressure gradient, suspension pitch), late. It cannot see one in a part they share.
-- **Low-end stop-and-go:** 89–335 m in v0.5.11, 16–21 m in five of six sets in v0.5.13 (one set at
-  225 m: seed 232), 12–15 m in all six now, with no run over 100 m. Seed 232's mechanism was traced
-  in v0.5.14 (the barometer rows at a wrong pitch drove the speed down, then a speed row collapsed
-  σ); v0.5.13's explanation of it was wrong. The 10-state filter got a curve landmark (the yaw change over 12 s against the map's
+- **Low-end stop-and-go:** 89–335 m in v0.5.11, 12–15 m in all six sets now, with no run over
+  100 m. The last failure (seed 232, −1.6 km) was traced: the barometer rows at a wrong pitch drove
+  the speed down, then a speed row collapsed σ; the first explanation of it was wrong. The 10-state filter got a curve landmark (the yaw change over 12 s against the map's
   curve), its own branch decision (the same profile against the branch and the main tunnel), a
   one-way speed constraint ("a car does not reverse in a one-way tunnel", [ASSUMED]) and a speed
   row from the lateral force in turns (v·ω); in v0.5.14 the map grade as a pitch measurement.
@@ -176,27 +185,26 @@ The app runs all three and shows one (REPORT §4.12):
    look the same. A stricter "driver holds speed" model is 30–50 % better, but fails as soon as the
    speed wanders by ±1 km/h.
 3. **A tunnel pressure gradient** of 30 Pa/km is read as a climb: 110–120 m error and a wrong branch
-   decision. A gradient state alone fixes that case but costs normal roads, because in a straight,
-   constant-grade tunnel the barometer cannot tell the gradient from a pitch error. With the map's
-   grade as a measurement of pitch (v0.5.14) the barometer's residual goes to the gradient, and both
-   products handle it (S3 at 30 Pa/km: 2.3 m on a Note10). On a constant grade a map grade error and
-   a pressure gradient cannot be told apart; the filter knows their sum, not the share of each, and
-   its σ says so. Without the map's grade the old behaviour returns. The gradient itself is
-   [ASSUMED] and should be measured in a real tunnel.
+   decision. A gradient state alone costs normal roads: in a straight, constant-grade tunnel the
+   barometer cannot tell the gradient from a pitch error. With the map's grade as a measurement of
+   pitch (v0.5.14) the residual goes to the gradient and both products handle it (S3 at 30 Pa/km:
+   2.3 m on a Note10). On a constant grade a map grade error and a gradient still cannot be told
+   apart; the filter knows their sum and its σ says so. Without the map's grade the old behaviour
+   returns. The gradient is [ASSUMED] and should be measured in a real tunnel.
 4. **The map's own error limits what the map adds.** At twice the assumed map error the filter
    becomes optimistic, and on 5 km the map then does worse than no map.
 5. **A low-end IMU** (MPU9250 class [MEAS]) works with its own tuning, with the fast gyro bias
    terms treated as white noise and a looser cruise test:
-   - 10–25 m at the portal in steady and long tunnels;
-   - consistent ((e/σ)² 0.2–0.6) and no late callouts;
+   - the ESKF alone, at k = 1: 10–25 m at the portal in steady and long tunnels, consistent
+     ((e/σ)² 0.2–0.6), no late callouts;
    - stop-and-go fails for the ESKF (~0.9 km). At crawling speed the vehicle constraints see a pitch
      error only through v·δθ, so the cheap gyro's tilt leaks gravity into the speed. The supervisor
      selects the 10-state filter there (12–15 m in all six sets in v0.5.14);
    - the price of the map grade on a low-end phone: a σ 4–6 times the error on flat tunnels, from
-     the gradient state's assumed prior. With k = 1 callouts came 2–6 s early; since v0.5.15 the
-     low-end phone uses k = 0.5 (5 km: 6 → 3 s early), with 3 of 1200 late in the gradient cases
-     but 16 of 300 late on the S-bend (open). The lasting fix is the gradient measured in a real
-     tunnel;
+     the gradient state's assumed prior. With k = 1 callouts came 2–6 s early; since v0.5.16 the
+     low-end phone uses k = 0.7 (5 km: 6 → 4 s early, 59 of 300 more than 5 s early), with 1 of 1200
+     late in the gradient cases and 4 of 300 on the S-bend (k = 0.5 had 16). Accepted knowingly; the
+     lasting fix is the gradient measured in a real tunnel;
    - a car going straight on: the 10-state filter never decides "main". Since v0.5.15 it pauses its
      map rows meanwhile (5 km: 753 → 77 m) and the car is drawn on the main tunnel.
 6. **Levelling from gravity** (an extra update) was tried and left off: it helps one scenario and
@@ -253,8 +261,9 @@ The app runs all three and shows one (REPORT §4.12):
     without grade give the old filter exactly, and set the one-way constraint's form per filter on
     the condition that both forms ran on 300 seeds.
   - **"Not yet" and callout timing (v0.5.15):** chose "main first" for the drawn point with the
-    follower's limit across, approved pausing the 10-state filter's map rows, and accepted k = 0.5 on
-    a low-end phone under an acceptance rule he set (the agent's first rule could not fail).
+    follower's limit across, approved pausing the 10-state filter's map rows, and set the low-end
+    callout margin by an acceptance rule he wrote before the 300-seed run (the agent's first rule
+    could not fail); on its borderline result he chose k = 0.7 (v0.5.16).
 - **Detail:** REPORT §6 lists every intervention and the choices the agent made. It also lists
   the AI-side errors and what caught them: the author, AI reviews, the agent's own tests, or the
   consistency metric.
