@@ -35,8 +35,8 @@ every seed as in v0.5.14), so its 300-seed sets were not re-run. REPORT §4.16.
 How the numbers moved (0–299, six sets of 50, through the supervisor unless stated):
 - Drawn point, straight on (largest distance from the car's road, mean per set): Note10 S1 / S4 / 5 km
   12.8–13.3 / 32.9–35.7 / 30.8–32.0 → 0.6 / 0.7–3.5 / 1.0–3.2 m; low-end 242–246 / 185–190 / 413–423 →
-  0.6 / 0.4–1.6 / 1.5–6.7 m. Taking the branch: Note10 0.5–3.4 → 2.5–6.7 m; low-end 0.3–6.7 → 3.7–12.9 m
-  (p95 up to 39 m in the long and gradient cases). Largest step across ≤ 1.1 m (6–35 m without the
+  0.6 / 0.4–1.6 / 1.5–6.7 m. Taking the branch: Note10 0.5–3.4 → 1.0–6.7 m; low-end 0.3–13.1 → 3.0–15.5 m
+  (p95 up to 42 m in the long and gradient cases). Largest step across ≤ 1.1 m (5–35 m without the
   limit).
 - 10-state, straight on (20 seeds, along-track at the portal): low-end 5 km 753 → 77 m, 3 % tunnel
   370 → 53 m, S1/S2/S6 70–71 → 23–29 m, S4 49 → 56 m; Note10 S1 39 → 22 m. "Main" still never decided
@@ -45,7 +45,8 @@ How the numbers moved (0–299, six sets of 50, through the supervisor unless st
   (e/σ)² 3.1 → 1.3, branch 295 → 300.
 - Low-end callouts (k 1 → 0.5): S1 −2.3…−2.5 → −1.1…−1.3 s; 5 km −5.5…−6.1 → −2.4…−3.0 s, more than 5 s
   early 230 → 7 of 300, "now" prompt 135–150 → 57–73 m early; S5 −4.1…−4.6 → −1.5…−2.0 s. Late > 1 s:
-  gradient cases 0, 0, 0 and 3 of 300 (rule: ≤ the Note10's 1–2 % at k = 1, met); S2 3 → 16 of 300, S4
+  gradient cases 0, 0, 0 and 3 of 300 (rule: ≤ the Note10's at k = 1; holds against the owner's 1–2 %
+  and pooled (0.25 %), not for the −25 Pa/km case against the measured 0.76 %: owner's reading); S2 3 → 16 of 300, S4
   0 → 4, 5 km 0 → 2 (S2 open, §5).
 - Note10 product: unchanged (ESKF unchanged, k = 1).
 - Validation 600–699 (run once): no run > 100 m; branch right in every run; straight-on cars drawn

@@ -202,13 +202,15 @@ seed 271 decided "main"). When the car goes straight on, "main" is reported in 6
 **v0.5.15 validation** (600–699, run once; `reports/0.5.15/supervisor_validation.json`,
 `ekf10_validation_600-699.json`). The ESKF is unchanged since v0.5.14, so its table below stands; the
 v0.5.15 changes are in the supervisor and the 10-state filter.
-- **No run more than 100 m off;** the branch shown is right in every run that takes it.
+- **Cars taking the branch:** portal p95 ≤ 49 m in every case and set; the branch shown is right in
+  every run. A car going straight on keeps the no-curve error of §3 (Note10 5 km: 122–132 m rms).
 - **K1:** a car going straight on is drawn 0.4–2.5 m from its road on average (v0.5.14's route policy:
   13–420 m); a low-end car taking the branch 3–14 m (p95 up to 40 m on 5 km), as in §4.16.
 - **K3:** the low-end gradient cases have 2 of 400 callouts more than 1 s late at k = 0.5 (the 3 %
   tunnel at −25 Pa/km); the S-bend 4 of 100 (k = 0.7: 3; k = 1: 0), as on 0–299.
-- **Ranges:** low-end S2 (15.8 m), S4 (18.0 m) and S5 (12.6 m) and Note10 S1 (7.8 m) are above their
-  300-seed portal ranges in one set each, by 0.5–3 m.
+- **Ranges:** low-end S2 (15.8 m), S4 (18.0 m) and S5 (12.6 m), Note10 S1 (7.8 m), and the Note10
+  gradient and 3 % tunnel cases (S1 at 30 Pa/km 7.3 m, 3 % tunnel 4.6 m, −25 Pa/km 6.4 m) are above
+  their 300-seed portal ranges in one set each, by 0.5–3 m.
 
 **3.1 Validation on untouched seeds** (500–599, v0.5.14 configuration, run once;
 `reports/0.5.14/validation_500-599.json`, `ekf10_validation_500-599.json`, `supervisor_validation.json`).
@@ -1162,14 +1164,16 @@ the car is on, mean per set (p95 over runs) [runs over 10 m of 300]:
 - **A car going straight on is drawn on its road.** On a low-end phone that is 185–423 m → ≤ 7 m.
 - **The cost is on a car taking the branch, and on a low-end phone it is larger than the 50-seed look
   showed.** For the 3–4 s until "branch" is decided it is drawn on the main tunnel at ŝ; with the
-  low-end ŝ error (30–75 m at the largest) that puts it 8–13 m from its road on average, p95 27–39 m,
-  over 10 m in a third to nearly half of the runs in the long and gradient cases. The route policy hid that error
+  low-end ŝ error (30–100 m at the largest) that puts it 8–16 m from its road on average, p95 27–42 m,
+  over 10 m in a third to nearly half of the runs in the long and gradient cases (in the 3 % tunnel at
+  −25 Pa/km the route policy was already 7.5–13.1 m there). The route policy hid that error
   along the branch; main first shows it across.
 - **The move across when "branch" is decided** (owner: the follower's 2 m/s limit across too): the
   point's gap to the target road closes at 2 m/s while it moves with the roads. The largest step
-  beyond the along-track step is ≤ 1.1 m with the limit; without it 6–35 m on a low-end phone (S4:
-  35 m, p95 22 m) and 3–5 m on a Note10. The limit costs ≤ 0.7 m of off-road distance on average
-  (2.6 m on 5 km; `k1_rate_sweep_0-49.json`: 2, 5 and 10 m/s give the same within 0.5 m). The route
+  beyond the along-track step is ≤ 1.1 m with the limit; without it 5–35 m on a low-end phone (S4:
+  35 m, p95 22 m) and 1.3–4.7 m on a Note10. The limit costs up to 4.1 m of off-road distance on
+  average per set (3.5–4.1 m in the 3 % tunnel, ≤ 2.6 m elsewhere; `k1_rate_sweep_0-49.json`: 2, 5
+  and 10 m/s give the same within 0.5 m). The route
   policy had its own step when "main" came: 15–59 m on a Note10 straight on.
 - **Product assumption [ASSUMED]: while the decision is "not yet" the app does not re-route.** A car
   drawn on the main tunnel is not declared off the route, and one drawn on the branch is not either.
@@ -1201,8 +1205,8 @@ error at the portal of a car going straight on, rows on → paused:
   supervisor).
 - **The "main" decision still does not come** for a low-end car going straight on: 300 of 300 runs
   reach the portal undecided on S1, S4 and 5 km (and 20 of 20 on S6 and the 3 % tunnel); on a Note10
-  10-state S4, 11 of 20. σ_s keeps growing (5 km: 327 m at the portal), now covering the error ((e/σ)² 0.05–0.43 through the supervisor). The
-  likely reason, read from the code and not traced run by run: with σ_s of 140–330 m the ±3σ candidate
+  10-state S4, 11 of 20. σ_s keeps growing (5 km: 327 m at the portal), now covering the error ((e/σ)² 0.02–0.43 through the supervisor). The
+  likely reason, read from the code and not traced run by run: with σ_s of 96–330 m the ±3σ candidate
   window of the J test reaches back before the diverge, where both profiles are straight, so they cannot
   be told apart. K1 keeps the drawing on the right road; why the filter does not say "main" stays open
   (§5).
@@ -1226,13 +1230,17 @@ every metre of a flat tunnel, where nothing can take it out; σ_s grows to 4–6
 - **Acceptance (owner).** In a gradient tunnel σ_s is closer to honest ((e/σ)² ~0.2, σ_e ≈ 0.45 σ), so
   k = 0.5 leaves ~1.1 σ_e, roughly a 10 % late share for a zero-mean error; 0 late of 220 on 20 seeds
   is evidence against that, not proof. Rule: over 300 seeds the low-end gradient cases' share of
-  callouts more than 1 s late must not exceed the Note10's at k = 1 (1–2 %), else k = 0.7.
-  **Result: it holds.** 30 Pa/km S1 and S3: 0 of 300 each; the 3 % tunnel at +25 Pa/km 0 of 300, at
-  −25 Pa/km 3 of 300 (1.0 %). The Note10 at k = 1: 16 of 2100 nominal (S5 14 of 300, 4.7 %).
+  callouts more than 1 s late must not exceed the Note10's at k = 1 (stated by the owner as 1–2 %),
+  else k = 0.7. **Result: borderline, by which Note10 figure is used.** 30 Pa/km S1 and S3: 0 of 300
+  each; the 3 % tunnel at +25 Pa/km 0 of 300, at −25 Pa/km 3 of 300 (1.0 %); pooled 3 of 1200
+  (0.25 %). The Note10 at k = 1 measures 16 of 2100 nominal (0.76 %; S5 14 of 300, 4.7 %). Against the
+  owner's 1–2 % and the pooled share the rule holds; against the measured 0.76 % the −25 Pa/km case
+  alone is above it. In validation: 2 of 400 pooled, 2 of 100 at −25 Pa/km. k = 0.5 stays pending the
+  owner's reading (§5).
 - **But one nominal case shows the risk the rule was written for:** the low-end S-bend S2, where the
   curves keep σ_s honest, has 16 of 300 callouts late at k = 0.5 (5.3 %), against 4 at k = 0.7 and 3
   at k = 1. Low-end S4: 4 of 300 at 0.5 and 0.7, 0 at 1. The rule covers the gradient cases only, so
-  k = 0.5 stays; S2 is reported for the owner's decision (§5).
+  S2 is reported for the owner's decision with the rule's reading (§5).
 
 The k sweep on the same tracks (low-end, 300 seeds; late > 1 s / more than 5 s early, of 300, mean
 callout, mean "now" prompt early):
@@ -1333,9 +1341,11 @@ On the 5 km tunnel the "now" prompt comes 57–73 m early instead of 135–150 m
   pulled back (5 km: 753 → 77 m on 20 seeds). Why the filter does not decide "main" is open: the
   likely reason is the ±3σ window of the J test reaching back before the diverge (not traced).
 - **"Main first" costs a car taking the branch on a low-end phone** (§4.16): drawn on the main tunnel
-  for the 3–4 s until "branch" is decided, 8–13 m from its road on average (p95 27–39 m) in the long and
+  for the 3–4 s until "branch" is decided, 8–16 m from its road on average (p95 27–42 m) in the long and
   gradient cases. The policy rests on an [ASSUMED] product rule: no re-route while "not yet".
-- **k = 0.5 on a low-end phone** (§4.16) met the owner's rule on the gradient cases, but on the S-bend
+- **k = 0.5 on a low-end phone** (§4.16): the owner's rule holds against his stated 1–2 % and the
+  pooled gradient share (0.25 %), but the 3 % tunnel at −25 Pa/km (1.0 %) is above the measured Note10
+  share (0.76 %). And on the S-bend
   (S2), where σ_s is honest, 16 of 300 callouts are more than 1 s late (k = 0.7: 4; k = 1: 3). Whether
   that is acceptable, or k = 0.7, is open. It rests on the [ASSUMED] σ_g; measuring σ_g in a real
   tunnel is the lasting fix.

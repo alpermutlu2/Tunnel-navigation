@@ -105,7 +105,7 @@ map grade became a measurement (11.6–15.7 and 8.9–11.8 m before).
   "main" is reported in 600 of 600. Such a car has no curve to correct it: on stop-and-go, 5 of 300
   straight-on runs are more than 100 m off at the exit (34 in v0.5.13), until GNSS returns. Until
   "main" is decided (11–12 s on stop-and-go) the car was shown on the branch, 32–36 m off; since
-  v0.5.15 it is drawn on the main tunnel until "branch" is decided (≤ 4 m), and a car that does take
+  v0.5.15 it is drawn on the main tunnel until "branch" is decided (≤ 7 m), and a car that does take
   the branch is drawn on the main tunnel for those 3–4 s. The app must not re-route meanwhile
   [ASSUMED].
 - **Exit.** The largest jump at the exit is under 6.3 m (p95); the shown position is under 5 m
@@ -194,7 +194,7 @@ The app runs all three and shows one (REPORT §4.12):
      selects the 10-state filter there (12–15 m in all six sets in v0.5.14);
    - the price of the map grade on a low-end phone: a σ 4–6 times the error on flat tunnels, from
      the gradient state's assumed prior. With k = 1 callouts came 2–6 s early; since v0.5.15 the
-     low-end phone uses k = 0.5 (5 km: 6 → 3 s early), with no late callout in the gradient cases
+     low-end phone uses k = 0.5 (5 km: 6 → 3 s early), with 3 of 1200 late in the gradient cases
      but 16 of 300 late on the S-bend (open). The lasting fix is the gradient measured in a real
      tunnel;
    - a car going straight on: the 10-state filter never decides "main". Since v0.5.15 it pauses its
