@@ -61,8 +61,9 @@ CHI2_1_999 = 10.83
 # bias-instability GM terms with τ ≤ 50 s as (σ [rad/s], τ [s]); the τ = 500 s term is the bias state.
 LANDMARK_GYRO = {"note10": (7.0e-4, ((2.2e-4, 5.0), (1.8e-4, 50.0))),
                  "mpu9250": (6.25e-3, ((6.64e-3, 5.0), (5.61e-3, 50.0)))}
-NX = 11
-I_S, I_V, I_H, I_T, I_PSI, I_BA, I_BGY, I_BGZ, I_BH, I_SG, I_MY = range(NX)   # + mount yaw (v0.5.13)
+NX = 12
+I_S, I_V, I_H, I_T, I_PSI, I_BA, I_BGY, I_BGZ, I_BH, I_SG, I_MY, I_G = range(NX)   # + mount yaw (v0.5.13), + tunnel
+# pressure gradient (v0.5.14, A/B; frozen with zero covariance unless Ekf10Config.baro_grad)
 
 
 @dataclass(frozen=True)
@@ -126,6 +127,10 @@ class Ekf10Config:
     landmark_T: float = 12.0              # s [ASSUMED] (owner: 10-15 s, one curve)
     landmark_min_deg: float = 5.0         # [ASSUMED] (owner)
     landmark_n: int = 121
+    # v0.5.14 (owner 2026-11-05, A/B): the ESKF's tunnel pressure-gradient state (EskfConfig.baro_grad):
+    # in an outage the barometer offset drifts as ḃ_h = g_h·v, g_h unknown per tunnel (prior
+    # EskfConfig.baro_grad_sigma); at the exit the accumulated part g_h·d is removed from b_h.
+    baro_grad: bool = False
     outage_s: float = 2.0                 # no fix for this long = outage (the ESKF's cruise_no_gnss_s)
 
 
@@ -249,6 +254,7 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
     b_lag = np.array([tt - baro_t[(baro_t > tt - 1.0) & (baro_t <= tt)].mean() for tt in b1_t])
     bi = int(np.searchsorted(b_idx, i0, side="right"))
     last_fix = np.full(B, imu_t[i0]); relock = np.zeros(B, bool); settle = np.zeros(B, int)
+    g_out_prev = np.zeros(B, bool); d_acc = np.zeros(B)                 # pressure-gradient state bookkeeping
     wsum = np.zeros(B); wn = 0
     fysum = np.zeros(B); fxsum = np.zeros(B); by_hat = np.full(B, np.nan)       # lateral force sum, its straight-road mean
     L_clo = _min_clothoid(road_map)
@@ -308,6 +314,11 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
         F[:, I_H, I_V] = np.sin(th); F[:, I_H, I_T] = v * np.cos(th)
         F[:, I_T, I_BGY] = 1.0
         F[:, I_PSI, I_BGZ] = -1.0
+        if cfg10.baro_grad:
+            out_k = imu_t[k + 1] - last_fix > cfg10.outage_s
+            x[:, I_BH] += np.where(out_k, x[:, I_G] * v * dt, 0.0)
+            F[:, I_BH, I_G] = np.where(out_k, v, 0.0); F[:, I_BH, I_V] = np.where(out_k, x[:, I_G], 0.0)
+            d_acc += np.where(out_k, v * dt, 0.0)
         Fsum += F * dt; dt_sum += dt
         wsum += 0.5 * (wz[:, k] + wz[:, k + 1]); wn += 1
         fysum += 0.5 * (fy[:, k] + fy[:, k + 1]); fxsum += 0.5 * (fx[:, k] + fx[:, k + 1])
@@ -325,6 +336,21 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
             Phi = np.eye(NX) + Fsum + 0.5 * Fsum @ Fsum
             P[:] = Phi @ P @ np.swapaxes(Phi, 1, 2) + np.diag(q) * dt_sum
             Fsum[:] = 0.0; dt_sum = 0.0
+        if cfg10.baro_grad:
+            g_out = imu_t[kk] - last_fix > cfg10.outage_s
+            new_g = g_out & ~g_out_prev
+            if new_g.any():                     # a new tunnel: its gradient is unknown, independent of the last
+                P[new_g, I_G, :] = 0.0; P[new_g, :, I_G] = 0.0
+                P[new_g, I_G, I_G] = cfg.baro_grad_sigma ** 2
+                x[new_g, I_G] = 0.0; d_acc[new_g] = 0.0
+            end_g = ~g_out & g_out_prev
+            if end_g.any():                     # out of the tunnel the offset g_h·d is gone: δb_h' = δb_h − d·δg_h
+                x[end_g, I_BH] -= x[end_g, I_G] * d_acc[end_g]
+                T = np.broadcast_to(np.eye(NX), (int(end_g.sum()), NX, NX)).copy()
+                T[:, I_BH, I_G] = -d_acc[end_g]
+                P[end_g] = T @ P[end_g] @ np.swapaxes(T, 1, 2)
+                d_acc[end_g] = 0.0
+            g_out_prev = g_out
         # --- GNSS
         while gi < len(g_idx) and g_idx[gi] == kk:
             pz, vz, tf = gnss["pos"][:, gi], gnss["vel"][:, gi], g_t[gi]

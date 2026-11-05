@@ -1,0 +1,324 @@
+{
+ "S1/lowend/pg/branch": {
+  "off": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 1.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "portal": 181.0,
+   "p95": 200.6,
+   "nees": 91.112
+  },
+  "on": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 1.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "portal": 181.0,
+   "p95": 200.6,
+   "nees": 91.112
+  }
+ },
+ "S3/lowend/pg/branch": {
+  "off": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 1.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "portal": 381.1,
+   "p95": 423.1,
+   "nees": 159.389
+  },
+  "on": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 1.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "portal": 381.1,
+   "p95": 423.1,
+   "nees": 159.389
+  }
+ },
+ "S1-5km/lowend/pg/branch": {
+  "off": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 1.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "portal": 524.3,
+   "p95": 582.9,
+   "nees": 337.488
+  },
+  "on": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 1.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "portal": 524.3,
+   "p95": 582.9,
+   "nees": 337.488
+  }
+ },
+ "custom:L=5000,g=3,v=110/lowend/pg/branch": {
+  "off": {
+   "branch10": {
+    "branch": 0.05,
+    "main": 0.95,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 1,
+   "portal": 404.5,
+   "p95": 525.2,
+   "nees": 212.503
+  },
+  "on": {
+   "branch10": {
+    "branch": 0.05,
+    "main": 0.95,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 1,
+   "portal": 404.5,
+   "p95": 525.2,
+   "nees": 212.503
+  }
+ },
+ "S1/lowend/nom/branch": {
+  "off": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "portal": 6.329,
+   "p95": 10.89,
+   "nees": 0.118
+  },
+  "on": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "portal": 6.329,
+   "p95": 10.89,
+   "nees": 0.118
+  }
+ },
+ "S4/lowend/nom/branch": {
+  "off": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 15,
+   "portal": 22.16,
+   "p95": 41.08,
+   "nees": 1.542
+  },
+  "on": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 15,
+   "portal": 22.16,
+   "p95": 41.08,
+   "nees": 1.542
+  }
+ },
+ "S1-5km/lowend/nom/branch": {
+  "off": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 6,
+   "portal": 20.62,
+   "p95": 34.42,
+   "nees": 0.376
+  },
+  "on": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 6,
+   "portal": 20.62,
+   "p95": 34.42,
+   "nees": 0.376
+  }
+ },
+ "S1/note10/nom/branch": {
+  "off": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "portal": 4.998,
+   "p95": 10.14,
+   "nees": 0.513
+  },
+  "on": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "portal": 4.998,
+   "p95": 10.14,
+   "nees": 0.513
+  }
+ },
+ "S4/note10/nom/branch": {
+  "off": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 5,
+   "portal": 4.73,
+   "p95": 8.376,
+   "nees": 0.424
+  },
+  "on": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 5,
+   "portal": 4.73,
+   "p95": 8.376,
+   "nees": 0.424
+  }
+ },
+ "S1/lowend/nom/straight": {
+  "off": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 1.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "horiz": 247.8
+  },
+  "on": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 1.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "horiz": 247.8
+  }
+ },
+ "S4/lowend/nom/straight": {
+  "off": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 0.0,
+    "none": 1.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "horiz": 337.1
+  },
+  "on": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 0.0,
+    "none": 1.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "horiz": 337.1
+  }
+ },
+ "S1/note10/nom/straight": {
+  "off": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 1.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "horiz": 248.7
+  },
+  "on": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 1.0,
+    "none": 0.0
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "horiz": 248.7
+  }
+ },
+ "S4/note10/nom/straight": {
+  "off": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 0.55,
+    "none": 0.45
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "horiz": 189.3
+  },
+  "on": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 0.55,
+    "none": 0.45
+   },
+   "nofit": 0,
+   "landmark": 0,
+   "horiz": 189.3
+  }
+ }
+}
