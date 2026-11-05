@@ -1,0 +1,126 @@
+{
+ "S1/imu_lowend/branch": {
+  "v0.5.13": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 11.55,
+   "nees_div": 0.389,
+   "late1": 0.0,
+   "portal": 6.329,
+   "nees": 0.118,
+   "fail": 0
+  },
+  "mean": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 11.55,
+   "nees_div": 0.389,
+   "late1": 0.0,
+   "portal": 6.329,
+   "nees": 0.118,
+   "fail": 0
+  },
+  "hybR": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 13.67,
+   "nees_div": 0.032,
+   "late1": 0.0,
+   "portal": 11.98,
+   "nees": 0.205,
+   "fail": 0
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 13.67,
+   "nees_div": 0.032,
+   "late1": 0.0,
+   "portal": 11.98,
+   "nees": 0.205,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 13.67,
+   "nees_div": 0.032,
+   "late1": 0.0,
+   "portal": 11.98,
+   "nees": 0.205,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 13.67,
+   "nees_div": 0.032,
+   "late1": 0.0,
+   "portal": 11.98,
+   "nees": 0.205,
+   "fail": 0
+  }
+ },
+ "S1/imu_lowend+set:baro.tunnel_grad_pa_per_km=30/branch": {
+  "v0.5.13": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 95.56,
+   "nees_div": 67.574,
+   "late1": 0.0,
+   "portal": 181.0,
+   "nees": 91.112,
+   "fail": 20
+  },
+  "mean": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 95.56,
+   "nees_div": 67.574,
+   "late1": 0.0,
+   "portal": 181.0,
+   "nees": 91.112,
+   "fail": 20
+  },
+  "hybR": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 35.83,
+   "nees_div": 0.217,
+   "late1": 0.0,
+   "portal": 14.99,
+   "nees": 0.428,
+   "fail": 0
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 35.83,
+   "nees_div": 0.217,
+   "late1": 0.0,
+   "portal": 14.99,
+   "nees": 0.428,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 35.83,
+   "nees_div": 0.217,
+   "late1": 0.0,
+   "portal": 14.99,
+   "nees": 0.428,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 35.83,
+   "nees_div": 0.217,
+   "late1": 0.0,
+   "portal": 14.99,
+   "nees": 0.428,
+   "fail": 0
+  }
+ }
+}

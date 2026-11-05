@@ -825,15 +825,15 @@ runs > 100 m, failures, (e/σ)²:
   as turns. Final form: |ω| > max(0.02, 4σ_ω,1s), with σ_ω,1s from the gyro's [MEAS] short-term
   terms, and (v·σ_ω,1s)² in R. With the true mount it fixed seed 200 (229 m) and moved seed 232
   from −1566 to −340 m.
-- **The estimated mount undid that on seed 232** (−1581 m): a low-end tilt error of ~2° leaks
-  gravity into the speed during the crawl. Every other low-end S4 run stays under 100 m.
+- **The estimated mount undid that on seed 232** (−1581 m). Every other low-end S4 run stays under
+  100 m. (v0.5.13 put this down to a ~2° tilt error of the estimated mount; the v0.5.14 trace shows
+  roll 1.0°, pitch 0.1°, and a different mechanism, §4.15.)
 - **Without a mount-yaw state** the Note10 S2 was 6.0 m with (e/σ)² 3.3: a yaw error the filter did
   not know about. The state brings it to 4.4 m and 0.98.
 
-*Seed 232, the mechanism as far as it is understood* (low-end S4). After the crawl the speed drifts
-low (16.7 → 8.9 m/s, the pitch gravity leak of §4.6) and σ_s grows honestly to 713 m. In the curve
-the error is pulled from −561 to −273 m while σ_s collapses to 67 m: a lock to a wrong point at ~4σ,
-the failure the s-guard of §4.13 is there to prevent. Why the guard let it through is not yet known.
+*Seed 232* (low-end S4). v0.5.13 read it as a lock to a wrong point in the curve that the s-guard
+failed to stop. That was wrong: the landmark never fires and the s-guard is not involved. The
+mechanism, from a trace of every update (v0.5.14), is in §4.15.
 
 *Recovery and prompt metrics (owner's items 1 and 2;* `navmetrics.py`). Recovery: from the first
 fix of any kind after the outage, the time until the shown along-track error is under 10 m and 5 m

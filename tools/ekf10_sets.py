@@ -57,7 +57,8 @@ def one(args):
         out[var] = {"portal_rmse": r["real_exit"]["rmse"], "portal_p95": r["real_exit"]["p95_abs"],
                     "failures": int((~ok).sum()), "nees": r["consistency_real_exit"]["mean_norm_sq"],
                     "sigma_mean": r["consistency_real_exit"]["sigma_s_mean_m"],
-                    "diverge_rmse": (r.get("at_diverge") or {}).get("rmse"), "errors": e.round(1).tolist(), **ev}
+                    "diverge_rmse": (r.get("at_diverge") or {}).get("rmse"), "errors": e.round(1).tolist(),
+                    "coverage": r.get("coverage"), **ev}
     return f"{imu}/{key}{'' if branch else '_straight_on'}/{lo}", out
 
 

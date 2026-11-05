@@ -146,6 +146,14 @@ def filter_mount(tr, t, F, W, gnss, seed_ids, mount="known", mount_err_deg=None)
     return np.einsum("bij,bnj->bni", R, F), np.einsum("bij,bnj->bni", R, W), C_BP_NOMINAL, diag
 
 
+def coverage(e, sig):
+    """v0.5.14 (review): beside the mean of (e/σ)², the share of runs inside 1σ and 2σ (a Gaussian
+    error with an honest σ: 68 % and 95 %). Evaluation side."""
+    z = np.abs(np.asarray(e) / np.asarray(sig))
+    return {"within_1sigma": round(float(np.mean(z < 1)), 3), "within_2sigma": round(float(np.mean(z < 2)), 3),
+            "mean_norm_sq": round(float(np.mean(z * z)), 3)}
+
+
 def simulate_run(key, seeds, overrides=(), imu_switches=None, branch=True, vehicle=None, speed_scale=1.0,
                  speed_change=None, approach_manoeuvre=True):
     """Sensor data for a batch of seeds: IMU (no gaps; jitter off so the batch shares a time
@@ -284,6 +292,7 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
         k_div = int(np.argmax(s_true >= ex.s))
         t_div = out.t[k_div]
         res["at_diverge"] = stats(e_s[:, k_div])
+        res["coverage"] = {"diverge": coverage(e_s[:, k_div], sig_s[:, k_div]), "portal": coverage(e_s[:, kx], sig_s[:, kx])}
         res["at_diverge_lateral"] = stats(e_lat[:, k_div])
         took = 1 if branch else -1                          # what the car really did
 
@@ -472,6 +481,7 @@ def ekf10_experiment(key, seeds=50, overrides=(), mount_err_deg=None, cfg10=None
     k_div = int(np.argmax(s_true >= ex.s)); k_ct = int(np.argmax(s_true >= s_call))
     res["at_diverge"] = stats(e[:, k_div])
     res["consistency_diverge"] = {"mean_norm_sq": round(float(np.mean((e[:, k_div] / o.sig_s[:, k_div]) ** 2)), 3)}
+    res["coverage"] = {"diverge": coverage(e[:, k_div], o.sig_s[:, k_div]), "portal": coverage(e[:, k_x], o.sig_s[:, k_x])}
     res["callout_k"] = {}
     for kk_ in (0.0, CALLOUT_K):
         m = (o.s + kk_ * o.sig_s) >= s_call

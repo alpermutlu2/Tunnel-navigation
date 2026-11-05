@@ -71,6 +71,8 @@ def one(args):
            "map_rejected": r["events"].get("map_rejected", 0),
            "none": r["branch_confirm"]["none_frac"], "branch_delay_s": (r["branch_confirm"]["delay_s"] or {}).get("bias"),
            "errors": e.round(1).tolist()}
+    if "coverage" in r:
+        out["coverage"] = r["coverage"]
     if "mount" in r:
         out["mount_err_rms_deg"] = r["mount"]["err_rms_deg"]; out["mount_yaw_from"] = r["mount"]["yaw_from"]
     if "recovery_time" in r:                     # v0.5.13
