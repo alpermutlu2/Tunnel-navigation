@@ -61,9 +61,10 @@ CHI2_1_999 = 10.83
 # bias-instability GM terms with τ ≤ 50 s as (σ [rad/s], τ [s]); the τ = 500 s term is the bias state.
 LANDMARK_GYRO = {"note10": (7.0e-4, ((2.2e-4, 5.0), (1.8e-4, 50.0))),
                  "mpu9250": (6.25e-3, ((6.64e-3, 5.0), (5.61e-3, 50.0)))}
-NX = 12
-I_S, I_V, I_H, I_T, I_PSI, I_BA, I_BGY, I_BGZ, I_BH, I_SG, I_MY, I_G = range(NX)   # + mount yaw (v0.5.13), + tunnel
-# pressure gradient (v0.5.14, A/B; frozen with zero covariance unless Ekf10Config.baro_grad)
+NX = 13
+I_S, I_V, I_H, I_T, I_PSI, I_BA, I_BGY, I_BGZ, I_BH, I_SG, I_MY, I_G, I_K = range(NX)
+# the 10 base states + mount yaw (v0.5.13) + tunnel pressure gradient and map-grade scale error (v0.5.14,
+# optional: frozen with zero covariance unless Ekf10Config.baro_grad / grade_update)
 
 
 @dataclass(frozen=True)
@@ -122,6 +123,10 @@ class Ekf10Config:
     lateral_omega_min: float = 0.02       # rad/s [ASSUMED]
     no_reverse_k: float = 0.0             # A/B: act only while v̂ < −k·σ_v (0 = owner's form)
     no_reverse_sigma: float = 0.5         # m/s [ASSUMED]; soft form, default since v0.5.12 (owner): R = (0.02 m/s)² gave 12 runs > 100 m in 300 (low-end S4), this 2
+    # v0.5.14 (owner, from the seed 232 diagnosis): "mean" moves v̂ to 0 and leaves P alone. The constraint is
+    # an inequality; as an equality measurement (z = 0 − v̂, R = σ²) it collapsed σ_s through the s–v
+    # correlation (450 → 54 m at −1018 m). Mean-only errs on the conservative side. "soft": v0.5.12-13.
+    no_reverse_mode: str = "mean"
     landmark_gate: str = "own"            # "own": this filter's branch decision; "turn": a turn seen only
                                           # (v0.5.12 A/B: on a straight main tunnel the two must agree)
     landmark_T: float = 12.0              # s [ASSUMED] (owner: 10-15 s, one curve)
@@ -140,6 +145,11 @@ class Ekf10Config:
     grade_update: bool = False
     grade_sigma_deg: float = 0.2          # [ASSUMED] map vertical profile + lane, as an angle
     grade_rel: float = 0.1                # [ASSUMED] relative grade error (DESIGN A3: tunnel grade often wrong)
+    # owner 2026-11-05: the grade error as a state, the map's grade = (1 + k)·the road's, k ~ N(0, grade_rel²) per
+    # tunnel (not white noise in R, which averaged a 10 % error away: late callouts). On a constant grade k and
+    # the pressure gradient are one direction (both a constant bias on the barometer's height rate): the filter
+    # knows their sum, not the split, and σ says so; where the grade changes they separate.
+    grade_error_state: bool = True
     grade_scale: float = 1.0              # stress only: the map's grade = scale × the road's (1.1 = 10 % too steep)
     susp_pitch_per_mps2: float = np.deg2rad(1.5) / G0   # [ASSUMED] the truth's order (1.5°/g)
     outage_s: float = 2.0                 # no fix for this long = outage (the ESKF's cruise_no_gnss_s)
@@ -267,7 +277,8 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
     b_lag = np.array([tt - baro_t[(baro_t > tt - 1.0) & (baro_t <= tt)].mean() for tt in b1_t])
     bi = int(np.searchsorted(b_idx, i0, side="right"))
     last_fix = np.full(B, imu_t[i0]); relock = np.zeros(B, bool); settle = np.zeros(B, int)
-    g_out_prev = np.zeros(B, bool); d_acc = np.zeros(B)                 # pressure-gradient state bookkeeping
+    g_out_prev = np.zeros(B, bool); d_acc = np.zeros(B)                 # per-tunnel states' bookkeeping
+    k_on = cfg10.grade_update and cfg10.grade_error_state
     wsum = np.zeros(B); wn = 0
     fysum = np.zeros(B); fxsum = np.zeros(B); by_hat = np.full(B, np.nan)       # lateral force sum, its straight-road mean
     L_clo = _min_clothoid(road_map)
@@ -360,14 +371,20 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
             Phi = np.eye(NX) + Fsum + 0.5 * Fsum @ Fsum
             P[:] = Phi @ P @ np.swapaxes(Phi, 1, 2) + np.diag(q) * dt_sum
             Fsum[:] = 0.0; dt_sum = 0.0
-        if cfg10.baro_grad:
+        if cfg10.baro_grad or k_on:
             g_out = imu_t[kk] - last_fix > cfg10.outage_s
             new_g = g_out & ~g_out_prev
+            if new_g.any() and k_on:            # a new tunnel: its map grade error is its own
+                P[new_g, I_K, :] = 0.0; P[new_g, :, I_K] = 0.0
+                P[new_g, I_K, I_K] = cfg10.grade_rel ** 2
+                x[new_g, I_K] = 0.0
+            if not cfg10.baro_grad:
+                new_g = np.zeros(B, bool)
             if new_g.any():                     # a new tunnel: its gradient is unknown, independent of the last
                 P[new_g, I_G, :] = 0.0; P[new_g, :, I_G] = 0.0
                 P[new_g, I_G, I_G] = cfg.baro_grad_sigma ** 2
                 x[new_g, I_G] = 0.0; d_acc[new_g] = 0.0
-            end_g = ~g_out & g_out_prev
+            end_g = ~g_out & g_out_prev & cfg10.baro_grad
             if end_g.any():                     # out of the tunnel the offset g_h·d is gone: δb_h' = δb_h − d·δg_h
                 x[end_g, I_BH] -= x[end_g, I_G] * d_acc[end_g]
                 T = np.broadcast_to(np.eye(NX), (int(end_g.sum()), NX, NX)).copy()
@@ -562,9 +579,15 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
                 gam = gm(sp); gam_r = cfg10.grade_scale * road_map.grade_rate(np.clip(sp, 0.0, L_))
                 a_lon = fxsum / wn - x[:, I_BA] - G0 * np.sin(x[:, I_T])
                 H = np.zeros((B, NX)); H[:, I_T] = 1.0; H[:, I_S] = np.where(guard, 0.0, -gam_r)
-                R = (np.deg2rad(cfg10.grade_sigma_deg) ** 2 + (cfg10.grade_rel * gam) ** 2
-                     + (cfg10.susp_pitch_per_mps2 * a_lon) ** 2 + (0.5 * (gm(sp + sgs) - gm(sp - sgs))) ** 2)
-                ok = update(o_g, np.where(o_g, gam - x[:, I_T], 0.0), H, R, CHI2_1_999)
+                R = (np.deg2rad(cfg10.grade_sigma_deg) ** 2 + (cfg10.susp_pitch_per_mps2 * a_lon) ** 2
+                     + (0.5 * (gm(sp + sgs) - gm(sp - sgs))) ** 2)
+                if k_on:                         # γ_map = (1 + k)·θ  →  h = θ + k·γ_map
+                    H[:, I_K] = gam
+                    zg = gam - x[:, I_T] - x[:, I_K] * gam
+                else:
+                    R = R + (cfg10.grade_rel * gam) ** 2
+                    zg = gam - x[:, I_T]
+                ok = update(o_g, np.where(o_g, zg, 0.0), H, R, CHI2_1_999)
                 ev["grade"] = ev.get("grade", 0) + int(ok.sum())
         if map_due and wn > 0:
             wsum[:] = 0.0; wn = 0; fysum[:] = 0.0; fxsum[:] = 0.0
@@ -576,8 +599,11 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
         if cfg10.no_reverse and do_cov:
             rev = (imu_t[kk] - last_fix > 2.0) & (x[:, I_V] < -cfg10.no_reverse_k * np.sqrt(P[:, I_V, I_V]))
             if rev.any():
-                H = np.zeros((B, NX)); H[:, I_V] = 1.0
-                update(rev, -x[:, I_V], H, np.full(B, max(cfg.zupt_sigma, cfg10.no_reverse_sigma) ** 2), None)
+                if cfg10.no_reverse_mode == "mean":
+                    x[rev, I_V] = 0.0
+                else:
+                    H = np.zeros((B, NX)); H[:, I_V] = 1.0
+                    update(rev, -x[:, I_V], H, np.full(B, max(cfg.zupt_sigma, cfg10.no_reverse_sigma) ** 2), None)
                 ev["no_reverse"] = ev.get("no_reverse", 0) + int(rev.sum())
         if do_cov:
             out["t"].append(imu_t[kk]); out["s"].append(x[:, I_S].copy()); out["v"].append(x[:, I_V].copy())

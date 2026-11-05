@@ -111,6 +111,19 @@ class EskfConfig:
     # NHC lateral ∂v_by/∂δψ_m = v_bx; map heading ∂ψ_body/∂δψ_m = −1 (body forward = Ĉ C_bpᵀ R_z(−ψ_m) e_x).
     mount_yaw_sigma: float = 0.0       # rad; or a tuple, one per batch member (v0.5.14)
     no_reverse_sigma: float = 0.5     # m/s [ASSUMED]; default soft form since v0.5.12 (owner): R = (0.02 m/s)² hurt (Note10 S4 5.0 → 6.5 m)
+    # v0.5.14 (owner, seed 232): "mean" removes the backward speed from v̂ and leaves P alone (the
+    # constraint is an inequality; as an equality measurement it collapses σ through correlations).
+    # "soft": the v0.5.12-13 measurement form.
+    no_reverse_mode: str = "mean"
+    # v0.5.14 hybrid (owner 2026-11-05, A/B): the map grade as a measurement of the path pitch through the
+    # vertical velocity, v_u = γ_road·|v_h| (no mount or suspension pitch enters: it is the velocity's
+    # direction, which the barometer's height rate sees), with the map's grade = (1 + k)·the road's and k
+    # a per-tunnel state (grade_error_state) or white in R. In an outage, 1 Hz. Meant with baro_grad.
+    grade_update: bool = False
+    grade_sigma_deg: float = 0.2       # [ASSUMED] map vertical profile, as an angle
+    grade_rel: float = 0.1             # [ASSUMED] relative map grade error (DESIGN A3)
+    grade_scale: float = 1.0           # stress only: the map's grade = scale × the map's polyline grade
+    grade_error_state: bool = True
     zupt_band_hz: tuple = (2.0, 18.0)  # road-vibration band, below the engine tone (E5)
     zupt_band_rms: float = 0.01       # m/s² threshold on the 1 s band RMS of |f|
     zupt_hold_s: float = 0.3          # s: debounce
@@ -361,9 +374,10 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         cfg = replace(cfg, **FILTER_PROFILES[cls_name])
     elif cfg.imu_class != "note10":
         cfg = replace(cfg, **FILTER_PROFILES[cfg.imu_class])
-    NA = NX + 7          # (+ pitch-prior offset δγ, NX + 5; mount yaw δψ_m, NX + 6)
+    NA = NX + 8          # (+ pitch-prior offset δγ, NX + 5; mount yaw δψ_m, NX + 6; map grade scale k, NX + 7)
     IP = NX + 5
     IY = NX + 6
+    IK = NX + 7
     # + speed clone / v_ref (NX), driver wander d (NX + 1), baro gradient g_h (NX + 2),
     ID = NX + 1          #   map lateral offset (NX + 3), map scale error (NX + 4)
     IG = NX + 2
@@ -419,6 +433,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     psi_start = np.full(B, np.nan); s_start = np.full(B, np.nan); map_prev_out = np.zeros(B, bool)
     ra_flag = np.zeros(B, bool)             # re-association applied since the last output epoch
     my_hat = np.zeros(B)                    # mount yaw correction [rad] (state IY)
+    k_hat = np.zeros(B)                     # map grade scale error (state IK, v0.5.14)
+    k_on = cfg.grade_update and cfg.grade_error_state
     m_hat = np.zeros(B); e_hat = np.zeros(B); off_hat = np.zeros(B)   # + pitch-prior offset [rad]  # map lateral offset [m], map scale error [-]
     br_time = np.full(B, np.nan)              # time of the in-loop branch decision
     pre_w = np.full(B, cfg.map_pre_m)         # branch window length before the diverge [m]
@@ -639,7 +655,12 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             u_f = np.einsum("bij,j->bi", C, C_bp.T @ np.array([1.0, 0.0, 0.0]))
             v_f = np.einsum("bi,bi->b", u_f, v)
             rev = (imu_t[kk] - last_vel > cfg.cruise_no_gnss_s) & (v_f < 0.0)
-            if rev.any():
+            if rev.any() and cfg.no_reverse_mode == "mean":
+                # remove the backward part of the (corrected) velocity: v ← v − v_f·u_f, as a correction
+                v_c = v - x[:, 3:6]
+                v_fc = np.einsum("bi,bi->b", u_f, v_c)
+                x[:, 3:6] += np.where((rev & (v_fc < 0.0))[:, None], v_fc[:, None] * u_f, 0.0)
+            elif rev.any():
                 H = np.zeros((B, 1, NA)); H[:, 0, 3:6] = u_f
                 z = v_f[:, None] - np.einsum("bij,bj->bi", H, x)
                 R = np.full((B, 1, 1), max(cfg.zupt_sigma, cfg.no_reverse_sigma) ** 2)
@@ -709,9 +730,11 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             br_dec = np.where(new_m, 0, br_dec); psi_start = np.where(new_m, np.nan, psi_start)
             pre_w = np.where(new_m, cfg.map_pre_m, pre_w)
             if new_m.any():                       # a new tunnel: its map errors are unknown, independent
-                for j, sg_ in ((IM, cfg.map_offset_sigma), (IE, cfg.map_scale_sigma), (IP, cfg.pitch_prior_offset_sigma)):
+                for j, sg_ in ((IM, cfg.map_offset_sigma), (IE, cfg.map_scale_sigma), (IP, cfg.pitch_prior_offset_sigma)) + \
+                        (((IK, cfg.grade_rel),) if k_on else ()):
                     P[new_m, j, :] = 0.0; P[new_m, :, j] = 0.0; P[new_m, j, j] = sg_ ** 2
                 m_hat = np.where(new_m, 0.0, m_hat); e_hat = np.where(new_m, 0.0, e_hat); off_hat = np.where(new_m, 0.0, off_hat)
+                k_hat = np.where(new_m, 0.0, k_hat)
             s_map = np.where(out_m, s_map, np.nan)
             map_prev_out = out_m
             if out_m.any():
@@ -890,6 +913,36 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                 _update(xs, Psub, z[sel], H[sel], R[sel], None)
                 P[sel], x[sel] = Psub, xs
                 ev["pitch_prior_updates"] = ev.get("pitch_prior_updates", 0) + int(sel.sum())
+        # map grade (v0.5.14 hybrid): h = v_u − (1 − k̂)·γ_map(ŝ)·|v_h| = 0 (the road's grade γ_map/(1+k));
+        # ∂h/∂δv = [−(1−k̂)γ v_h/|v_h|, 1], ∂h/∂δk = γ|v_h|, ∂h/∂δp = −(1−k̂)γ'|v_h|·tᵀ (δ = estimate − truth)
+        if cfg.grade_update and use_map and (kk - i0) % int(round(fs)) == 0:
+            sel = np.isfinite(s_map) & (imu_t[kk] - last_vel > cfg.cruise_no_gnss_s) & (np.linalg.norm(v[:, :2], axis=1) > 1.0)
+            if road_map.s_div is not None:
+                sel &= ~((br_dec == -1) & (np.nan_to_num(s_map) >= road_map.s_div))
+            if sel.any():
+                sm = np.nan_to_num(s_map)
+                gam, gam_r = road_map.grade_at(sm)
+                gam, gam_r = cfg.grade_scale * gam, cfg.grade_scale * gam_r
+                _, psi_g, _ = road_map.at(sm)
+                tg = np.stack([np.cos(psi_g), np.sin(psi_g), np.zeros(B)], 1)
+                vh = np.linalg.norm(v[:, :2], axis=1)
+                f1 = 1.0 - (k_hat if k_on else 0.0)
+                H = np.zeros((B, 1, NA))
+                H[:, 0, 3:5] = -(f1 * gam / vh)[:, None] * v[:, :2]; H[:, 0, 5] = 1.0
+                H[:, 0, 0:3] = -(f1 * gam_r * vh)[:, None] * tg
+                sg_s = np.sqrt(np.einsum("bi,bij,bj->b", tg, P[:, 0:3, 0:3], tg))
+                g_hi, _ = road_map.grade_at(sm + sg_s); g_lo, _ = road_map.grade_at(np.maximum(sm - sg_s, 0.0))
+                Rg = np.deg2rad(cfg.grade_sigma_deg) ** 2 + (0.5 * cfg.grade_scale * (g_hi - g_lo)) ** 2
+                if k_on:
+                    H[:, 0, IK] = gam * vh
+                else:
+                    Rg = Rg + (cfg.grade_rel * gam) ** 2
+                z = (v[:, 2] - f1 * gam * vh)[:, None] - np.einsum("bij,bj->bi", H, x)
+                R = (vh ** 2 * Rg)[:, None, None]
+                Psub, xs = P[sel], x[sel]
+                ok_g, _ = _update(xs, Psub, z[sel], H[sel], R[sel], 10.83)
+                P[sel], x[sel] = Psub, xs
+                ev["grade_updates"] = ev.get("grade_updates", 0) + int(ok_g.sum())
         # levelling: f̄ = −Ĉᵀg + b̂_a; δz = −Ĉᵀ[g×]δθ + δb_a  (Ĉ = Exp(δθ)C, δ = estimate − truth)
         if cfg.level and (kk - i0) % int(round(fs)) == 0 and kk - i0 >= int(round(fs)):
             n1 = int(round(fs))
@@ -925,6 +978,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
             g_hat = g_hat - x[:, IG]
             m_hat = m_hat - x[:, IM]; e_hat = e_hat - x[:, IE]; off_hat = off_hat - x[:, IP]
             my_hat = my_hat - x[:, IY]
+            k_hat = k_hat - x[:, IK]
             fc = f[:, kk] - b_a
             a_k = np.einsum("bij,bj->bi", C, fc) + GRAVITY_N
         if reclone.any():
