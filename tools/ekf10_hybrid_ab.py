@@ -23,9 +23,10 @@ CASES = ([("S1", LOW + PG(p), True) for p in (0, 30, -30)] + [("S3", LOW + PG(p)
          + [(k, LOW, True) for k in ("S2", "S4", "S5", "S6")]
          + [(k, (), True) for k in ("S1", "S4", "S5")] + [("S1", PG(30), True)]
          + [("S4", LOW, False), ("S1", LOW + PG(30), False)])
-CONFIGS = {"today": {}, "grad": {"baro_grad": True}, "grade": {"grade_update": True},
+CONFIGS = {"today": {"grade_update": False, "baro_grad": False}, "grad": {"grade_update": False, "baro_grad": True},
+           "grade": {"grade_update": True, "baro_grad": False},
            "grade+grad": {"grade_update": True, "baro_grad": True},
-           "grade10": {"grade_update": True, "grade_scale": 1.1},
+           "grade10": {"grade_update": True, "grade_scale": 1.1, "baro_grad": False},
            "grade10+grad": {"grade_update": True, "grade_scale": 1.1, "baro_grad": True}}
 
 

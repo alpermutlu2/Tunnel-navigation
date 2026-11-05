@@ -17,9 +17,12 @@ def _portal(r):
 
 def test_branch_window_recovers_s4_seed_247():
     """A dead-reckoning error larger than 100 m put the turn outside the fixed window (v0.5.11)."""
+    # the v0.5.13 filter: with the v0.5.14 mean-only one-way constraint this seed ends at -87 m (hybrid) or
+    # -144 m (no hybrid) against -3 m with the soft form: REPORT §4.15, owner decision pending
+    v13 = dict(grade_update=False, baro_grad=False, no_reverse_mode="soft")
     seeds = np.array([247])
-    e0 = _portal(eskf_experiment("S4", seeds, eskf_cfg=EskfConfig(map_pre_sigma_k=0.0), keep_tracks=True))
-    e2 = _portal(eskf_experiment("S4", seeds, eskf_cfg=EskfConfig(map_pre_sigma_k=2.0), keep_tracks=True))
+    e0 = _portal(eskf_experiment("S4", seeds, eskf_cfg=EskfConfig(map_pre_sigma_k=0.0, **v13), keep_tracks=True))
+    e2 = _portal(eskf_experiment("S4", seeds, eskf_cfg=EskfConfig(map_pre_sigma_k=2.0, **v13), keep_tracks=True))
     assert abs(e0[0]) > 100.0 and abs(e2[0]) < 20.0
 
 
@@ -32,10 +35,11 @@ def test_landmark_and_guard_are_one_switch():
 def test_curve_landmark_fixes_lowend_s4_seed_15():
     seeds = np.array([15])
     sim = simulate_run("S4", seeds, ("imu_lowend",))
+    v13 = dict(grade_update=False, baro_grad=False)      # the v0.5.12 mechanism (the hybrid alone: 11 m)
     off = _portal(ekf10_experiment("S4", seeds, ("imu_lowend",), sim=sim, keep_tracks=True, mount="known",
-                                   cfg10=Ekf10Config(curve_landmark=False, no_reverse=False, lateral_speed=False)))
+                                   cfg10=Ekf10Config(curve_landmark=False, no_reverse=False, lateral_speed=False, **v13)))
     on = ekf10_experiment("S4", seeds, ("imu_lowend",), sim=sim, keep_tracks=True, mount="known",
-                          cfg10=Ekf10Config(lateral_speed=False))
+                          cfg10=Ekf10Config(lateral_speed=False, **v13))
     assert abs(off[0]) > 100.0 and abs(_portal(on)[0]) < 30.0
     assert on["branch10"]["branch"] == 1.0
 

@@ -30,3 +30,15 @@ def test_prompt_that_never_fires_is_not_scored():
     sm = summarise_prompts(p)
     assert sm["1000 m"]["not_fired"] == 0.5 and abs(sm["1000 m"]["err_mean_m"]) < 25.0
 
+
+
+def test_hybrid_default_by_class():
+    """The hybrid is on for the products (ESKF Note10, 10-state low-end) and only where left at None."""
+    from tunnelsim.eskf import EskfConfig, resolve_hybrid
+    e = resolve_hybrid(EskfConfig(), "eskf", "note10")
+    assert e.grade_update and e.baro_grad
+    assert not resolve_hybrid(EskfConfig(), "eskf", "mpu9250").grade_update
+    k = resolve_hybrid(Ekf10Config(), "ekf10", "mpu9250")
+    assert k.grade_update and k.baro_grad
+    assert not resolve_hybrid(Ekf10Config(), "ekf10", "note10").baro_grad
+    assert resolve_hybrid(Ekf10Config(grade_update=False), "ekf10", "mpu9250").grade_update is False

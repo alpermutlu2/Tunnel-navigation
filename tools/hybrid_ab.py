@@ -29,11 +29,12 @@ def cases(imu):
 
 
 HYB = {"grade_update": True, "baro_grad": True}
+OFF = {"grade_update": False, "baro_grad": False}     # explicit: since v0.5.14 None means the class default
 CONFIGS = {
-    "ekf10": {"v0.5.13": {"no_reverse_mode": "soft"}, "mean": {},
+    "ekf10": {"v0.5.13": dict(OFF, no_reverse_mode="soft"), "mean": dict(OFF),
               "hybR": dict(HYB, grade_error_state=False), "hybK": dict(HYB),
               "hybR10": dict(HYB, grade_error_state=False, grade_scale=1.1), "hybK10": dict(HYB, grade_scale=1.1)},
-    "eskf": {"v0.5.13": {"no_reverse_mode": "soft"}, "mean": {}, "grad": {"baro_grad": True},
+    "eskf": {"v0.5.13": dict(OFF, no_reverse_mode="soft"), "mean": dict(OFF), "grad": dict(OFF, baro_grad=True),
              "hybR10": dict(HYB, grade_error_state=False, grade_scale=1.1), "hybK": dict(HYB), "hybK10": dict(HYB, grade_scale=1.1)}}
 FILT = sys.argv[1] if len(sys.argv) > 1 else "ekf10"
 LO, HI = (int(sys.argv[2]), int(sys.argv[3])) if len(sys.argv) > 3 else (50, 70)

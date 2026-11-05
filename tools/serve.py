@@ -63,13 +63,15 @@ def run_data(q: dict) -> dict:
     eskf = [f"cruise={q.get('cruise', '1') == '1'}",
             f"cruise_mode={q.get('cruise_mode', 'gm')!r}",
             f"nhc_turn_gate={float(q.get('nhc_turn_gate', 0.3))}",
-            f"baro_grad={q.get('baro_grad', '0') == '1'}",
             f"gate_recover={q.get('gate_recover', '1') == '1'}",
             f"adaptive_q={q.get('gate_recover', '1') == '1'}",
             f"reacq={q.get('reacq', '1') == '1'}",
             f"map_in_tunnel={q.get('map_in_tunnel', '1') == '1'}",
             f"cruise_gm_sigma={float(q.get('gm_sigma', 0.5))}",
             f"cruise_gm_tau={float(q.get('gm_tau', 60.0))}"]
+    hyb = q.get("hybrid", "auto")          # v0.5.14: class default (Note10 ESKF / low-end 10-state on), on, off
+    if hyb in ("on", "off"):
+        eskf += [f"grade_update={hyb == 'on'}", f"baro_grad={hyb == 'on'}"]
     me = float(q.get("mount_err", 0.0))
     mount = (0.0, me, me) if me else None
     map_err = (float(q.get("map_lat", 0.0)), 1.0 + float(q.get("map_len", 0.0)) / 100.0)
@@ -117,7 +119,7 @@ iframe {{ width:100%; height:100vh; border:0; background:var(--bg); }}
 <label><input type="checkbox" name="cruise" value="1" checked> cruise prior</label>
 <label>cruise model <select name="cruise_mode">{opt([("gm", "GM speed wander (default)"), ("increment", "speed increment (driver holds speed)")], "gm")}</select></label>
 <label><div class="row"><span>lateral NHC turn gate</span><span id="nhc_turn_gate_v">0.3 m/s²</span></div><input type="range" name="nhc_turn_gate" min="0" max="1" step="0.1" value="0.3"></label>
-<label><input type="checkbox" name="baro_grad" value="1"> pressure-gradient state (experimental)</label>
+<label>hybrid (map grade + pressure gradient + grade error) <select name="hybrid">{opt([("auto", "class default"), ("on", "on"), ("off", "off")], "auto")}</select></label>
 <label><input type="checkbox" name="gate_recover" value="1" checked> gate-lock recovery + adaptive noise</label>
 <label><input type="checkbox" name="reacq" value="1" checked> exit re-acquisition phase</label>
 <label>stops <select name="zupt">{opt([("detector", "IMU stop detector"), ("oracle", "oracle (truth)")], "detector")}</select></label>

@@ -52,7 +52,7 @@ from dataclasses import dataclass, replace
 
 import numpy as np
 
-from .eskf import FILTER_PROFILES, EskfConfig, detect_imu_class, zupt_detector
+from .eskf import FILTER_PROFILES, EskfConfig, detect_imu_class, resolve_hybrid, zupt_detector
 from .frames import G0
 
 CHI2_1_999 = 10.83
@@ -135,14 +135,14 @@ class Ekf10Config:
     # v0.5.14 (owner 2026-11-05, A/B): the ESKF's tunnel pressure-gradient state (EskfConfig.baro_grad):
     # in an outage the barometer offset drifts as ḃ_h = g_h·v, g_h unknown per tunnel (prior
     # EskfConfig.baro_grad_sigma); at the exit the accumulated part g_h·d is removed from b_h.
-    baro_grad: bool = False
+    baro_grad: bool = None                # None: per IMU class (eskf.HYBRID_DEFAULT: on for low-end)
     # v0.5.14 (owner 2026-11-05, A/B; reviews: "take the source, not the filter"): the map's road grade
     # as a weak measurement of θ (the path pitch: ḣ = v·sin θ, so no mount offset enters), in an outage,
     # once per second: z = γ_map(ŝ) − θ̂, H_θ = 1, H_s = −γ'(ŝ) (0 under the curve s-guard).
     # R = σ_γ² + (rel·γ)² (the map's grade error, DESIGN A3) + (k_susp·a)² (suspension pitch; θ is
     # propagated with the body's pitch rate) + ((γ(ŝ+σ_s) − γ(ŝ−σ_s))/2)² (where along the grade profile).
     # Meant to run with baro_grad: with θ known the barometer residual goes to the gradient.
-    grade_update: bool = False
+    grade_update: bool = None             # None: per IMU class (eskf.HYBRID_DEFAULT: on for low-end)
     grade_sigma_deg: float = 0.2          # [ASSUMED] map vertical profile + lane, as an angle
     grade_rel: float = 0.1                # [ASSUMED] relative grade error (DESIGN A3: tunnel grade often wrong)
     # owner 2026-11-05: the grade error as a state, the map's grade = (1 + k)·the road's, k ~ N(0, grade_rel²) per
@@ -237,6 +237,7 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
         name = str(vals[np.argmax(cnt)])
     if name != "note10":
         cfg = replace(cfg, **FILTER_PROFILES[name])
+    cfg10 = resolve_hybrid(cfg10, "ekf10", name)
     sig_bi = cfg10.gyro_bi_note10 * (cfg10.gyro_bi_ratio_mpu9250 if name == "mpu9250" else 1.0)
     # body-frame specific force (forward) and rates (pitch, yaw) through the known mount
     fx = np.einsum("j,bnj->bn", C_bp[0], f)

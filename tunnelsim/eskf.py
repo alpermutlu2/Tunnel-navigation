@@ -47,7 +47,8 @@ class EskfConfig:
     nhc_turn_k: float = 0.0           # rad/(m/s²); 0 = off. Lateral NHC inflation in turns (sideslip)
     # Tunnel pressure gradient (Fable review, accepted 2026-10-20): during an outage the barometer
     # offset drifts with distance, ḃ_h = g_h·|v|; g_h restarts at 0 with σ_g at each outage.
-    baro_grad: bool = False            # experimental: fixes 10-30 Pa/km, costs S3/S5 nominal (decision note)
+    baro_grad: bool = None             # None: per IMU class (HYBRID_DEFAULT). Alone it fixes 10-30 Pa/km but costs
+                                       # S3/S5 nominal (v0.5.11 decision note); with grade_update it is the hybrid
     baro_grad_sigma: float = 3e-3      # m/m ≈ 35 Pa/km [ASSUMED]
     # GNSS gate lock recovery (accepted 2026-10-20): (i) after N consecutive rejections in open
     # sky, inflate P (non-position states) so the current innovation fits the gate ×1.5;
@@ -119,7 +120,8 @@ class EskfConfig:
     # vertical velocity, v_u = γ_road·|v_h| (no mount or suspension pitch enters: it is the velocity's
     # direction, which the barometer's height rate sees), with the map's grade = (1 + k)·the road's and k
     # a per-tunnel state (grade_error_state) or white in R. In an outage, 1 Hz. Meant with baro_grad.
-    grade_update: bool = False
+    # None: per IMU class (HYBRID_DEFAULT).
+    grade_update: bool = None
     grade_sigma_deg: float = 0.2       # [ASSUMED] map vertical profile, as an angle
     grade_rel: float = 0.1             # [ASSUMED] relative map grade error (DESIGN A3)
     grade_scale: float = 1.0           # stress only: the map's grade = scale × the map's polyline grade
@@ -225,6 +227,20 @@ FILTER_PROFILES = {
     "mpu9250": {"cruise_acc_th": 0.05, "gyro_noise": 0.0634, "gyro_bias_rw": 3.07e-3 / np.sqrt(180.0),
                 "accel_bias_rw": 5.4e-4 / np.sqrt(180.0), "p0_bg": np.deg2rad(0.4), "p0_ba": 0.45},
 }
+
+
+# v0.5.14 (owner 2026-11-05, A/B reports/0.5.14/hybrid_ab_*): the hybrid (map grade as a pitch measurement +
+# tunnel pressure-gradient state + map grade-error state) by filter and IMU class, where a config leaves
+# grade_update / baro_grad at None. The products: ESKF on Note10, 10-state on low-end (supervisor CLASS_RULE).
+# Off where it was not measured (ESKF low-end) or not consistent (10-state Note10 S4, REPORT §5).
+HYBRID_DEFAULT = {"eskf": {"note10": True, "mpu9250": False}, "ekf10": {"note10": False, "mpu9250": True}}
+
+
+def resolve_hybrid(cfg, filt: str, cls_name: str):
+    """grade_update / baro_grad left at None take the class default (HYBRID_DEFAULT)."""
+    on = HYBRID_DEFAULT[filt].get(cls_name, False)
+    kw = {k: on for k in ("grade_update", "baro_grad") if getattr(cfg, k) is None}
+    return replace(cfg, **kw) if kw else cfg
 
 
 def detect_imu_class(imu_t, w, cfg: EskfConfig, i0: int):
@@ -374,6 +390,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         cfg = replace(cfg, **FILTER_PROFILES[cls_name])
     elif cfg.imu_class != "note10":
         cfg = replace(cfg, **FILTER_PROFILES[cfg.imu_class])
+    cfg = resolve_hybrid(cfg, "eskf", cls_name)
     NA = NX + 8          # (+ pitch-prior offset δγ, NX + 5; mount yaw δψ_m, NX + 6; map grade scale k, NX + 7)
     IP = NX + 5
     IY = NX + 6

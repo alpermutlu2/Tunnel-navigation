@@ -15,7 +15,8 @@ def test_ekf10_imports_nothing_from_truth_side():
     tree = ast.parse((ROOT / "tunnelsim" / "ekf10.py").read_text())
     mods = {n.module for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)} | \
            {a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
-    assert mods <= {"__future__", "dataclasses", "numpy", "frames", "eskf"}, mods
+    # sys: the v0.5.14 debug hook (caller line of each update); not truth side
+    assert mods <= {"__future__", "dataclasses", "numpy", "frames", "eskf", "sys"}, mods
 
 
 @pytest.fixture(scope="module")
