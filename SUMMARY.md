@@ -109,7 +109,9 @@ map grade became a measurement (11.6–15.7 and 8.9–11.8 m before).
 - **Mount.** Estimated on the approach to ~0.6° per axis rms, it costs nothing measurable when the
   driver accelerates or turns before the tunnel. Without that, the yaw rests on the magnetometer
   (5.8°) and the portal error triples (17–25 m) and is not consistent: open.
-- **Validation on 100 untouched seeds (500–599),** run once, nothing changed after: VALIDATION_SUMMARY.
+- **Validation on 100 untouched seeds (500–599),** run once, nothing changed after: no run more
+  than 100 m off; inside the ranges except single sets at the edge (S2 and 1 km portal, ≤ 0.2 m);
+  7 of 1000 callouts more than 1 s late with k = 1; the pressure-gradient cases right in every run.
 - **Branch window.** v0.5.11's validation found one S4 run 110 m off: its dead-reckoning error
   (−220 m) put the turn outside the branch decision's fixed 100 m window. The window now grows
   with σ_s (max(100 m, 2σ_s)); the run is 3 m off and nothing else moved. Those seeds are now a

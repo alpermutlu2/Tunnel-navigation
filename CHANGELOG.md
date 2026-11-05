@@ -65,7 +65,12 @@ How the numbers moved (0–299, six sets of 50):
   0.60 → 0.10. Low-end cost: S1, S2, S6 portal +2–5 m, S2 0 → 3 late; callouts earlier on flat
   tunnels (S1 0.8 → 2.5 s, S5 → 4.1–4.6 s with 16–34 % > 5 s early, 5 km → 5.5–6.1 s with 64–86 %),
   likely the gradient state's prior σ (not retuned). Note10 rest within ±0.6 m.
-- VALIDATION_CHANGELOG
+- Validation 500–599 (run once): ESKF Note10 inside the ranges except single sets of S2 and 1 km at
+  the portal (≤ 0.2 m above) and the S4 diverge (below); no run > 100 m; 7 of 1000 callouts > 1 s
+  late (k = 1), 2 (k = 1.3); S4 straight on 2 of 100 > 100 m (v0.5.13's validation: 9). Supervisor:
+  low-end S4 15.2 / 12.5 m, (e/σ)² 0.13 / 0.06 with the monitor (10-state soft form 22.5 / 18.5 m,
+  1.40); gradient cases 1.4–5.8 m (Note10), 15–25 m (low-end), right branch in every run; low-end S3
+  and S6 one set each 1–2 m above their ranges.
 - Snapshot (`metrics.json`, Note10 ESKF, 20 seeds): S3 diverge 11.74 → 2.51 m, portal 9.06 → 1.73 m
   (the V profile is the map grade the row now uses); S4 diverge 30.03 → 21.59 m; S5 diverge 25.28 →
   28.66 m and 5 km 20.65 → 23.16 m (the hybrid's cost, as on 300 seeds); portal on S1, S2, S4 and the

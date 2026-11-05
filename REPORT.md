@@ -215,12 +215,15 @@ Nothing was changed after this run.
 - **Callouts:** 7 of 1000 more than 1 s late with k = 1 (v0.5.13's validation: 6), 2 with k = 1.3.
 - **Straight-on control:** "main" in 200 of 200; 2 of the 100 S4 runs are more than 100 m off at
   the portal (v0.5.13's validation: 9).
-- **Low-end, product configuration (supervisor):** S4 portal 14.4 / 20.0 m, (e/σ)² 0.48 / 1.21
-  without the monitor and 0.24 / 0.35 with it (§4.12). The 10-state filter alone: 17.4 m, no run
-  over 100 m (v0.5.12 configuration: 19.0 m).
+- **Low-end, product configuration (supervisor):** S4 portal 15.2 / 12.5 m, (e/σ)² 0.39 / 0.17
+  without the monitor and 0.13 / 0.06 with it; no run over 100 m. The 10-state filter's soft form
+  gives 22.5 / 18.5 m, (e/σ)² up to 1.40: the shipped mean-only form holds on new seeds. Low-end S3
+  (27.3 m) and S6 (16.6 m) are above their ranges in one set each, by 2 and 1 m.
+- **Pressure gradient on new seeds:** 1.4–5.8 m on a Note10 and 15–25 m on a low-end phone, the
+  right branch in every run (§4.15).
 - **The validation sets of v0.5.11 and v0.5.12** each found something (one S4 failure; ranges
-  exceeded on S4). This one found nothing new; with one set of 100 that is not a guarantee for
-  failures rarer than about 1 in 100.
+  exceeded on S4); v0.5.13's and this one found nothing new, only single sets at the edge of the
+  ranges. With one set of 100 that is not a guarantee for failures rarer than about 1 in 100.
 
 **Tunnel length** (diverge at min(0.73·L, L − 200 m) [ASSUMED]). At the diverge: 4.8 m after
 1 km, 12 m after 3 km, 25 m after 5 km. The error grows faster than linearly, since bias drift
@@ -616,8 +619,8 @@ The straight-on control was run at filter level (ESKF `eval_sets`, 10-state `ekf
 through the supervisor. The selection is by IMU class and each filter's branch decision is its
 own, so no difference is expected; it was not measured.
 
-*Validation, seeds 400–499* (`reports/0.5.13/supervisor_validation.json`, run once): the same
-picture. (The v0.5.12 validation on 300–399 is in `reports/0.5.12/`.)
+*Validation, seeds 400–499* (`reports/0.5.13/supervisor_validation.json`, run once; v0.5.14's on
+500–599 is in §3.1): the same picture. (The v0.5.12 validation on 300–399 is in `reports/0.5.12/`.)
 - Note10: portal 5.4–16.1 m, (e/σ)² ≤ 0.39.
 - Low-end except S4: 7.8–21.9 m, (e/σ)² ≤ 0.48.
 - Low-end S4: 14.4 / 20.0 m, (e/σ)² 0.48 → 0.24 and 1.21 → 0.35 with the monitor (the two sets);
