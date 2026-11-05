@@ -1,0 +1,996 @@
+{
+ "S1/note10/branch": {
+  "v0.5.13": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 13.6,
+   "nees_div": 0.321,
+   "late1": 0.0,
+   "portal": 5.688,
+   "nees": 0.136,
+   "fail": 0
+  },
+  "mean": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 13.6,
+   "nees_div": 0.321,
+   "late1": 0.0,
+   "portal": 5.688,
+   "nees": 0.136,
+   "fail": 0
+  },
+  "grad": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 14.48,
+   "nees_div": 0.117,
+   "late1": 0.0,
+   "portal": 5.65,
+   "nees": 0.105,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 12.9,
+   "nees_div": 0.237,
+   "late1": 0.0,
+   "portal": 5.381,
+   "nees": 0.115,
+   "fail": 0
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 12.9,
+   "nees_div": 0.237,
+   "late1": 0.0,
+   "portal": 5.381,
+   "nees": 0.115,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 12.9,
+   "nees_div": 0.237,
+   "late1": 0.0,
+   "portal": 5.381,
+   "nees": 0.115,
+   "fail": 0
+  }
+ },
+ "S1/set:baro.tunnel_grad_pa_per_km=30/branch": {
+  "v0.5.13": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 113.1,
+   "nees_div": 22.072,
+   "late1": 0.0,
+   "portal": 103.5,
+   "nees": 13.343,
+   "fail": 12
+  },
+  "mean": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 113.1,
+   "nees_div": 22.072,
+   "late1": 0.0,
+   "portal": 103.5,
+   "nees": 13.343,
+   "fail": 12
+  },
+  "grad": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 35.72,
+   "nees_div": 0.391,
+   "late1": 0.0,
+   "portal": 5.73,
+   "nees": 0.101,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 14.39,
+   "nees_div": 0.303,
+   "late1": 0.0,
+   "portal": 4.807,
+   "nees": 0.091,
+   "fail": 0
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 14.39,
+   "nees_div": 0.303,
+   "late1": 0.0,
+   "portal": 4.807,
+   "nees": 0.091,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 14.39,
+   "nees_div": 0.303,
+   "late1": 0.0,
+   "portal": 4.807,
+   "nees": 0.091,
+   "fail": 0
+  }
+ },
+ "S1/set:baro.tunnel_grad_pa_per_km=-30/branch": {
+  "v0.5.13": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 129.7,
+   "nees_div": 23.744,
+   "late1": 1.0,
+   "portal": 59.14,
+   "nees": 13.209,
+   "fail": 0
+  },
+  "mean": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 129.7,
+   "nees_div": 23.744,
+   "late1": 1.0,
+   "portal": 59.14,
+   "nees": 13.209,
+   "fail": 0
+  },
+  "grad": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 76.93,
+   "nees_div": 1.409,
+   "late1": 0.2,
+   "portal": 8.395,
+   "nees": 0.224,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 19.96,
+   "nees_div": 0.549,
+   "late1": 0.0,
+   "portal": 6.435,
+   "nees": 0.166,
+   "fail": 0
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 19.96,
+   "nees_div": 0.549,
+   "late1": 0.0,
+   "portal": 6.435,
+   "nees": 0.166,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 19.96,
+   "nees_div": 0.549,
+   "late1": 0.0,
+   "portal": 6.435,
+   "nees": 0.166,
+   "fail": 0
+  }
+ },
+ "S3/note10/branch": {
+  "v0.5.13": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 14.13,
+   "nees_div": 0.338,
+   "late1": 0.0,
+   "portal": 10.69,
+   "nees": 0.253,
+   "fail": 0
+  },
+  "mean": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 14.13,
+   "nees_div": 0.338,
+   "late1": 0.0,
+   "portal": 10.69,
+   "nees": 0.253,
+   "fail": 0
+  },
+  "grad": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 18.32,
+   "nees_div": 0.241,
+   "late1": 0.0,
+   "portal": 10.7,
+   "nees": 0.241,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 16.41,
+   "nees_div": 4.004,
+   "late1": 0.0,
+   "portal": 27.93,
+   "nees": 9.572,
+   "fail": 0
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 2.465,
+   "nees_div": 0.096,
+   "late1": 0.0,
+   "portal": 2.086,
+   "nees": 0.112,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 2.405,
+   "nees_div": 0.086,
+   "late1": 0.0,
+   "portal": 2.073,
+   "nees": 0.104,
+   "fail": 0
+  }
+ },
+ "S3/set:baro.tunnel_grad_pa_per_km=30/branch": {
+  "v0.5.13": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 154.7,
+   "nees_div": 30.344,
+   "late1": 0.0,
+   "portal": 110.9,
+   "nees": 9.27,
+   "fail": 12
+  },
+  "mean": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 154.7,
+   "nees_div": 30.344,
+   "late1": 0.0,
+   "portal": 110.9,
+   "nees": 9.27,
+   "fail": 12
+  },
+  "grad": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 21.81,
+   "nees_div": 0.205,
+   "late1": 0.0,
+   "portal": 11.1,
+   "nees": 0.236,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 16.93,
+   "nees_div": 4.32,
+   "late1": 0.0,
+   "portal": 34.51,
+   "nees": 13.125,
+   "fail": 0
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 2.255,
+   "nees_div": 0.081,
+   "late1": 0.0,
+   "portal": 2.075,
+   "nees": 0.11,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 2.263,
+   "nees_div": 0.077,
+   "late1": 0.0,
+   "portal": 2.009,
+   "nees": 0.097,
+   "fail": 0
+  }
+ },
+ "S3/set:baro.tunnel_grad_pa_per_km=-30/branch": {
+  "v0.5.13": {
+   "branch": 0.85,
+   "main": 0.15,
+   "diverge": 161.8,
+   "nees_div": 30.119,
+   "late1": 1.0,
+   "portal": 65.09,
+   "nees": 5.672,
+   "fail": 1
+  },
+  "mean": {
+   "branch": 0.85,
+   "main": 0.15,
+   "diverge": 161.8,
+   "nees_div": 30.119,
+   "late1": 1.0,
+   "portal": 65.09,
+   "nees": 5.672,
+   "fail": 1
+  },
+  "grad": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 50.13,
+   "nees_div": 0.93,
+   "late1": 0.05,
+   "portal": 13.26,
+   "nees": 0.349,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 15.99,
+   "nees_div": 3.739,
+   "late1": 0.0,
+   "portal": 24.39,
+   "nees": 7.562,
+   "fail": 0
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 2.794,
+   "nees_div": 0.12,
+   "late1": 0.0,
+   "portal": 2.304,
+   "nees": 0.138,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 2.608,
+   "nees_div": 0.099,
+   "late1": 0.0,
+   "portal": 2.254,
+   "nees": 0.122,
+   "fail": 0
+  }
+ },
+ "custom:L=5000,g=3,v=110/note10/branch": {
+  "v0.5.13": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 25.77,
+   "nees_div": 0.383,
+   "late1": 0.0,
+   "portal": 17.47,
+   "nees": 0.475,
+   "fail": 0
+  },
+  "mean": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 25.77,
+   "nees_div": 0.383,
+   "late1": 0.0,
+   "portal": 17.47,
+   "nees": 0.475,
+   "fail": 0
+  },
+  "grad": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 23.04,
+   "nees_div": 0.155,
+   "late1": 0.0,
+   "portal": 18.48,
+   "nees": 0.493,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 0.95,
+   "main": 0.05,
+   "diverge": 136.3,
+   "nees_div": 18.002,
+   "late1": 1.0,
+   "portal": 83.08,
+   "nees": 11.649,
+   "fail": 1
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 15.69,
+   "nees_div": 0.142,
+   "late1": 0.0,
+   "portal": 2.812,
+   "nees": 0.045,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 20.18,
+   "nees_div": 0.23,
+   "late1": 0.0,
+   "portal": 3.777,
+   "nees": 0.071,
+   "fail": 0
+  }
+ },
+ "custom:L=5000,g=3,v=110/set:baro.tunnel_grad_pa_per_km=25/branch": {
+  "v0.5.13": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 202.3,
+   "nees_div": 21.359,
+   "late1": 0.0,
+   "portal": 59.31,
+   "nees": 2.134,
+   "fail": 1
+  },
+  "mean": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 202.3,
+   "nees_div": 21.359,
+   "late1": 0.0,
+   "portal": 59.31,
+   "nees": 2.134,
+   "fail": 1
+  },
+  "grad": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 43.95,
+   "nees_div": 0.18,
+   "late1": 0.0,
+   "portal": 16.54,
+   "nees": 0.372,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 0.9,
+   "main": 0.1,
+   "diverge": 130.8,
+   "nees_div": 16.691,
+   "late1": 1.0,
+   "portal": 82.57,
+   "nees": 11.346,
+   "fail": 1
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 17.49,
+   "nees_div": 0.186,
+   "late1": 0.0,
+   "portal": 2.286,
+   "nees": 0.035,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 13.79,
+   "nees_div": 0.12,
+   "late1": 0.0,
+   "portal": 2.954,
+   "nees": 0.048,
+   "fail": 0
+  }
+ },
+ "custom:L=5000,g=3,v=110/set:baro.tunnel_grad_pa_per_km=-25/branch": {
+  "v0.5.13": {
+   "branch": 0.0,
+   "main": 0.55,
+   "diverge": 252.0,
+   "nees_div": 22.438,
+   "late1": 1.0,
+   "portal": 94.47,
+   "nees": 6.252,
+   "fail": 8
+  },
+  "mean": {
+   "branch": 0.0,
+   "main": 0.55,
+   "diverge": 252.0,
+   "nees_div": 22.438,
+   "late1": 1.0,
+   "portal": 94.47,
+   "nees": 6.252,
+   "fail": 8
+  },
+  "grad": {
+   "branch": 0.9,
+   "main": 0.1,
+   "diverge": 211.6,
+   "nees_div": 2.662,
+   "late1": 0.6,
+   "portal": 40.32,
+   "nees": 1.536,
+   "fail": 1
+  },
+  "hybR10": {
+   "branch": 0.95,
+   "main": 0.05,
+   "diverge": 142.3,
+   "nees_div": 19.382,
+   "late1": 1.0,
+   "portal": 84.28,
+   "nees": 11.943,
+   "fail": 1
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 31.68,
+   "nees_div": 0.511,
+   "late1": 0.0,
+   "portal": 2.755,
+   "nees": 0.042,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 42.78,
+   "nees_div": 0.834,
+   "late1": 0.05,
+   "portal": 4.439,
+   "nees": 0.092,
+   "fail": 0
+  }
+ },
+ "S1-5km/note10/branch": {
+  "v0.5.13": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 23.08,
+   "nees_div": 0.209,
+   "late1": 0.0,
+   "portal": 14.74,
+   "nees": 0.286,
+   "fail": 0
+  },
+  "mean": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 23.08,
+   "nees_div": 0.209,
+   "late1": 0.0,
+   "portal": 14.74,
+   "nees": 0.286,
+   "fail": 0
+  },
+  "grad": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 41.05,
+   "nees_div": 0.22,
+   "late1": 0.0,
+   "portal": 16.88,
+   "nees": 0.302,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 21.61,
+   "nees_div": 0.155,
+   "late1": 0.0,
+   "portal": 14.56,
+   "nees": 0.268,
+   "fail": 0
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 21.61,
+   "nees_div": 0.155,
+   "late1": 0.0,
+   "portal": 14.56,
+   "nees": 0.268,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 21.61,
+   "nees_div": 0.155,
+   "late1": 0.0,
+   "portal": 14.56,
+   "nees": 0.268,
+   "fail": 0
+  }
+ },
+ "S1-5km/set:baro.tunnel_grad_pa_per_km=30/branch": {
+  "v0.5.13": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 300.7,
+   "nees_div": 35.055,
+   "late1": 0.0,
+   "portal": 199.3,
+   "nees": 13.224,
+   "fail": 20
+  },
+  "mean": {
+   "branch": 0.0,
+   "main": 1.0,
+   "diverge": 300.7,
+   "nees_div": 35.055,
+   "late1": 0.0,
+   "portal": 199.3,
+   "nees": 13.224,
+   "fail": 20
+  },
+  "grad": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 23.29,
+   "nees_div": 0.045,
+   "late1": 0.0,
+   "portal": 13.33,
+   "nees": 0.186,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 18.18,
+   "nees_div": 0.109,
+   "late1": 0.0,
+   "portal": 13.13,
+   "nees": 0.217,
+   "fail": 0
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 18.18,
+   "nees_div": 0.109,
+   "late1": 0.0,
+   "portal": 13.13,
+   "nees": 0.217,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 18.18,
+   "nees_div": 0.109,
+   "late1": 0.0,
+   "portal": 13.13,
+   "nees": 0.217,
+   "fail": 0
+  }
+ },
+ "S2/note10/branch": {
+  "v0.5.13": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 4.919,
+   "nees_div": 0.424,
+   "late1": 0.0,
+   "portal": 4.056,
+   "nees": 0.221,
+   "fail": 0
+  },
+  "mean": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 4.919,
+   "nees_div": 0.424,
+   "late1": 0.0,
+   "portal": 4.056,
+   "nees": 0.221,
+   "fail": 0
+  },
+  "grad": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 4.7,
+   "nees_div": 0.334,
+   "late1": 0.0,
+   "portal": 4.76,
+   "nees": 0.257,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 4.568,
+   "nees_div": 0.358,
+   "late1": 0.0,
+   "portal": 3.855,
+   "nees": 0.191,
+   "fail": 0
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 4.568,
+   "nees_div": 0.358,
+   "late1": 0.0,
+   "portal": 3.855,
+   "nees": 0.191,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 4.568,
+   "nees_div": 0.358,
+   "late1": 0.0,
+   "portal": 3.855,
+   "nees": 0.191,
+   "fail": 0
+  }
+ },
+ "S4/note10/branch": {
+  "v0.5.13": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 35.14,
+   "nees_div": 0.284,
+   "late1": 0.0,
+   "portal": 6.618,
+   "nees": 0.151,
+   "fail": 0
+  },
+  "mean": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 49.6,
+   "nees_div": 0.637,
+   "late1": 0.1,
+   "portal": 6.063,
+   "nees": 0.128,
+   "fail": 0
+  },
+  "grad": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 89.68,
+   "nees_div": 1.611,
+   "late1": 0.4,
+   "portal": 8.891,
+   "nees": 0.247,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 46.04,
+   "nees_div": 0.606,
+   "late1": 0.05,
+   "portal": 6.457,
+   "nees": 0.144,
+   "fail": 0
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 46.04,
+   "nees_div": 0.606,
+   "late1": 0.05,
+   "portal": 6.457,
+   "nees": 0.144,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 46.04,
+   "nees_div": 0.606,
+   "late1": 0.05,
+   "portal": 6.457,
+   "nees": 0.144,
+   "fail": 0
+  }
+ },
+ "S5/note10/branch": {
+  "v0.5.13": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 24.83,
+   "nees_div": 0.604,
+   "late1": 0.0,
+   "portal": 6.51,
+   "nees": 0.205,
+   "fail": 0
+  },
+  "mean": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 24.83,
+   "nees_div": 0.604,
+   "late1": 0.0,
+   "portal": 6.51,
+   "nees": 0.205,
+   "fail": 0
+  },
+  "grad": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 87.31,
+   "nees_div": 0.939,
+   "late1": 0.1,
+   "portal": 7.912,
+   "nees": 0.257,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 28.18,
+   "nees_div": 0.572,
+   "late1": 0.0,
+   "portal": 5.995,
+   "nees": 0.166,
+   "fail": 0
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 28.18,
+   "nees_div": 0.572,
+   "late1": 0.0,
+   "portal": 5.995,
+   "nees": 0.166,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 28.18,
+   "nees_div": 0.572,
+   "late1": 0.0,
+   "portal": 5.995,
+   "nees": 0.166,
+   "fail": 0
+  }
+ },
+ "S6/note10/branch": {
+  "v0.5.13": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 15.14,
+   "nees_div": 0.384,
+   "late1": 0.0,
+   "portal": 6.475,
+   "nees": 0.17,
+   "fail": 0
+  },
+  "mean": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 15.14,
+   "nees_div": 0.384,
+   "late1": 0.0,
+   "portal": 6.475,
+   "nees": 0.17,
+   "fail": 0
+  },
+  "grad": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 33.66,
+   "nees_div": 0.417,
+   "late1": 0.0,
+   "portal": 9.126,
+   "nees": 0.252,
+   "fail": 0
+  },
+  "hybR10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 14.64,
+   "nees_div": 0.275,
+   "late1": 0.0,
+   "portal": 6.495,
+   "nees": 0.158,
+   "fail": 0
+  },
+  "hybK": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 14.64,
+   "nees_div": 0.275,
+   "late1": 0.0,
+   "portal": 6.495,
+   "nees": 0.158,
+   "fail": 0
+  },
+  "hybK10": {
+   "branch": 1.0,
+   "main": 0.0,
+   "diverge": 14.64,
+   "nees_div": 0.275,
+   "late1": 0.0,
+   "portal": 6.495,
+   "nees": 0.158,
+   "fail": 0
+  }
+ },
+ "S4/note10/straight": {
+  "v0.5.13": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 53.45
+  },
+  "mean": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 70.58
+  },
+  "grad": {
+   "branch": 0.0,
+   "main": 0.95,
+   "horiz": 138.0
+  },
+  "hybR10": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 65.21
+  },
+  "hybK": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 65.21
+  },
+  "hybK10": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 65.21
+  }
+ },
+ "S1/set:baro.tunnel_grad_pa_per_km=30/straight": {
+  "v0.5.13": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 203.7
+  },
+  "mean": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 203.7
+  },
+  "grad": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 33.04
+  },
+  "hybR10": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 18.93
+  },
+  "hybK": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 18.93
+  },
+  "hybK10": {
+   "branch": 0.0,
+   "main": 1.0,
+   "horiz": 18.93
+  }
+ }
+}
