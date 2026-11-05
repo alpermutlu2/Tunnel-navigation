@@ -98,7 +98,7 @@ map grade became a measurement (11.6–15.7 and 8.9–11.8 m before).
 - **Consistent.** The filter's own uncertainty covers its error everywhere: mean (e/σ)² ≤ 0.37 in
   every set, conservative, and every run is within 2σ at the portal.
 - **Callout.** Without the rule, 0–66 % of callouts come more than 1 s late; with k = 1, 13 of
-  3000. k = 1.3 cuts them to 5 of 3000 (VALIDATION_K13), at 0.3–0.9 s more advance. Prompts at 1000, 500 and 200 m and "now" follow the same rule; when the shown 2σ is over
+  3000. k = 1.3 cuts them to 5 of 3000 (2 of 1000 in validation), at 0.3–0.9 s more advance. Prompts at 1000, 500 and 200 m and "now" follow the same rule; when the shown 2σ is over
   100 m the prompt names no distance ("Exit A ahead, keep right").
 - **Exit branch.** Recognised in 3000 of 3000 runs that take it. When the car goes straight on,
   "main" is reported in 600 of 600. Such a car has no curve to correct it: on stop-and-go, 5 of 300

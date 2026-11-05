@@ -173,7 +173,8 @@ seed 271 decided "main"). When the car goes straight on, "main" is reported in 6
   - **With k = 1:** 13 of 3000 callouts are more than 1 s late (11 on S5, 2 on S4; v0.5.13: 20),
     and on average they come 0.1–2.5 s early. The development set alone gave "1 in 500"; over 300
     seeds S5 is at 2–10 % per set.
-  - **With k = 1.3:** 5 of 3000 (4 on S5, 1 on S4); with k = 1.65, 1 (S4). VALIDATION_K. The cost is
+  - **With k = 1.3:** 5 of 3000 (4 on S5, 1 on S4); with k = 1.65, 1 (S4). In the v0.5.14 validation, k = 1 gives 7 of
+    1000 and k = 1.3 gives 2 (§3.1). The cost is
     0.3–0.9 s more advance (S4: 2.3 → 3.1 → 4.0 s early on average).
   - **Why k = 1 stays:** σ_s is about twice the real error ((e/σ)² 0.1–0.4), so k = 1 is in effect
     ~2σ. The k = 1.3 row is the measured alternative; it cuts the late callouts from 13 to 5 in 3000.
@@ -194,23 +195,26 @@ seed 271 decided "main"). When the car goes straight on, "main" is reported in 6
   1 km tunnel, where the error is already under 5 m; the supervisor's follower in §4.12); 12–33 runs
   of 300 per scenario are not under 5 m within 60 s.
 
-**3.1 Validation on untouched seeds** (400–499, v0.5.13 configuration, run once;
-`reports/0.5.13/validation_400-499.json`, `ekf10_validation_400-499.json`, `supervisor_validation.json`).
+**3.1 Validation on untouched seeds** (500–599, v0.5.14 configuration, run once;
+`reports/0.5.14/validation_500-599.json`, `ekf10_validation_500-599.json`, `supervisor_validation.json`).
 Nothing was changed after this run.
 
 | | S1 | S2 | S3 | S4 | S5 | S6s | S6 | S6L | 1 km | 5 km |
 |---|---|---|---|---|---|---|---|---|---|---|
-| diverge rms, two sets [m] | 13.9 / 16.5 | 4.4 / 4.5 | 14.2 / 17.9 | 37.8 / 39.5 | 26.8 / 30.8 | 15.8 / 17.5 | 15.8 / 17.8 | 15.1 / 17.1 | 4.6 / 4.9 | 27.8 / 34.2 |
-| portal rms, two sets [m] | 6.3 / 7.6 | 5.2 / 5.2 | 9.6 / 11.9 | 6.5 / 6.7 | 7.2 / 8.3 | 7.1 / 8.0 | 7.1 / 8.2 | 7.2 / 8.0 | 3.2 / 3.1 | 15.7 / 15.2 |
+| diverge rms, two sets [m] | 13.7 / 13.9 | 4.6 / 4.2 | 2.7 / 2.7 | 28.2 / 27.0 | 33.4 / 32.7 | 15.1 / 16.5 | 16.3 / 16.5 | 15.0 / 15.5 | 4.9 / 4.4 | 32.1 / 29.9 |
+| portal rms, two sets [m] | 5.8 / 6.3 | 5.0 / 5.6 | 1.9 / 1.8 | 6.0 / 5.5 | 7.0 / 6.4 | 6.2 / 6.9 | 6.7 / 7.0 | 6.3 / 6.9 | 3.3 / 2.5 | 14.3 / 13.5 |
 | runs > 100 m off (of 100) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| worst (e/σ)² | 0.24 | 0.35 | 0.28 | 0.15 | 0.33 | 0.27 | 0.28 | 0.26 | 0.35 | 0.33 |
-| > 1 s late of 100, k = 1 / 1.3 | 0 / 0 | 0 / 0 | 0 / 0 | 2 / 0 | 3 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 1 / 0 |
+| worst (e/σ)² | 0.16 | 0.39 | 0.10 | 0.12 | 0.23 | 0.19 | 0.19 | 0.18 | 0.34 | 0.26 |
+| > 1 s late of 100, k = 1 / 1.3 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 5 / 2 | 0 / 0 | 1 / 0 | 0 / 0 | 0 / 0 | 1 / 0 |
 
-- **Inside the ranges of §3,** except the S3 diverge error in one set (17.9 m against 11.6–15.7 m)
-  and the S5 portal error in one set (8.3 m, at the top of 6.2–8.7 m).
-- **No run is more than 100 m off;** the branch is reported in 1000 of 1000 runs that take it.
-- **Straight-on control:** "main" in 200 of 200; 9 of the 100 S4 runs are more than 100 m off at
-  the portal (§3).
+- **Inside the ranges of §3,** except the S2 portal in one set (5.6 m against 4.3–5.4 m), the
+  1 km portal in one set (3.3 m against 2.4–3.2 m) and the S4 diverge in one set (27.0 m, below
+  28.3–35.9 m). The S3 diverge, 2.7 m in both sets, confirms the map-grade gain on new seeds.
+- **No run is more than 100 m off;** the branch is reported in 1000 of 1000 runs that take it, and
+  at least 98 % of runs are within 2σ at the portal in every set.
+- **Callouts:** 7 of 1000 more than 1 s late with k = 1 (v0.5.13's validation: 6), 2 with k = 1.3.
+- **Straight-on control:** "main" in 200 of 200; 2 of the 100 S4 runs are more than 100 m off at
+  the portal (v0.5.13's validation: 9).
 - **Low-end, product configuration (supervisor):** S4 portal 14.4 / 20.0 m, (e/σ)² 0.48 / 1.21
   without the monitor and 0.24 / 0.35 with it (§4.12). The 10-state filter alone: 17.4 m, no run
   over 100 m (v0.5.12 configuration: 19.0 m).
