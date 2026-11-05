@@ -1,0 +1,174 @@
+{
+ "S1/imu_lowend/branch": {
+  "today": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "diverge": 11.55,
+   "nees_div": 0.389,
+   "late1": 0.0,
+   "portal": 6.329,
+   "p95": 10.89,
+   "nees": 0.118,
+   "fail": 0
+  },
+  "grad": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "diverge": 13.79,
+   "nees_div": 0.009,
+   "late1": 0.0,
+   "portal": 17.6,
+   "p95": 34.57,
+   "nees": 0.322,
+   "fail": 0
+  },
+  "grade": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "diverge": 11.62,
+   "nees_div": 0.38,
+   "late1": 0.0,
+   "portal": 5.907,
+   "p95": 10.92,
+   "nees": 0.097,
+   "fail": 0
+  },
+  "grade+grad": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "diverge": 13.67,
+   "nees_div": 0.032,
+   "late1": 0.0,
+   "portal": 11.98,
+   "p95": 22.8,
+   "nees": 0.205,
+   "fail": 0
+  },
+  "grade10": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "diverge": 11.62,
+   "nees_div": 0.38,
+   "late1": 0.0,
+   "portal": 5.907,
+   "p95": 10.92,
+   "nees": 0.097,
+   "fail": 0
+  },
+  "grade10+grad": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "diverge": 13.67,
+   "nees_div": 0.032,
+   "late1": 0.0,
+   "portal": 11.98,
+   "p95": 22.8,
+   "nees": 0.205,
+   "fail": 0
+  }
+ },
+ "S1/imu_lowend+set:baro.tunnel_grad_pa_per_km=30/branch": {
+  "today": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 1.0,
+    "none": 0.0
+   },
+   "diverge": 95.56,
+   "nees_div": 67.574,
+   "late1": 0.0,
+   "portal": 181.0,
+   "p95": 200.6,
+   "nees": 91.112,
+   "fail": 20
+  },
+  "grad": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "diverge": 50.2,
+   "nees_div": 0.156,
+   "late1": 0.0,
+   "portal": 17.21,
+   "p95": 31.96,
+   "nees": 0.683,
+   "fail": 0
+  },
+  "grade": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 1.0,
+    "none": 0.0
+   },
+   "diverge": 90.15,
+   "nees_div": 58.286,
+   "late1": 0.0,
+   "portal": 172.4,
+   "p95": 192.9,
+   "nees": 78.826,
+   "fail": 20
+  },
+  "grade+grad": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "diverge": 35.83,
+   "nees_div": 0.217,
+   "late1": 0.0,
+   "portal": 14.99,
+   "p95": 22.7,
+   "nees": 0.428,
+   "fail": 0
+  },
+  "grade10": {
+   "branch10": {
+    "branch": 0.0,
+    "main": 1.0,
+    "none": 0.0
+   },
+   "diverge": 90.15,
+   "nees_div": 58.286,
+   "late1": 0.0,
+   "portal": 172.4,
+   "p95": 192.9,
+   "nees": 78.826,
+   "fail": 20
+  },
+  "grade10+grad": {
+   "branch10": {
+    "branch": 1.0,
+    "main": 0.0,
+    "none": 0.0
+   },
+   "diverge": 35.83,
+   "nees_div": 0.217,
+   "late1": 0.0,
+   "portal": 14.99,
+   "p95": 22.7,
+   "nees": 0.428,
+   "fail": 0
+  }
+ }
+}

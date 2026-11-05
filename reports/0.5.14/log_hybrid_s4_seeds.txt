@@ -1,0 +1,3 @@
+232 {'today': -1580.0, 'grad': -1580.0, 'grade': 17.0, 'grade+grad': 25.8, 'grade10': 17.0, 'grade10+grad': 25.8}
+200 {'today': 62.4, 'grad': -20.3, 'grade': 82.5, 'grade+grad': 17.0, 'grade10': 82.5, 'grade10+grad': 17.0}
+15 {'today': -0.9, 'grad': -3.0, 'grade': -13.0, 'grade+grad': 16.2, 'grade10': -13.0, 'grade10+grad': 16.2}

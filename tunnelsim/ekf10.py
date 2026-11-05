@@ -131,6 +131,17 @@ class Ekf10Config:
     # in an outage the barometer offset drifts as ḃ_h = g_h·v, g_h unknown per tunnel (prior
     # EskfConfig.baro_grad_sigma); at the exit the accumulated part g_h·d is removed from b_h.
     baro_grad: bool = False
+    # v0.5.14 (owner 2026-11-05, A/B; reviews: "take the source, not the filter"): the map's road grade
+    # as a weak measurement of θ (the path pitch: ḣ = v·sin θ, so no mount offset enters), in an outage,
+    # once per second: z = γ_map(ŝ) − θ̂, H_θ = 1, H_s = −γ'(ŝ) (0 under the curve s-guard).
+    # R = σ_γ² + (rel·γ)² (the map's grade error, DESIGN A3) + (k_susp·a)² (suspension pitch; θ is
+    # propagated with the body's pitch rate) + ((γ(ŝ+σ_s) − γ(ŝ−σ_s))/2)² (where along the grade profile).
+    # Meant to run with baro_grad: with θ known the barometer residual goes to the gradient.
+    grade_update: bool = False
+    grade_sigma_deg: float = 0.2          # [ASSUMED] map vertical profile + lane, as an angle
+    grade_rel: float = 0.1                # [ASSUMED] relative grade error (DESIGN A3: tunnel grade often wrong)
+    grade_scale: float = 1.0              # stress only: the map's grade = scale × the road's (1.1 = 10 % too steep)
+    susp_pitch_per_mps2: float = np.deg2rad(1.5) / G0   # [ASSUMED] the truth's order (1.5°/g)
     outage_s: float = 2.0                 # no fix for this long = outage (the ESKF's cruise_no_gnss_s)
 
 
@@ -540,6 +551,21 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
                          + (v * cfg10.lane_wander_rate_sigma) ** 2 + 0.02 ** 2)
                     ok = update(sel, z, H, R, CHI2_1_999)
                     ev["lateral_speed"] = ev.get("lateral_speed", 0) + int(ok.sum())
+        if map_due and wn > 0 and cfg10.grade_update and hasattr(road_map, "grade"):
+            o_g = imu_t[kk] - last_fix > cfg10.outage_s
+            sp = x[:, I_S] + lever
+            if s_div is not None:
+                o_g &= ~(main_ & (sp >= s_div))                             # main tunnel: its grade is not in the map
+            if o_g.any():
+                sgs = np.sqrt(P[:, I_S, I_S]); L_ = road_map.length - 1.0
+                gm = lambda q: cfg10.grade_scale * road_map.grade(np.clip(q, 0.0, L_))
+                gam = gm(sp); gam_r = cfg10.grade_scale * road_map.grade_rate(np.clip(sp, 0.0, L_))
+                a_lon = fxsum / wn - x[:, I_BA] - G0 * np.sin(x[:, I_T])
+                H = np.zeros((B, NX)); H[:, I_T] = 1.0; H[:, I_S] = np.where(guard, 0.0, -gam_r)
+                R = (np.deg2rad(cfg10.grade_sigma_deg) ** 2 + (cfg10.grade_rel * gam) ** 2
+                     + (cfg10.susp_pitch_per_mps2 * a_lon) ** 2 + (0.5 * (gm(sp + sgs) - gm(sp - sgs))) ** 2)
+                ok = update(o_g, np.where(o_g, gam - x[:, I_T], 0.0), H, R, CHI2_1_999)
+                ev["grade"] = ev.get("grade", 0) + int(ok.sum())
         if map_due and wn > 0:
             wsum[:] = 0.0; wn = 0; fysum[:] = 0.0; fxsum[:] = 0.0
         # --- ZUPT
