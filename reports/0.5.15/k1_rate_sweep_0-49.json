@@ -1,0 +1,138 @@
+{
+ "S4/imu_lowend": {
+  "2.0": {
+   "offroad_max_mean_m": 8.21,
+   "offroad_max_p95_m": 22.23,
+   "runs_offroad_gt_10m": 17,
+   "err_max_mean_m": 39.53,
+   "transition_step_max_m": 0.96,
+   "transition_step_p95_m": 0.83
+  },
+  "5.0": {
+   "offroad_max_mean_m": 8.15,
+   "offroad_max_p95_m": 22.23,
+   "runs_offroad_gt_10m": 17,
+   "err_max_mean_m": 39.54,
+   "transition_step_max_m": 0.96,
+   "transition_step_p95_m": 0.84
+  },
+  "10.0": {
+   "offroad_max_mean_m": 8.1,
+   "offroad_max_p95_m": 22.23,
+   "runs_offroad_gt_10m": 17,
+   "err_max_mean_m": 39.54,
+   "transition_step_max_m": 0.96,
+   "transition_step_p95_m": 0.95
+  },
+  "None": {
+   "offroad_max_mean_m": 7.96,
+   "offroad_max_p95_m": 22.23,
+   "runs_offroad_gt_10m": 17,
+   "err_max_mean_m": 39.5,
+   "transition_step_max_m": 23.97,
+   "transition_step_p95_m": 10.25
+  }
+ },
+ "S1/imu_lowend+baro_tunnel_30pa": {
+  "2.0": {
+   "offroad_max_mean_m": 10.42,
+   "offroad_max_p95_m": 27.09,
+   "runs_offroad_gt_10m": 19,
+   "err_max_mean_m": 45.53,
+   "transition_step_max_m": 0.99,
+   "transition_step_p95_m": 0.91
+  },
+  "5.0": {
+   "offroad_max_mean_m": 10.36,
+   "offroad_max_p95_m": 26.93,
+   "runs_offroad_gt_10m": 18,
+   "err_max_mean_m": 45.52,
+   "transition_step_max_m": 0.94,
+   "transition_step_p95_m": 0.93
+  },
+  "10.0": {
+   "offroad_max_mean_m": 10.27,
+   "offroad_max_p95_m": 26.68,
+   "runs_offroad_gt_10m": 18,
+   "err_max_mean_m": 45.53,
+   "transition_step_max_m": 1.14,
+   "transition_step_p95_m": 1.1
+  },
+  "None": {
+   "offroad_max_mean_m": 9.86,
+   "offroad_max_p95_m": 24.68,
+   "runs_offroad_gt_10m": 18,
+   "err_max_mean_m": 45.67,
+   "transition_step_max_m": 16.85,
+   "transition_step_p95_m": 10.97
+  }
+ },
+ "S1-5km/imu_lowend": {
+  "2.0": {
+   "offroad_max_mean_m": 9.14,
+   "offroad_max_p95_m": 28.82,
+   "runs_offroad_gt_10m": 19,
+   "err_max_mean_m": 61.39,
+   "transition_step_max_m": 1.03,
+   "transition_step_p95_m": 0.94
+  },
+  "5.0": {
+   "offroad_max_mean_m": 8.99,
+   "offroad_max_p95_m": 28.65,
+   "runs_offroad_gt_10m": 19,
+   "err_max_mean_m": 61.42,
+   "transition_step_max_m": 1.36,
+   "transition_step_p95_m": 0.94
+  },
+  "10.0": {
+   "offroad_max_mean_m": 8.73,
+   "offroad_max_p95_m": 28.39,
+   "runs_offroad_gt_10m": 19,
+   "err_max_mean_m": 61.49,
+   "transition_step_max_m": 1.22,
+   "transition_step_p95_m": 1.15
+  },
+  "None": {
+   "offroad_max_mean_m": 6.54,
+   "offroad_max_p95_m": 25.06,
+   "runs_offroad_gt_10m": 16,
+   "err_max_mean_m": 61.67,
+   "transition_step_max_m": 25.81,
+   "transition_step_p95_m": 10.02
+  }
+ },
+ "S4/note10": {
+  "2.0": {
+   "offroad_max_mean_m": 4.0,
+   "offroad_max_p95_m": 14.31,
+   "runs_offroad_gt_10m": 4,
+   "err_max_mean_m": 25.36,
+   "transition_step_max_m": 0.99,
+   "transition_step_p95_m": 0.98
+  },
+  "5.0": {
+   "offroad_max_mean_m": 3.89,
+   "offroad_max_p95_m": 14.31,
+   "runs_offroad_gt_10m": 4,
+   "err_max_mean_m": 25.36,
+   "transition_step_max_m": 1.0,
+   "transition_step_p95_m": 0.99
+  },
+  "10.0": {
+   "offroad_max_mean_m": 3.74,
+   "offroad_max_p95_m": 14.31,
+   "runs_offroad_gt_10m": 4,
+   "err_max_mean_m": 25.36,
+   "transition_step_max_m": 1.21,
+   "transition_step_p95_m": 1.1
+  },
+  "None": {
+   "offroad_max_mean_m": 3.33,
+   "offroad_max_p95_m": 14.31,
+   "runs_offroad_gt_10m": 4,
+   "err_max_mean_m": 25.36,
+   "transition_step_max_m": 2.26,
+   "transition_step_p95_m": 1.26
+  }
+ }
+}
