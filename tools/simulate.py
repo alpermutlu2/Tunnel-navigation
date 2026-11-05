@@ -105,6 +105,15 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
     anyf = gnss["t"][(np.isfinite(gnss["pos"][0][:, 0]) | np.isfinite(gnss["vel"][0][:, 0])) & (gnss["t"] > t_o + 5.0)]
     t_back = np.array([anyf[0] if len(anyf) else np.inf])
     s_app = SV.display(out.t, s_i, V_[sel_[0]], t_back)[0]
+    # v0.5.15 (K1): where the app draws the car near the diverge: the main tunnel until the shown filter
+    # decides "branch", the move across rate-limited (tunnelsim/display.py)
+    from tunnelsim.display import shown_xy
+    st_e = out.aux.get("branch_state")
+    bt10 = o10.branch_time[0] if np.isfinite(o10.branch_time[0]) else np.inf
+    st_10 = np.where(out.t >= bt10, o10.branch_decision[0], 0)[None]
+    st_app = st_10 if (sel_[0] == "ekf10" or st_e is None) else st_e
+    app_xy, _ = shown_xy(mv_f, out.t, s_app[None], st_app)
+    k_app = float(SV.callout_k(cls_)[0])
     idx = np.clip(np.round((out.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
     tn = _tangent(tr, idx)
     pR = out.p[0] - np.einsum("kij,j->ki", out.C[0] @ C_bp_f.T, tr.lever_arm_b)
@@ -178,9 +187,10 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
         "sig_app": g_app[0, sel].round(2).tolist(),
         "v_app": V_[sel_[0]][0, sel].round(3).tolist(),     # the selected filter's speed (driver's view)
         "alarm": (d_app[0, sel] > SV.ALARM_D).tolist(),
+        "app_xy": app_xy[0, sel].round(2).tolist(),          # v0.5.15: the drawn point (K1)
         "app_filter": {"1d": "4-state 1D", "ekf10": "10-state", "eskf": "16-state ESKF"}[sel_[0]],
         "imu_class": str(cls_[0]),
-        "callout_k": CALLOUT_K,
+        "callout_k": k_app,                                  # v0.5.15: by IMU class
         "v_true": tr.v[idx[sel]].round(3).tolist(),
         "v_est": np.linalg.norm(out.v[0, sel], axis=1).round(3).tolist(),
         "zupt_on": out.zupt[0, sel].tolist(),

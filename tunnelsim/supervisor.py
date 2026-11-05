@@ -40,6 +40,19 @@ NEES_PASS = 4.0                             # [ASSUMED] mean e²/σ² a filter m
 SIMPLE_FACTOR = 1.5                         # [ASSUMED] "as good as the best" for the simplest rule
 ALARM_D = 9.0                               # [ASSUMED] 3σ disagreement
 HANDOVER_RATE = 2.0                         # m/s [ASSUMED]: as the ESKF's re-acquisition cap (2 m per fix)
+# v0.5.15 (owner 2026-11-05, K3): the callout margin k by IMU class, the second class-dependent setting
+# (the first: the one-way constraint's form, by filter). k·σ assumes an honest σ; the low-end hybrid's σ_s
+# is 4-6 times its error on flat tunnels ((e/σ)² 0.03-0.06), because of the pressure-gradient prior
+# σ_g [ASSUMED], so k = 0.5 there leaves the margin k = 1 leaves on a Note10 (σ ~2× the error). Rests on
+# the assumed σ_g; the lasting fix is σ_g measured in a real tunnel. Acceptance (owner): over 300 seeds the
+# low-end gradient cases' share of callouts > 1 s late must not exceed the Note10's at k = 1 (1-2 %);
+# else 0.7.
+CALLOUT_K_BY_CLASS = {"note10": 1.0, "mpu9250": 0.5}
+
+
+def callout_k(imu_class):
+    """k per batch member from the detected IMU class (1.0 for an unknown class)."""
+    return np.array([CALLOUT_K_BY_CLASS.get(str(c), 1.0) for c in imu_class], float)
 
 
 def rehearsal_windows(t_start, t_outage):

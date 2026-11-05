@@ -260,11 +260,15 @@ if (!CanvasRenderingContext2D.prototype.roundRect) CanvasRenderingContext2D.prot
 const ALL = /*ALLDATA*/null;      // all-in-one page: {order, runs: {key: {label, risk, variants: {map, nomap}}}}
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 let N = 0, k = 0, playing = false, last = 0, curKey = null;
-let cvErr, errBand, errLim, callK, trueCallK, callLead = 300, callKs = null;
+let cvErr, errBand, errLim, callK, trueCallK, callLead = 300, callKs = null, kTouched = false;
 const scrub = document.getElementById("scrub");
 function derive() {
   N = D.t.length; scrub.max = N - 1;
-  if (callKs === null) callKs = D.callout_k || 0;
+  if (callKs === null || !kTouched) {        // v0.5.15: each run starts at its IMU class's k until the slider is moved
+    callKs = D.callout_k ?? 1;
+    const ks_ = document.getElementById("kSl"), kv_ = document.getElementById("kv");
+    if (ks_) ks_.value = callKs; if (kv_) kv_.textContent = callKs.toFixed(2);
+  }
   cvErr = D.t.map((_, i) => { const c = cvS(i); return c === null ? null : c - D.s_true[i]; });
   const eA = D.e_app || D.e_s;
   errBand = { lo: eA.map((e, i) => e - 2 * appSig(i)), hi: eA.map((e, i) => e + 2 * appSig(i)) };
@@ -369,7 +373,7 @@ function drawMap() {
   const c = cvS(k); if (SHOW.cv && c !== null) { const [x, y] = sToXY(c); drawCar(x, y, D.heading[k], css("--cv"), "CV", 0.55, -Wc / 2 - 20); }
   if (SHOW.ref && D.s_1d) { const [x, y] = sToXY(D.s_1d[k]); drawCar(x, y, headingAt(D.s_1d[k]), css("--ref"), "4", 0.6, -Wc / 2 - 33); }
   if (SHOW.e10 && D.s_10) { const [x, y] = sToXY(D.s_10[k]); drawCar(x, y, headingAt(D.s_10[k]), css("--e10"), "10", 0.6, -Wc / 2 - 46); }
-  if (SHOW.app && D.s_app) { const [x, y] = sToXY(D.s_app[k]); drawCar(x, y, headingAt(D.s_app[k]), css("--app"), "app", 0.85, -Wc / 2 - 59); }
+  if (SHOW.app && D.s_app) { const [x, y] = D.app_xy ? D.app_xy[k] : sToXY(D.s_app[k]); drawCar(x, y, headingAt(D.s_app[k]), css("--app"), "app", 0.85, -Wc / 2 - 59); }
   const eh = isFinite(D.est_heading[k]) ? D.est_heading[k] : D.heading[k];
   if (SHOW.eskf) drawCar(D.est_xy[k][0], D.est_xy[k][1], eh, css("--est"), "16", 0.9, -Wc / 2 - 7);
   drawCar(cx, cy, D.heading[k], css("--true"), "true car", 1, Wc / 2 + 15);
@@ -850,9 +854,9 @@ if (ALL) {
     .then(j => { if (j && j.live) { LIVE = true; document.getElementById("live").classList.add("on"); } else staticLive(); }).catch(staticLive);
   else staticLive();
   const kS = document.getElementById("kSl"), lS = document.getElementById("lSl");
-  kS.oninput = () => { callKs = +kS.value; document.getElementById("kv").textContent = callKs.toFixed(2); callout(); render(); renderResults(); };
+  kS.oninput = () => { kTouched = true; callKs = +kS.value; document.getElementById("kv").textContent = callKs.toFixed(2); callout(); render(); renderResults(); };
   lS.oninput = () => { callLead = +lS.value; document.getElementById("lv").textContent = `${callLead} m`; callout(); render(); renderResults(); };
-  callKs = +kS.value;
+  callKs = null;
   const hq = readHash();
   const first = (hq && hq.tab && ALL.runs[hq.tab]) ? hq.tab : ALL.order[0];
   load(first, false);

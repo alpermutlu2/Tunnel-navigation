@@ -130,6 +130,13 @@ class Ekf10Config:
     # trusted, not the filter: in seed 232 the speed error came from the barometer in the last 20 s, so
     # the correlation was wrong. Measured, not derived (seeds 232, 247; 300 seeds of both forms, §4.15).
     no_reverse_mode: str = "mean"
+    # v0.5.15 (owner 2026-11-05, K2): while the filter's own branch decision is "not yet" and ŝ is past the
+    # diverge, the map rows (heading, curvature-gyro, grade) are paused, as the ESKF pauses its map layer:
+    # the route's geometry there is the branch's, which a car going straight on does not follow (low-end
+    # 5 km, straight on: ψ̂ pulled 20° to the branch, v̂ −4 m/s, ŝ −500 m in 60 s). pause_pre_sigma_k > 0
+    # starts the pause max(100 m, k·σ_s) before the diverge (the ESKF's window; A/B only).
+    pause_undecided: bool = True
+    pause_pre_sigma_k: float = 0.0
     landmark_gate: str = "own"            # "own": this filter's branch decision; "turn": a turn seen only
                                           # (v0.5.12 A/B: on a straight main tunnel the two must agree)
     landmark_T: float = 12.0              # s [ASSUMED] (owner: 10-15 s, one curve)
@@ -520,6 +527,13 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
                     ev["landmark_seen"] = ev.get("landmark_seen", 0) + int(lm_go0.sum())
         main_ = br10 == -1
         guard = (np.sqrt(P[:, I_S, I_S]) > L_clo) if cfg10.curve_landmark else np.zeros(B, bool)
+        paused = np.zeros(B, bool)
+        if cfg10.pause_undecided and s_div is not None:
+            pre = (np.maximum(100.0, cfg10.pause_pre_sigma_k * np.sqrt(P[:, I_S, I_S]))
+                   if cfg10.pause_pre_sigma_k > 0 else 0.0)
+            paused = (br10 == 0) & (x[:, I_S] + lever >= s_div - pre)
+            if map_due and paused.any():
+                ev["map_paused"] = ev.get("map_paused", 0) + int(paused.sum())
         # --- map heading (global along the route)
         if map_due and cfg10.heading_update:
             sp = x[:, I_S] + lever
@@ -530,8 +544,8 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
             z = np.angle(np.exp(1j * (psi_m - x[:, I_PSI])))          # h = psi - psi_map(s); z = 0 - h
             H = np.zeros((B, NX)); H[:, I_S] = np.where(guard, 0.0, -kap); H[:, I_PSI] = 1.0
             R = np.deg2rad(cfg10.heading_sigma_deg) ** 2 + (cfg10.slip_gain * v * v * kap) ** 2   # sideslip beta = -k a_lat
-            update(np.ones(B, bool), z, H, R, CHI2_1_999)
-            ev["heading"] += B
+            update(~paused, z, H, R, CHI2_1_999)
+            ev["heading"] += int((~paused).sum())
         # --- curvature-gyro (speed from the curve), 1 s mean rate at the window centre
         if map_due and wn > 0 and cfg10.curvature_update:
             wm = wsum / wn
@@ -549,8 +563,8 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
             R = (cfg.gyro_noise ** 2 / (wn / fs) + sig_bi ** 2
                  + (cfg10.slip_gain * np.abs(v) ** 3 * np.abs(kap_r)) ** 2      # sideslip rate where kappa changes
                  + cfg10.lane_wander_rate_sigma ** 2)                           # lane keeping
-            update(np.ones(B, bool), z, H, np.broadcast_to(R, (B,)).copy() if np.ndim(R) == 0 else R, CHI2_1_999)
-            ev["curv"] += B
+            update(~paused, z, H, np.broadcast_to(R, (B,)).copy() if np.ndim(R) == 0 else R, CHI2_1_999)
+            ev["curv"] += int((~paused).sum())
         if map_due and wn > 0:
             wm_ = wsum / wn; fym = fysum / wn; fxm = fxsum / wn
             wc = wm_ - x[:, I_BGZ]
@@ -578,6 +592,7 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
             sp = x[:, I_S] + lever
             if s_div is not None:
                 o_g &= ~(main_ & (sp >= s_div))                             # main tunnel: its grade is not in the map
+            o_g &= ~paused                                                  # v0.5.15: not yet decided
             if o_g.any():
                 sgs = np.sqrt(P[:, I_S, I_S]); L_ = road_map.length - 1.0
                 gm = lambda q: cfg10.grade_scale * road_map.grade(np.clip(q, 0.0, L_))

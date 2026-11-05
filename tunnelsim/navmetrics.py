@@ -57,6 +57,8 @@ def prompts(t, s_hat, sig, s_true, v_hat, s_gore, k=1.0):
     per-prompt arrays (B,): err_m (true distance at firing − D, + early), dt_s (firing − true moment,
     + late), and for "now" also missed (fired after the car reached the gore, or never)."""
     B, K = s_hat.shape
+    k = np.asarray(k, float)
+    k = k[:, None] if k.ndim == 1 else k            # v0.5.15: k per member (class), (B,) or a scalar
     res = {}
     for name, D in [(f"{int(d)} m", np.full((B, K), d)) for d in PROMPTS_M] + \
                    [("now", np.maximum(NOW_MIN_M, NOW_LEAD_S * np.maximum(v_hat, 0.0)))]:

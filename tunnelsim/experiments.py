@@ -491,7 +491,7 @@ def ekf10_experiment(key, seeds=50, overrides=(), mount_err_deg=None, cfg10=None
     res["consistency_diverge"] = {"mean_norm_sq": round(float(np.mean((e[:, k_div] / o.sig_s[:, k_div]) ** 2)), 3)}
     res["coverage"] = {"diverge": coverage(e[:, k_div], o.sig_s[:, k_div]), "portal": coverage(e[:, k_x], o.sig_s[:, k_x])}
     res["callout_k"] = {}
-    for kk_ in (0.0, CALLOUT_K):
+    for kk_ in (0.0, 0.5, CALLOUT_K):                       # 0.5: the low-end class k (v0.5.15)
         m = (o.s + kk_ * o.sig_s) >= s_call
         k_hat = np.where(m.any(1), np.argmax(m, 1), m.shape[1] - 1)
         d = o.t[k_hat] - o.t[k_ct]
@@ -544,6 +544,7 @@ def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None, eskf_
     o10 = run_ekf10(t, F, W, gnss, bt, bh, C_bp, r_b, road,            # its own branch decision (v0.5.12)
                     Ekf10Config(mount_yaw_sigma=(eskf_cfg.mount_yaw_sigma if eskf_cfg is not None else 0.0)))
     oe.aux["branch10"] = o10.branch_decision
+    oe.aux["branch10_time"] = o10.branch_time
     o1 = run_ekf1d(t, F, W, gnss, C_bp, r_b, road)
     ip = lambda tt, x: np.stack([np.interp(oe.t, tt, xb) for xb in x])
     s = {"1d": ip(o1.t, o1.s), "ekf10": ip(o10.t, o10.s), "eskf": s_e}
@@ -553,18 +554,49 @@ def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None, eskf_
     return oe, s, g, cls, v
 
 
+def _display_block(oe, tr, mv, sel, s_disp, s_true, t_x, d_e):
+    """K1 (v0.5.15): the shown point from 50 m before the diverge to the portal, 0.1 s steps; the shown
+    filter's decision over time (the ESKF's in-loop state, or the 10-state filter's decision time)."""
+    from .display import display_metrics, shown_xy
+    st_e = oe.aux.get("branch_state")
+    t10 = oe.aux.get("branch10_time"); d10 = oe.aux.get("branch10")
+    st_10 = np.where(oe.t[None] >= np.where(np.isfinite(t10), t10, np.inf)[:, None], d10[:, None], 0)
+    state = np.where((sel == "ekf10")[:, None], st_10, st_e if st_e is not None else st_10)
+    win = (s_true >= mv.s_div - 50.0) & (oe.t <= t_x)
+    ks = np.nonzero(win)[0]
+    ks = ks[np.unique(np.minimum(np.searchsorted(oe.t[ks], np.arange(oe.t[ks[0]], oe.t[ks[-1]], 0.1)), len(ks) - 1))]
+    idx = np.clip(np.round((oe.t[ks] - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
+    truth = tr.pos_n[idx, :2]
+    j0 = int(np.argmax(tr.s >= mv.s_div - 100.0))
+    road_xy = tr.pos_n[j0::max(1, int(round(0.05 / tr.dt))), :2]
+    t_k, s_k, st_k = oe.t[ks], s_disp[:, ks], state[:, ks]
+    allw = np.ones(len(ks), bool)
+    out = {}
+    for name, pol, rate in (("route", "route", None), ("main_first", "main_first", "default"),
+                            ("main_first_no_limit", "main_first", None)):
+        xy, _ = shown_xy(mv, t_k, s_k, st_k, pol, **({} if rate == "default" else {"lat_rate": None}))
+        out[name] = display_metrics(t_k, xy, s_k, road_xy, truth, allw)
+    und = (st_k == 0) & (s_true[ks] >= mv.s_div)[None]
+    out["not_yet_s_mean"] = round(float(und.sum(1).mean() * 0.1), 1)
+    fin = st_k[:, -1]
+    out["decision_at_portal"] = {"branch": int((fin == 1).sum()), "main": int((fin == -1).sum()), "none": int((fin == 0).sum())}
+    return out
+
+
 def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsal", "simplest"), sim=None,
                           keep_tracks=False, eskf_cfg=None, map_err=None, mount="estimated", vehicle=None, approach_manoeuvre=True,
-                          map_grade=True):
+                          map_grade=True, branch=True):
     """The three filters, their open-sky rehearsals and the supervisor, scored against the truth.
     Metrics per filter and per selection rule (displayed track: selected filter in the tunnel,
-    disagreement-inflated σ, ESKF handover after the exit)."""
+    disagreement-inflated σ, ESKF handover after the exit). v0.5.15: branch=False, the car goes straight
+    on (the map keeps the branch on the route); the callout margin k by IMU class (supervisor.callout_k);
+    where the car is drawn near the diverge (tunnelsim/display.py, K1)."""
     from . import supervisor as SV
     from .mapview import MapView
     seed_ids = np.arange(seeds) if np.isscalar(seeds) else np.asarray(seeds)
     sc, tr, t, F, W, gnss, bt, bh = sim if sim is not None else simulate_run(key, seed_ids, overrides, vehicle=vehicle,
-                                                                             approach_manoeuvre=approach_manoeuvre)
-    road = get_scenario(key, branch=True).road if sim is None else sc.road
+                                                                             approach_manoeuvre=approach_manoeuvre, branch=branch)
+    road = get_scenario(key, branch=True).road if (sim is None or not branch) else sc.road
     if not map_grade:                                   # v0.5.14: a map without grade profile
         from .mapview import without_grade
         road = without_grade(road)
@@ -614,7 +646,7 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
     i_x = len(tr.in_tunnel) - int(np.argmax(tr.in_tunnel[::-1]))
     t_x = tr.t[min(i_x, len(tr.t) - 1)]
     kx = int(np.argmin(np.abs(oe.t - (t_x - 0.05))))
-    ex = sc.road.exits[0]
+    ex = road.exits[0]                                  # the map's exit (the car may go straight on)
     k_div = int(np.argmax(s_true >= ex.s))
     s_call = ex.s - CALLOUT_LEAD_M
     k_ct = int(np.argmax(s_true >= s_call))
@@ -622,9 +654,11 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
 
     from . import navmetrics as NM
 
+    k_b = SV.callout_k(cls if cls is not None else np.full(B, "note10"))[:, None]      # v0.5.15: k by class
+
     def metrics(s_d, g_d, dmax=None, v_d=None):
         e = s_d - s_true[None]
-        m = (s_d + CALLOUT_K * g_d) >= s_call
+        m = (s_d + k_b * g_d) >= s_call
         k_hat = np.where(m.any(1), np.argmax(m, 1), m.shape[1] - 1)
         dc = oe.t[k_hat] - oe.t[k_ct]
         w = (oe.t >= t_x) & (oe.t <= t_x + 60.0)
@@ -639,7 +673,18 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
         rec, worst = NM.recovery(oe.t, e, t_back)
         r["recovery"] = NM.summarise_recovery(rec, worst)
         if v_d is not None:
-            r["prompts"] = NM.summarise_prompts(NM.prompts(oe.t, s_d, g_d, s_true, v_d, ex.s, CALLOUT_K))
+            r["prompts"] = NM.summarise_prompts(NM.prompts(oe.t, s_d, g_d, s_true, v_d, ex.s, k_b[:, 0]))
+            # v0.5.15: the same track at fixed k, for the class-k decision (owner: late share, "now" prompt)
+            r["callout_k_sweep"] = {}
+            for kk_ in (0.5, 0.7, 1.0):
+                m_ = (s_d + kk_ * g_d) >= s_call
+                kh_ = np.where(m_.any(1), np.argmax(m_, 1), m_.shape[1] - 1)
+                d_ = oe.t[kh_] - oe.t[k_ct]
+                pn = NM.prompts(oe.t, s_d, g_d, s_true, v_d, ex.s, kk_)["now"]
+                r["callout_k_sweep"][str(kk_)] = {
+                    "mean_s": round(float(d_.mean()), 2), "late_gt_1s": int((d_ > CALLOUT_LATE_S).sum()),
+                    "early_gt_5s": int((d_ < -5.0).sum()),
+                    "now_err_mean_m": round(float(np.nanmean(pn["err_m"])), 1) if np.isfinite(pn["err_m"]).any() else None}
         if dmax is not None:
             r["alarm_time_frac"] = round(float(np.mean(dmax[:, in_t] > SV.ALARM_D)), 3)
             r["alarm_runs_frac"] = round(float(np.mean((dmax[:, in_t] > SV.ALARM_D).any(axis=1))), 3)
@@ -674,6 +719,9 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
             r["branch_shown"] = {"branch": round(float(np.mean(shown == 1)), 3), "main": round(float(np.mean(shown == -1)), 3),
                                  "none": round(float(np.mean(shown == 0)), 3),
                                  "eskf_branch": round(float(np.mean(d_e == 1)), 3), "ekf10_branch": round(float(np.mean(d_10 == 1)), 3)}
+        # v0.5.15 (K1): where the car is drawn near the diverge, for the product (class rule + majority)
+        if rule == "class" and d_e is not None and d_10 is not None and getattr(mv, "s_div", None) is not None:
+            r["display"] = _display_block(oe, tr, mv, sel, tracks["class/majority"]["s_disp"], s_true, t_x, d_e)
         res["rules"][rule] = r
     if keep_tracks:
         res["_tracks"] = {"t": oe.t, "s_true": s_true, "s": s, "sig": g, "rules": tracks, "t_back": t_back,

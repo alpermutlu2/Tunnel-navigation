@@ -22,13 +22,15 @@ import tunnelsim  # noqa: E402
 
 SETS = (0, 50, 100, 150, 200, 250)
 OUT = "ekf10_sets_300.json"
-if "--validation" in sys.argv:          # v0.5.14: 500-599, run once
-    SETS = (500, 550); OUT = "ekf10_validation_500-599.json"; sys.argv.remove("--validation")
+if "--validation" in sys.argv:          # v0.5.15: 600-699, run once
+    SETS = (600, 650); OUT = "ekf10_validation_600-699.json"; sys.argv.remove("--validation")
 KEYS = ("S1", "S2", "S3", "S4", "S5", "S6s", "S6", "S6L", "S1-1km", "S1-5km")
 # v0.5.14 (owner 2026-11-05): the shipped defaults (hybrid on for low-end, mean-only one-way constraint) and
 # the same with the soft one-way form: the choice rests on seeds 232 and 247, so both run on 300 seeds.
 # v0.5.13's variants are in reports/0.5.13/ekf10_sets_300_v3*.json.
 VARIANTS = {"v0.5.14": dict(), "soft": dict(no_reverse_mode="soft")}
+# v0.5.15 (owner 2026-11-05, K2): the map rows paused while "not yet"; no_pause is v0.5.14's filter
+VARIANTS = {"v0.5.15": dict(), "no_pause": dict(pause_undecided=False)}
 IMUS = {"note10": (), "lowend": ("imu_lowend",)}
 FAIL_M = 100.0
 

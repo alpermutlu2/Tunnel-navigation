@@ -23,17 +23,19 @@ CUSTOM = "custom:L=5000,g=3,v=110"       # v0.5.14: 5 km, 3 % grade, 110 km/h (t
 CASES = [(k, imu) for k in ("S1", "S2", "S3", "S4", "S5", "S6", "S1-5km") for imu in ("note10", "lowend")] + \
         [("S3", "pressure30"), ("S1", "pressure30")] + \
         [("S3", "lowend_pressure30"), ("S1", "lowend_pressure30")] + \
-        [(CUSTOM, i) for i in ("note10", "lowend", "pressure25", "lowend_pressure25", "pressure-25", "lowend_pressure-25")]
+        [(CUSTOM, i) for i in ("note10", "lowend", "pressure25", "lowend_pressure25", "pressure-25", "lowend_pressure-25")] + \
+        [(k, i) for k in ("S1", "S4", "S1-5km") for i in ("note10_straight", "lowend_straight")]   # v0.5.15: K1
 OV = {"note10": (), "lowend": ("imu_lowend",), "pressure30": ("baro_tunnel_30pa",),
       "lowend_pressure30": ("imu_lowend", "baro_tunnel_30pa"),        # v0.5.14: the finding that led to the hybrid
       "pressure25": ("set:baro.tunnel_grad_pa_per_km=25",), "lowend_pressure25": ("imu_lowend", "set:baro.tunnel_grad_pa_per_km=25"),
-      "pressure-25": ("set:baro.tunnel_grad_pa_per_km=-25",), "lowend_pressure-25": ("imu_lowend", "set:baro.tunnel_grad_pa_per_km=-25")}
+      "pressure-25": ("set:baro.tunnel_grad_pa_per_km=-25",), "lowend_pressure-25": ("imu_lowend", "set:baro.tunnel_grad_pa_per_km=-25"),
+      "note10_straight": (), "lowend_straight": ("imu_lowend",)}          # the car goes straight on at the diverge
 
 
 def one(args):
     key, imu, lo, hi, rules = args
     from tunnelsim.experiments import supervisor_experiment
-    r = supervisor_experiment(key, np.arange(lo, hi), OV[imu], rules=rules)
+    r = supervisor_experiment(key, np.arange(lo, hi), OV[imu], rules=rules, branch=not imu.endswith("_straight"))
     return f"{key}/{imu}/{lo}", r
 
 
@@ -47,10 +49,10 @@ if __name__ == "__main__":
     # "sets": the class rule only (no rehearsals) on four independent sets of 50 seeds
     spans = {"dev": [(0, 50)], "heldout": [(50, 100)], "smoke": [(0, 2)],
              "sets": [(0, 50), (50, 100), (100, 150), (150, 200)],
-             "validation": [(500, 550), (550, 600)]}.get(part) or globals()["_SPANS"]     # v0.5.14: 500-599
+             "validation": [(600, 650), (650, 700)]}.get(part) or globals()["_SPANS"]     # v0.5.15: 600-699
     rules = ("class",) if part.startswith(("sets", "validation")) else ("class", "rehearsal", "simplest")
     res = {"version": tunnelsim.__version__, "spans": spans, "rules": rules, "runs": {}}
-    d = ROOT / "reports" / tunnelsim.__version__
+    d = ROOT / "reports" / tunnelsim.__version__.split(".dev")[0]
     d.mkdir(parents=True, exist_ok=True)
     jobs = [(k, i, lo, hi, rules) for lo, hi in spans for k, i in CASES]
     if (d / f"supervisor_{part}.json").exists():           # resume
