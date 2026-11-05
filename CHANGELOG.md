@@ -58,7 +58,13 @@ How the numbers moved (0–299, six sets of 50):
   5 km tunnel by 3–15 m at the top of the range. Soft form: S4 18.1–21.8 m, (e/σ)² 1.12; seeds 113,
   125, 255 stay under 25 m with mean-only. Note10 10-state: S4 4.8–23.7 → 6.4–16.0 m (mean-only),
   the rest unchanged.
-- SUPERVISOR_CHANGELOG
+- Supervisor (what the app shows, class rule + majority monitor): Note10 at 30 Pa/km S1 96–104 →
+  5.3–6.6 m and S3 99–106 → 1.4–1.8 m, branch 0 → 300 of 300 each; low-end at 30 Pa/km (new cases)
+  12–25 m, branch 300/300 (20 seeds of v0.5.13: 181–381 m, "main" 20/20); the 3 % tunnel at ±25 Pa/km
+  2.6–5.4 m (Note10), 12–23 m (low-end). Low-end S4 16.1–224.7 → 12.1–15.0 m, (e/σ)² with monitor
+  0.60 → 0.10. Low-end cost: S1, S2, S6 portal +2–5 m, S2 0 → 3 late; callouts earlier on flat
+  tunnels (S1 0.8 → 2.5 s, S5 → 4.1–4.6 s with 16–34 % > 5 s early, 5 km → 5.5–6.1 s with 64–86 %),
+  likely the gradient state's prior σ (not retuned). Note10 rest within ±0.6 m.
 - VALIDATION_CHANGELOG
 - SNAPSHOT_CHANGELOG
 

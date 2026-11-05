@@ -3,7 +3,7 @@
 Short version of [`REPORT.md`](REPORT.md), which has the full results, mechanisms and sources.
 All numbers come from simulation. The main results are ranges over six independent sets of 50
 seeds (0–299); tuning was done on seeds 0–49, features were designed on 50–299, and a further 100
-seeds (400–499) were run once on the v0.5.13 configuration for validation (`reports/0.5.13/`; each
+seeds (500–599) were run once on the v0.5.14 configuration for validation (`reports/0.5.14/`; each
 earlier version spent its own validation set). Every parameter is tagged [MEAS] (measured, cited), [SPEC] (datasheet) or
 [ASSUMED] (chosen here).
 
@@ -32,6 +32,9 @@ information:
 - **Vehicle constraints:** no sideways or vertical body motion, which holds pitch. The sideways
   row is skipped in curves, where the car slips.
 - **Barometer:** holds the vertical channel.
+- **Map grade (v0.5.14):** where the map has the road's grade, it is a weak measurement of pitch;
+  the tunnel's ventilation pressure gradient and the map's grade error are then states, so the
+  barometer cannot be fooled by the gradient. Off where the map has no grade.
 - **Stop detection:** zero-velocity updates at stops.
 - **Driver model (cruise):** a stated assumption that the speed wanders slowly (σ 0.5 m/s,
   τ 60 s), not a measurement.
@@ -65,8 +68,10 @@ sees truth.
 - **Phone:** a rigid mount, at an unknown angle (estimated on the approach).
 - **IMU:** Note10 (LSM6DSR) Allan terms [MEAS].
 - **GNSS:** 3 m and 0.1 m/s errors, correlated [ASSUMED].
-- **Barometer:** a closed cabin and no ventilation pressure gradient [ASSUMED].
-- **Map:** lateral error σ 2 m and length error σ 0.5 % [ASSUMED].
+- **Barometer:** a closed cabin; no ventilation pressure gradient in the nominal runs, ±25–30 Pa/km
+  tested [ASSUMED].
+- **Map:** lateral error σ 2 m and length error σ 0.5 %; a grade profile where the map has one, with
+  a 10 % scale error σ [ASSUMED].
 - **Vehicle and driver:** sideslip 0.4°/(m/s²), speed wander as above [ASSUMED].
 - **Not used:**
   - magnetometer in the tunnel, where steel distorts it (it is used only in open sky, for the
@@ -81,31 +86,30 @@ Ranges over six sets of 50 seeds (0–299):
 
 | | straight, steady (S1, S6) | stop-and-go, braking (S4, S5) | S-bend (S2) | 5 km |
 |---|---|---|---|---|
-| along-track error at the exit branch, rms | 11–18 m | 25–48 m | 4.2–5.2 m | 25–38 m |
-| along-track error at the portal, rms | 5.6–8.0 m | 4.5–8.7 m | 4.0–5.5 m | 13–17 m |
+| along-track error at the exit branch, rms | 11–18 m | 28–39 m | 3.9–5.1 m | 26–38 m |
+| along-track error at the portal, rms | 5.7–8.1 m | 4.6–8.0 m | 4.3–5.4 m | 12–16 m |
 | cross-track error at the portal, rms (v0.5.10, 50 seeds) | 1.5 m | 1.3–1.9 m | 3.2 m | 2.1 m |
-| callouts more than 1 s late (k = 1), of 300 | 0 | 3 (S4), 15 (S5) | 0 | 2 |
-| shown position under 5 m after the exit, median per set | 12–17 s | 11–18 s | 12–16 s | 10–12 s |
+| callouts more than 1 s late (k = 1), of 300 | 0 | 2 (S4), 11 (S5) | 0 | 0 |
+| shown position under 5 m after the exit, median per set | 13–17 s | 11–16 s | 12–16 s | 10–12 s |
 
-- **Consistent.** The filter's own uncertainty covers its error everywhere: mean (e/σ)² ≤ 0.38 in
-  every set, conservative.
-- **Callout.** Without the rule, 0–56 % of callouts come more than 1 s late; with k = 1, 20 of
-  3000. k = 1.3 cuts them 4 fold (5 of 3000; 0 of 1000 in validation), at 0.3–0.9 s more
-  advance. Prompts at 1000, 500 and 200 m and "now" follow the same rule; when the shown 2σ is over
+The V-profile tunnel (S3) is 2.6–3.3 m at the exit branch and 1.7–2.1 m at the portal since the
+map grade became a measurement (11.6–15.7 and 8.9–11.8 m before).
+
+- **Consistent.** The filter's own uncertainty covers its error everywhere: mean (e/σ)² ≤ 0.37 in
+  every set, conservative, and every run is within 2σ at the portal.
+- **Callout.** Without the rule, 0–66 % of callouts come more than 1 s late; with k = 1, 13 of
+  3000. k = 1.3 cuts them to 5 of 3000 (VALIDATION_K13), at 0.3–0.9 s more advance. Prompts at 1000, 500 and 200 m and "now" follow the same rule; when the shown 2σ is over
   100 m the prompt names no distance ("Exit A ahead, keep right").
-- **Exit branch.** Recognised in 2999 of 3000 runs that take it (one stop-and-go run decided
-  "main", 41 m off). When the car goes straight on, "main" is reported in 599 of 600 (one
-  undecided). Such a car has no curve to correct it: on stop-and-go, 11 % of straight-on runs are
-  more than 100 m off at the exit, until GNSS returns. Until "main" is decided (13 s on
-  stop-and-go) the car is shown on the branch, up to 38 m off.
+- **Exit branch.** Recognised in 3000 of 3000 runs that take it. When the car goes straight on,
+  "main" is reported in 600 of 600. Such a car has no curve to correct it: on stop-and-go, 5 of 300
+  straight-on runs are more than 100 m off at the exit (34 in v0.5.13), until GNSS returns. Until
+  "main" is decided (11–12 s on stop-and-go) the car is shown on the branch, up to 36 m off.
 - **Exit.** The largest jump at the exit is under 6.3 m (p95); the shown position is under 5 m
-  for good a median 10–18 s after the first fix.
+  for good a median 10–17 s after the first fix.
 - **Mount.** Estimated on the approach to ~0.6° per axis rms, it costs nothing measurable when the
   driver accelerates or turns before the tunnel. Without that, the yaw rests on the magnetometer
   (5.8°) and the portal error triples (17–25 m) and is not consistent: open.
-- **Validation on 100 untouched seeds (400–499),** run once, nothing changed after: no run more
-  than 100 m off; inside the ranges except the S3 diverge error in one set (17.9 m against
-  11.6–15.7 m); 6 of 1000 callouts more than 1 s late with k = 1.
+- **Validation on 100 untouched seeds (500–599),** run once, nothing changed after: VALIDATION_SUMMARY.
 - **Branch window.** v0.5.11's validation found one S4 run 110 m off: its dead-reckoning error
   (−220 m) put the turn outside the branch decision's fixed 100 m window. The window now grows
   with σ_s (max(100 m, 2σ_s)); the run is 3 m off and nothing else moved. Those seeds are now a
@@ -145,12 +149,16 @@ The app runs all three and shows one (REPORT §4.12):
 - **Rehearsing short outages in open sky could not tell the filters apart** and was dropped.
 - **What the monitor can and cannot see:** it catches failures where the models differ (a tunnel
   pressure gradient, suspension pitch), late. It cannot see one in a part they share.
-- **Low-end stop-and-go:** 89–335 m in v0.5.11, 16–21 m in five of six sets now and 14 / 20 m in
-  validation (one set at 225 m: one run, seed 232, a wrong lock in the curve after the crawl, partly
-  explained). The 10-state filter got a curve landmark (the yaw change over 12 s against the map's
+- **Low-end stop-and-go:** 89–335 m in v0.5.11, 16–21 m in five of six sets in v0.5.13 (one set at
+  225 m: seed 232), 12–15 m in all six now, with no run over 100 m. Seed 232's mechanism was traced
+  in v0.5.14 (the barometer rows at a wrong pitch drove the speed down, then a speed row collapsed
+  σ); v0.5.13's explanation of it was wrong. The 10-state filter got a curve landmark (the yaw change over 12 s against the map's
   curve), its own branch decision (the same profile against the branch and the main tunnel), a
   one-way speed constraint ("a car does not reverse in a one-way tunnel", [ASSUMED]) and a speed
-  row from the lateral force in turns (v·ω).
+  row from the lateral force in turns (v·ω); in v0.5.14 the map grade as a pitch measurement.
+- **Pressure gradient in the product:** at 30 Pa/km the app showed the car ~100 m off and on the
+  wrong branch in every run (Note10); a low-end phone, never measured there before, was 181–405 m off
+  (20 seeds). Now 1.4–6.6 m (Note10) and 12–25 m (low-end), right branch in every run (REPORT §4.15).
 - **Recovery through the supervisor:** under 5 m a median 12–19 s after the exit on the Note10,
   17–28 s on a low-end phone.
 
@@ -162,8 +170,13 @@ The app runs all three and shows one (REPORT §4.12):
    look the same. A stricter "driver holds speed" model is 30–50 % better, but fails as soon as the
    speed wanders by ±1 km/h.
 3. **A tunnel pressure gradient** of 30 Pa/km is read as a climb: 110–120 m error and a wrong branch
-   decision. A gradient state fixes that case but costs normal roads, because the barometer cannot
-   tell the gradient from a pitch error. It should be measured in a real tunnel.
+   decision. A gradient state alone fixes that case but costs normal roads, because in a straight,
+   constant-grade tunnel the barometer cannot tell the gradient from a pitch error. With the map's
+   grade as a measurement of pitch (v0.5.14) the barometer's residual goes to the gradient, and both
+   products handle it (S3 at 30 Pa/km: 2.3 m on a Note10). On a constant grade a map grade error and
+   a pressure gradient cannot be told apart; the filter knows their sum, not the share of each, and
+   its σ says so. Without the map's grade the old behaviour returns. The gradient itself is
+   [ASSUMED] and should be measured in a real tunnel.
 4. **The map's own error limits what the map adds.** At twice the assumed map error the filter
    becomes optimistic, and on 5 km the map then does worse than no map.
 5. **A low-end IMU** (MPU9250 class [MEAS]) works with its own tuning, with the fast gyro bias
@@ -172,8 +185,11 @@ The app runs all three and shows one (REPORT §4.12):
    - consistent ((e/σ)² 0.2–0.6) and no late callouts;
    - stop-and-go fails for the ESKF (~0.9 km). At crawling speed the vehicle constraints see a pitch
      error only through v·δθ, so the cheap gyro's tilt leaks gravity into the speed. The supervisor
-     selects the 10-state filter there (14–21 m in seven of eight sets); a road-grade pitch prior
-     brought the ESKF to 88 m but stays off (not consistent, needs the map grade).
+     selects the 10-state filter there (12–15 m in all six sets in v0.5.14);
+   - the price of the map grade on a low-end phone: a σ much larger than the error on flat tunnels,
+     so callouts come 2–6 s early on average (5 km: most more than 5 s early), and +2–5 m at the
+     portal on three scenarios. The gradient state's assumed prior is the likely source; not
+     retuned.
 6. **Levelling from gravity** (an extra update) was tried and left off: it helps one scenario and
    hurts five.
 
@@ -184,6 +200,8 @@ The app runs all three and shows one (REPORT §4.12):
     assumed;
   - a rigid mount, one lane, one car; the magnetometer model is assumed;
   - the mount without an approach manoeuvre (magnetometer yaw only) is not consistent yet;
+  - the map-grade layer needs a grade profile in the map; its shape errors are not simulated, and
+    with a Note10 the 10-state filter stays without it (overconfident in stop-and-go, source open);
   - a causal stop detector tuned on the [ASSUMED] vibration model: conservative, it catches 80 % of
     the stop time and never fires while the car moves.
 - **With real devices:**
@@ -221,6 +239,10 @@ The app runs all three and shows one (REPORT §4.12):
   - **Low-end stop-and-go:** corrected the agent's reading of the gyro noise (a profile artefact),
     designed the curve landmark and the 10-state branch test, and rejected a gate that assumed a
     straight main tunnel.
+  - **Map grade (v0.5.14):** had the low-end gradient failure measured, asked for the map grade as a
+    source instead of another filter, made the map's grade error a state, required that a map
+    without grade give the old filter exactly, and set the one-way constraint's form per filter on
+    the condition that both forms ran on 300 seeds.
 - **Detail:** REPORT §6 lists every intervention and the choices the agent made. It also lists
   the AI-side errors and what caught them: the author, AI reviews, the agent's own tests, or the
   consistency metric.
