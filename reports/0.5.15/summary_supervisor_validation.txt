@@ -1,0 +1,63 @@
+case | portal v0.5.14 -> v0.5.15 | (e/σ)² | late>1s (class k) | k sweep 0.5/0.7/1: late, >5s early, mean s, now m
+S1-5km/lowend                              | 15.6–18.5 -> 11.9–16.3 | 0.33 | 0/100 | k0.5: 0, 1, -2.9–-2.7, 63–70 ; k0.7: 0, 19, -4.2–-4.0, 95–101 ; k1.0: 0, 77, -6.1–-5.8, 142–147
+S1-5km/lowend_straight                     | – -> 63.5–75.4 | 0.06 | 0/100 | k0.5: 0, 1, -2.9–-2.7, 63–70 ; k0.7: 0, 19, -4.2–-4.0, 95–101 ; k1.0: 0, 77, -6.1–-5.8, 142–147
+S1-5km/note10                              | 13.8–14.6 -> 12.9–13.8 | 0.24 | 1/100 | k0.5: 8, 0, -0.6–-0.4, 6–12 ; k0.7: 5, 0, -1.0–-0.8, 17–22 ; k1.0: 1, 0, -1.7–-1.5, 33–38
+S1-5km/note10_straight                     | – -> 122.0–131.9 | 2.22 | 1/100 | k0.5: 8, 0, -0.6–-0.4, 6–12 ; k0.7: 5, 0, -1.0–-0.8, 17–22 ; k1.0: 1, 0, -1.7–-1.5, 33–38
+S1/lowend                                  | 14.6 -> 11.4–13.4 | 0.31 | 0/100 | k0.5: 0, 0, -1.2, 31–32 ; k0.7: 0, 0, -1.7, 45–46 ; k1.0: 0, 0, -2.5–-2.4, 66
+S1/lowend_pressure30                       | 15.4–17.2 -> 13.2–16.1 | 0.45 | 0/100 | k0.5: 0, 0, -2.5, 66–67 ; k0.7: 0, 0, -3.0, 79–80 ; k1.0: 0, 0, -3.7, 99
+S1/lowend_straight                         | – -> 24.7–25.9 | 0.03 | 0/100 | k0.5: 0, 0, -1.2, 31–32 ; k0.7: 0, 0, -1.7, 45–46 ; k1.0: 0, 0, -2.5–-2.4, 66
+S1/note10                                  | 6.1–6.5 -> 6.2–7.8 | 0.24 | 0/100 | k0.5: 2, 0, -0.3, 7 ; k0.7: 0, 0, -0.5, 12 ; k1.0: 0, 0, -0.8, 20
+S1/note10_straight                         | – -> 57.2–59.0 | 1.96 | 0/100 | k0.5: 2, 0, -0.3, 7 ; k0.7: 0, 0, -0.5, 12 ; k1.0: 0, 0, -0.8, 20
+S1/pressure30                              | 5.4–5.8 -> 5.5–7.3 | 0.19 | 0/100 | k0.5: 0, 0, -0.8–-0.7, 18–19 ; k0.7: 0, 0, -0.9, 24 ; k1.0: 0, 0, -1.2, 31
+S2/lowend                                  | 11.6–11.7 -> 13.0–15.8 | 0.39 | 4/100 | k0.5: 4, 0, -0.1–0.0, -1–1 ; k0.7: 3, 0, -0.4–-0.3, 5–7 ; k1.0: 0, 0, -0.8–-0.7, 13–15
+S2/note10                                  | 5.3–5.9 -> 4.5–5.4 | 0.30 | 0/100 | k0.5: 0, 0, -0.1, 2 ; k0.7: 0, 0, -0.2, 4 ; k1.0: 0, 0, -0.3, 6
+S3/lowend                                  | 23.0–27.2 -> 21.7–25.6 | 0.95 | 0/100 | k0.5: 0, 0, -1.2, 24 ; k0.7: 0, 0, -1.8, 34–35 ; k1.0: 0, 0, -2.6, 50–51
+S3/lowend_pressure30                       | 22.6–24.7 -> 18.4–22.1 | 0.71 | 0/100 | k0.5: 0, 0, -1.7–-1.6, 32–33 ; k0.7: 0, 0, -2.2, 43–44 ; k1.0: 0, 0, -3.0, 59
+S3/note10                                  | 1.4–1.6 -> 1.6–1.8 | 0.08 | 0/100 | k0.5: 0, 0, -0.2, 3–4 ; k0.7: 0, 0, -0.3, 4–6 ; k1.0: 0, 0, -0.4–-0.3, 7–8
+S3/pressure30                              | 1.4–1.6 -> 1.5–1.7 | 0.06 | 0/100 | k0.5: 0, 0, -0.2, 3–4 ; k0.7: 0, 0, -0.3–-0.2, 4–5 ; k1.0: 0, 0, -0.4–-0.3, 7
+S4/lowend                                  | 12.5–15.2 -> 13.1–18.0 | 0.12 | 2/100 | k0.5: 2, 5, -2.6–-2.3, 46–50 ; k0.7: 1, 10, -3.2–-3.0, 59–63 ; k1.0: 0, 21, -4.1–-3.9, 78–82
+S4/lowend_straight                         | – -> 51.5–54.4 | 0.31 | 2/100 | k0.5: 2, 5, -2.6–-2.3, 46–50 ; k0.7: 1, 10, -3.2–-3.0, 59–63 ; k1.0: 0, 21, -4.1–-3.9, 78–82
+S4/note10                                  | 5.5–6.0 -> 4.9–5.3 | 0.10 | 1/100 | k0.5: 7, 0, -1.2–-1.0, 18–23 ; k0.7: 5, 0, -1.7–-1.5, 29–34 ; k1.0: 1, 1, -2.5–-2.3, 45–50
+S4/note10_straight                         | – -> 56.4–63.6 | 0.60 | 1/100 | k0.5: 7, 0, -1.2–-1.0, 18–23 ; k0.7: 5, 0, -1.7–-1.5, 29–34 ; k1.0: 1, 1, -2.5–-2.3, 45–50
+S5/lowend                                  | 7.3–10.8 -> 8.5–12.6 | 0.30 | 0/100 | k0.5: 0, 0, -1.9–-1.7, 29–32 ; k0.7: 0, 2, -3.0–-2.8, 48–51 ; k1.0: 0, 23, -4.5–-4.3, 76–79
+S5/note10                                  | 6.8–7.5 -> 6.9–7.4 | 0.23 | 6/100 | k0.5: 23, 0, 0.1–0.3, -10–-7 ; k0.7: 12, 0, -0.3–-0.0, -2–1 ; k1.0: 6, 0, -0.9–-0.6, 8–11
+S6/lowend                                  | 14.4–16.6 -> 11.2–15.4 | 0.33 | 0/100 | k0.5: 0, 0, -1.3–-1.2, 32 ; k0.7: 0, 0, -1.8, 46 ; k1.0: 0, 0, -2.5, 66
+S6/note10                                  | 7.0–7.4 -> 7.1–8.2 | 0.25 | 0/100 | k0.5: 2, 0, -0.3, 6–7 ; k0.7: 0, 0, -0.5, 12 ; k1.0: 0, 0, -0.8, 20
+custom:L=5000,g=3,v=110/lowend             | 12.7–18.8 -> 15.0–15.9 | 0.45 | 0/100 | k0.5: 0, 0, -1.7, 56 ; k0.7: 0, 0, -2.5–-2.4, 82–83 ; k1.0: 0, 2, -3.6, 121
+custom:L=5000,g=3,v=110/lowend_pressure-25 | 14.8–15.3 -> 12.3–12.8 | 0.33 | 2/100 | k0.5: 2, 0, -0.3–-0.2, 9–11 ; k0.7: 0, 0, -1.0, 36 ; k1.0: 0, 0, -2.2–-2.1, 74
+custom:L=5000,g=3,v=110/lowend_pressure25  | 15.0–21.7 -> 17.8–19.5 | 0.58 | 0/100 | k0.5: 0, 1, -3.3, 109 ; k0.7: 0, 5, -4.1–-4.0, 135–136 ; k1.0: 0, 55, -5.2, 173
+custom:L=5000,g=3,v=110/note10             | 2.8–3.6 -> 2.7–4.6 | 0.08 | 0/100 | k0.5: 0, 0, -0.3, 8–10 ; k0.7: 0, 0, -0.6–-0.5, 16–18 ; k1.0: 0, 0, -0.9, 27–30
+custom:L=5000,g=3,v=110/pressure-25        | 4.0–5.0 -> 4.5–6.4 | 0.10 | 0/100 | k0.5: 8, 0, 0.3–0.4, -12–-10 ; k0.7: 2, 0, 0.1, -3–-2 ; k1.0: 0, 0, -0.3, 10–11
+custom:L=5000,g=3,v=110/pressure25         | 2.4–3.0 -> 2.5–3.4 | 0.05 | 0/100 | k0.5: 0, 0, -1.0–-0.9, 28–30 ; k0.7: 0, 0, -1.2, 36–38 ; k1.0: 0, 0, -1.6, 48–50
+
+K1 display (product): route -> main_first (limit) | main_first no limit; off-road max mean (p95) [runs>10 m]; transition step max (p95); not-yet s; decision at portal
+S1-5km/lowend                              | route 1.2–2.1 (8.2) [5] step 1.0 | main 9.8–10.5 (40.1) [34] step 1.0 (p95 1.0) | no-limit step 40.2 (p95 10.6) off 6.6–7.7 | err max 64.9–69.7 | not yet 2.9–3.0 s | {'branch': 100, 'main': 0, 'none': 0}
+S1-5km/lowend_straight                     | route 417.4–420.4 (450.8) [100] step 1.0 | main 1.2–2.2 (8.2) [5] step 0.9 (p95 0.9) | no-limit step 0.9 (p95 0.9) off 1.2–2.2 | err max 53.3–66.0 | not yet 60.7 s | {'branch': 0, 'main': 0, 'none': 100}
+S1-5km/note10                              | route 2.0 (12.1) [6] step 1.0 | main 3.8–4.0 (18.9) [7] step 1.0 (p95 1.0) | no-limit step 2.5 (p95 1.7) off 3.1–3.3 | err max 25.2–30.7 | not yet 2.6 s | {'branch': 100, 'main': 0, 'none': 0}
+S1-5km/note10_straight                     | route 31.3–31.8 (36.0) [100] step 36.1 | main 2.0 (12.1) [6] step 0.9 (p95 0.9) | no-limit step 0.9 (p95 0.9) off 2.0 | err max 117.5–126.4 | not yet 8.6–8.9 s | {'branch': 0, 'main': 100, 'none': 0}
+S1/lowend                                  | route 0.5 (0.5) [0] step 1.0 | main 3.5–3.9 (12.9) [6] step 1.1 (p95 0.9) | no-limit step 9.8 (p95 4.4) off 2.4–2.8 | err max 33.1–33.2 | not yet 2.9–3.0 s | {'branch': 100, 'main': 0, 'none': 0}
+S1/lowend_pressure30                       | route 0.5 (0.5) [0] step 1.0 | main 8.8–9.2 (19.6) [33] step 1.1 (p95 1.0) | no-limit step 15.5 (p95 8.9) off 8.2–8.8 | err max 41.9–43.6 | not yet 2.9–3.0 s | {'branch': 100, 'main': 0, 'none': 0}
+S1/lowend_straight                         | route 244.0–244.2 (259.2) [100] step 1.0 | main 0.6 (0.6) [0] step 0.8 (p95 0.8) | no-limit step 0.8 (p95 0.8) off 0.6 | err max 19.6–21.0 | not yet 36.0 s | {'branch': 0, 'main': 0, 'none': 100}
+S1/note10                                  | route 0.5 (0.5) [0] step 1.0 | main 2.9–3.0 (5.7) [0] step 1.0 (p95 1.0) | no-limit step 3.5 (p95 2.8) off 2.4–2.5 | err max 12.1–13.9 | not yet 2.8 s | {'branch': 100, 'main': 0, 'none': 0}
+S1/note10_straight                         | route 13.0–13.4 (16.3) [99] step 15.5 | main 0.6 (0.6) [0] step 1.0 (p95 0.9) | no-limit step 1.0 (p95 0.9) off 0.6 | err max 55.4–56.4 | not yet 5.4 s | {'branch': 0, 'main': 100, 'none': 0}
+S1/pressure30                              | route 0.5 (0.5) [0] step 1.0 | main 4.1–4.2 (7.9) [0] step 1.0 (p95 1.0) | no-limit step 4.3 (p95 3.0) off 3.9–4.0 | err max 13.2–15.1 | not yet 2.8 s | {'branch': 100, 'main': 0, 'none': 0}
+S2/lowend                                  | route 0.5–0.6 (0.5) [0] step 0.9 | main 3.0–3.3 (8.4) [1] step 0.9 (p95 0.9) | no-limit step 6.3 (p95 4.9) off 2.5–2.6 | err max 21.8–22.7 | not yet 3.0–3.1 s | {'branch': 100, 'main': 0, 'none': 0}
+S2/note10                                  | route 0.5 (0.5) [0] step 1.0 | main 2.9 (3.9) [0] step 1.0 (p95 1.0) | no-limit step 5.2 (p95 3.0) off 2.7–2.8 | err max 5.9–6.9 | not yet 2.8 s | {'branch': 100, 'main': 0, 'none': 0}
+S3/lowend                                  | route 0.5 (0.5) [0] step 1.0 | main 4.0–4.2 (10.5) [6] step 1.0 (p95 1.0) | no-limit step 10.6 (p95 7.6) off 3.5–3.6 | err max 29.4–32.2 | not yet 3.5 s | {'branch': 100, 'main': 0, 'none': 0}
+S3/lowend_pressure30                       | route 0.5 (0.5) [0] step 1.0 | main 5.1–5.3 (12.7) [13] step 1.0 (p95 1.0) | no-limit step 12.2 (p95 8.4) off 4.6–4.7 | err max 29.3–29.5 | not yet 3.5 s | {'branch': 100, 'main': 0, 'none': 0}
+S3/note10                                  | route 0.5 (0.5) [0] step 1.0 | main 2.3–2.4 (3.1) [0] step 1.0 (p95 1.0) | no-limit step 3.0 (p95 2.8) off 2.2–2.3 | err max 5.6–5.9 | not yet 2.9 s | {'branch': 100, 'main': 0, 'none': 0}
+S3/pressure30                              | route 0.5 (0.5) [0] step 1.0 | main 2.2–2.3 (2.9) [0] step 1.0 (p95 1.0) | no-limit step 3.2 (p95 2.5) off 2.2–2.3 | err max 5.7–6.0 | not yet 2.9 s | {'branch': 100, 'main': 0, 'none': 0}
+S4/lowend                                  | route 0.3–0.6 (0.3) [0] step 0.9 | main 8.6–10.1 (28.3) [30] step 0.9 (p95 0.9) | no-limit step 77.1 (p95 12.5) off 8.4–9.8 | err max 38.7–40.2 | not yet 4.0–4.3 s | {'branch': 100, 'main': 0, 'none': 0}
+S4/lowend_straight                         | route 186.9–189.5 (217.0) [100] step 1.0 | main 0.4–0.7 (0.4) [0] step 0.7 (p95 0.7) | no-limit step 0.7 (p95 0.7) off 0.4–0.7 | err max 42.5–44.4 | not yet 36.0 s | {'branch': 0, 'main': 0, 'none': 100}
+S4/note10                                  | route 1.9–2.5 (18.0) [6] step 1.0 | main 5.4–5.8 (18.0) [14] step 1.0 (p95 1.0) | no-limit step 3.3 (p95 1.9) off 4.7–5.2 | err max 24.5–26.9 | not yet 3.5–3.6 s | {'branch': 100, 'main': 0, 'none': 0}
+S4/note10_straight                         | route 33.4–33.7 (47.2) [100] step 57.7 | main 1.9–2.5 (18.0) [6] step 1.0 (p95 0.9) | no-limit step 1.0 (p95 0.9) off 1.9–2.5 | err max 50.5–56.4 | not yet 11.1–11.4 s | {'branch': 0, 'main': 100, 'none': 0}
+S5/lowend                                  | route 0.5–0.7 (0.5) [1] step 1.0 | main 5.0–5.3 (14.7) [15] step 1.0 (p95 1.0) | no-limit step 12.8 (p95 4.8) off 3.2–3.4 | err max 43.4–48.3 | not yet 3.4 s | {'branch': 100, 'main': 0, 'none': 0}
+S5/note10                                  | route 1.1–1.7 (8.8) [4] step 1.0 | main 1.5–2.1 (8.8) [4] step 1.0 (p95 1.0) | no-limit step 1.9 (p95 1.0) off 1.4–1.9 | err max 27.3–30.5 | not yet 2.5–2.6 s | {'branch': 100, 'main': 0, 'none': 0}
+S6/lowend                                  | route 0.6 (0.6) [0] step 1.0 | main 3.6–3.9 (9.8) [5] step 1.1 (p95 1.0) | no-limit step 6.0 (p95 4.1) off 2.8 | err max 32.3–33.0 | not yet 3.1 s | {'branch': 100, 'main': 0, 'none': 0}
+S6/note10                                  | route 0.6 (0.6) [0] step 1.0 | main 1.7–1.8 (4.2) [0] step 1.0 (p95 1.0) | no-limit step 2.6 (p95 1.8) off 1.4–1.5 | err max 13.8–15.1 | not yet 2.4 s | {'branch': 100, 'main': 0, 'none': 0}
+custom:L=5000,g=3,v=110/lowend             | route 0.9–1.4 (2.6) [2] step 1.0 | main 5.6–6.5 (14.5) [10] step 1.0 (p95 1.0) | no-limit step 3.2 (p95 1.6) off 1.7–2.5 | err max 65.7–70.8 | not yet 2.4 s | {'branch': 100, 'main': 0, 'none': 0}
+custom:L=5000,g=3,v=110/lowend_pressure-25 | route 8.8–11.5 (37.9) [36] step 1.0 | main 11.1–13.8 (37.9) [39] step 1.0 (p95 1.0) | no-limit step 1.2 (p95 1.0) off 8.9–11.6 | err max 95.9–99.6 | not yet 2.4 s | {'branch': 100, 'main': 0, 'none': 0}
+custom:L=5000,g=3,v=110/lowend_pressure25  | route 0.8 (0.8) [0] step 1.0 | main 10.0–10.3 (23.3) [38] step 1.0 (p95 1.0) | no-limit step 10.5 (p95 5.4) off 8.6–8.7 | err max 58.8–62.1 | not yet 2.4 s | {'branch': 100, 'main': 0, 'none': 0}
+custom:L=5000,g=3,v=110/note10             | route 0.8 (0.8) [0] step 1.0 | main 1.0–1.3 (2.6) [0] step 1.0 (p95 1.0) | no-limit step 1.5 (p95 1.1) off 0.9 | err max 18.4–20.5 | not yet 1.4 s | {'branch': 100, 'main': 0, 'none': 0}
+custom:L=5000,g=3,v=110/pressure-25        | route 1.1–1.8 (9.3) [3] step 1.0 | main 1.6–2.3 (9.3) [3] step 1.0 (p95 1.0) | no-limit step 1.1 (p95 1.0) off 1.1–1.8 | err max 33.8–35.2 | not yet 1.6 s | {'branch': 100, 'main': 0, 'none': 0}
+custom:L=5000,g=3,v=110/pressure25         | route 0.8 (0.8) [0] step 1.0 | main 2.2–2.5 (9.2) [5] step 1.0 (p95 1.0) | no-limit step 2.1 (p95 1.6) off 2.2–2.4 | err max 19.2–19.8 | not yet 1.4–1.5 s | {'branch': 100, 'main': 0, 'none': 0}

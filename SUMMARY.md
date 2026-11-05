@@ -3,8 +3,9 @@
 Short version of [`REPORT.md`](REPORT.md), which has the full results, mechanisms and sources.
 All numbers come from simulation. The main results are ranges over six independent sets of 50
 seeds (0–299); tuning was done on seeds 0–49, features were designed on 50–299, and a further 100
-seeds (500–599) were run once on the v0.5.14 configuration for validation (`reports/0.5.14/`; each
-earlier version spent its own validation set). Every parameter is tagged [MEAS] (measured, cited), [SPEC] (datasheet) or
+seeds (500–599) were run once on the v0.5.14 configuration for validation (`reports/0.5.14/`) and
+600–699 on v0.5.15 for the supervisor and the 10-state filter (`reports/0.5.15/`; each earlier
+version spent its own validation set). Every parameter is tagged [MEAS] (measured, cited), [SPEC] (datasheet) or
 [ASSUMED] (chosen here).
 
 ## Problem

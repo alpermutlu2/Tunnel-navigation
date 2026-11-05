@@ -48,8 +48,11 @@ How the numbers moved (0–299, six sets of 50, through the supervisor unless st
   gradient cases 0, 0, 0 and 3 of 300 (rule: ≤ the Note10's 1–2 % at k = 1, met); S2 3 → 16 of 300, S4
   0 → 4, 5 km 0 → 2 (S2 open, §5).
 - Note10 product: unchanged (ESKF unchanged, k = 1).
-- VALIDATION_LINE
-- SNAPSHOT_LINE
+- Validation 600–699 (run once): no run > 100 m; branch right in every run; straight-on cars drawn
+  0.4–2.5 m from their road; low-end gradient cases 2 of 400 callouts late at k = 0.5, S-bend 4 of 100;
+  low-end S2, S4, S5 and Note10 S1 one set each 0.5–3 m above their portal ranges.
+- Snapshot (`metrics.json`, Note10 ESKF, 20 seeds): no metric moved (the ESKF is unchanged). Tests
+  206 → 209.
 
 ## v0.5.14 (2026-11-05): the map grade as a measurement, pressure-gradient and grade-error states
 

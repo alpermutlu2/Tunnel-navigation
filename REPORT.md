@@ -199,6 +199,17 @@ seed 271 decided "main"). When the car goes straight on, "main" is reported in 6
   1 km tunnel, where the error is already under 5 m; the supervisor's follower in §4.12); 12–33 runs
   of 300 per scenario are not under 5 m within 60 s.
 
+**v0.5.15 validation** (600–699, run once; `reports/0.5.15/supervisor_validation.json`,
+`ekf10_validation_600-699.json`). The ESKF is unchanged since v0.5.14, so its table below stands; the
+v0.5.15 changes are in the supervisor and the 10-state filter.
+- **No run more than 100 m off;** the branch shown is right in every run that takes it.
+- **K1:** a car going straight on is drawn 0.4–2.5 m from its road on average (v0.5.14's route policy:
+  13–420 m); a low-end car taking the branch 3–14 m (p95 up to 40 m on 5 km), as in §4.16.
+- **K3:** the low-end gradient cases have 2 of 400 callouts more than 1 s late at k = 0.5 (the 3 %
+  tunnel at −25 Pa/km); the S-bend 4 of 100 (k = 0.7: 3; k = 1: 0), as on 0–299.
+- **Ranges:** low-end S2 (15.8 m), S4 (18.0 m) and S5 (12.6 m) and Note10 S1 (7.8 m) are above their
+  300-seed portal ranges in one set each, by 0.5–3 m.
+
 **3.1 Validation on untouched seeds** (500–599, v0.5.14 configuration, run once;
 `reports/0.5.14/validation_500-599.json`, `ekf10_validation_500-599.json`, `supervisor_validation.json`).
 Nothing was changed after this run.
