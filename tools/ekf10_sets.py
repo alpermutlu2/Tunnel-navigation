@@ -21,15 +21,14 @@ sys.path.insert(0, str(ROOT))
 import tunnelsim  # noqa: E402
 
 SETS = (0, 50, 100, 150, 200, 250)
-OUT = "ekf10_sets_300_v3.json"
-if "--validation" in sys.argv:
-    SETS = (400, 450); OUT = "ekf10_validation_400-499.json"; sys.argv.remove("--validation")
+OUT = "ekf10_sets_300.json"
+if "--validation" in sys.argv:          # v0.5.14: 500-599, run once
+    SETS = (500, 550); OUT = "ekf10_validation_500-599.json"; sys.argv.remove("--validation")
 KEYS = ("S1", "S2", "S3", "S4", "S5", "S6s", "S6", "S6L", "S1-1km", "S1-5km")
-VARIANTS = {"v0.5.12": dict(lateral_speed=False, _mount="known"),            # v0.5.12 configuration
-            "lateral": dict(_mount="known"),                                   # + lateral-force speed
-            "v0.5.13": dict()}                                                 # + mount estimated in open sky
-if "--only-final" in sys.argv:          # v0.5.13 option (a): the 10-state mount-yaw state changed only this variant
-    VARIANTS = {"v0.5.13": dict()}; OUT = OUT.replace(".json", "_final.json"); sys.argv.remove("--only-final")
+# v0.5.14 (owner 2026-11-05): the shipped defaults (hybrid on for low-end, mean-only one-way constraint) and
+# the same with the soft one-way form: the choice rests on seeds 232 and 247, so both run on 300 seeds.
+# v0.5.13's variants are in reports/0.5.13/ekf10_sets_300_v3*.json.
+VARIANTS = {"v0.5.14": dict(), "soft": dict(no_reverse_mode="soft")}
 IMUS = {"note10": (), "lowend": ("imu_lowend",)}
 FAIL_M = 100.0
 
@@ -65,7 +64,7 @@ def one(args):
 if __name__ == "__main__":
     jobs = [(k, lo, imu, True) for imu in IMUS for lo in SETS for k in KEYS] + \
            [(k, lo, imu, False) for imu in IMUS for lo in SETS for k in ("S1", "S4")]
-    d = ROOT / "reports" / tunnelsim.__version__
+    d = ROOT / "reports" / tunnelsim.__version__.split(".dev")[0]
     d.mkdir(parents=True, exist_ok=True)
     res = {"version": tunnelsim.__version__, "sets": list(SETS), "variants": VARIANTS, "fail_m": FAIL_M, "runs": {}}
     if (d / OUT).exists():

@@ -42,3 +42,26 @@ def test_hybrid_default_by_class():
     assert k.grade_update and k.baro_grad
     assert not resolve_hybrid(Ekf10Config(), "ekf10", "note10").baro_grad
     assert resolve_hybrid(Ekf10Config(grade_update=False), "ekf10", "mpu9250").grade_update is False
+
+
+def test_map_without_grade_turns_the_hybrid_off():
+    """Owner 2026-11-05: a missing grade is not a zero grade; without it the filter is the v0.5.13 one."""
+    from tunnelsim.eskf import EskfConfig
+    from tunnelsim.experiments import eskf_experiment
+    seeds = np.arange(2)
+    off = dict(grade_update=False, baro_grad=False)
+    a = eskf_experiment("S3", seeds, eskf_cfg=EskfConfig(**off, no_reverse_mode="soft"), keep_tracks=True)
+    b = eskf_experiment("S3", seeds, keep_tracks=True, map_grade=False)
+    np.testing.assert_array_equal(a["_tracks"]["e_s"], b["_tracks"]["e_s"])
+    sim = simulate_run("S3", seeds, ("imu_lowend",))
+    c = ekf10_experiment("S3", seeds, ("imu_lowend",), sim=sim, keep_tracks=True, cfg10=Ekf10Config(**off))
+    d = ekf10_experiment("S3", seeds, ("imu_lowend",), sim=sim, keep_tracks=True, map_grade=False)
+    np.testing.assert_array_equal(c["_tracks"]["e_s"], d["_tracks"]["e_s"])
+
+
+def test_no_grade_road_hides_grade():
+    from tunnelsim.experiments import get_scenario
+    from tunnelsim.mapview import MapView, map_has_grade, without_grade
+    road = get_scenario("S3").road
+    assert map_has_grade(road) and not map_has_grade(without_grade(road))
+    assert MapView(road).has_grade and not MapView(without_grade(road)).has_grade

@@ -19,9 +19,15 @@ sys.path.insert(0, str(ROOT))
 
 import tunnelsim  # noqa: E402
 
+CUSTOM = "custom:L=5000,g=3,v=110"       # v0.5.14: 5 km, 3 % grade, 110 km/h (the hybrid's case)
 CASES = [(k, imu) for k in ("S1", "S2", "S3", "S4", "S5", "S6", "S1-5km") for imu in ("note10", "lowend")] + \
-        [("S3", "pressure30"), ("S1", "pressure30")]
-OV = {"note10": (), "lowend": ("imu_lowend",), "pressure30": ("baro_tunnel_30pa",)}
+        [("S3", "pressure30"), ("S1", "pressure30")] + \
+        [("S3", "lowend_pressure30"), ("S1", "lowend_pressure30")] + \
+        [(CUSTOM, i) for i in ("note10", "lowend", "pressure25", "lowend_pressure25", "pressure-25", "lowend_pressure-25")]
+OV = {"note10": (), "lowend": ("imu_lowend",), "pressure30": ("baro_tunnel_30pa",),
+      "lowend_pressure30": ("imu_lowend", "baro_tunnel_30pa"),        # v0.5.14: the finding that led to the hybrid
+      "pressure25": ("set:baro.tunnel_grad_pa_per_km=25",), "lowend_pressure25": ("imu_lowend", "set:baro.tunnel_grad_pa_per_km=25"),
+      "pressure-25": ("set:baro.tunnel_grad_pa_per_km=-25",), "lowend_pressure-25": ("imu_lowend", "set:baro.tunnel_grad_pa_per_km=-25")}
 
 
 def one(args):
@@ -41,7 +47,7 @@ if __name__ == "__main__":
     # "sets": the class rule only (no rehearsals) on four independent sets of 50 seeds
     spans = {"dev": [(0, 50)], "heldout": [(50, 100)], "smoke": [(0, 2)],
              "sets": [(0, 50), (50, 100), (100, 150), (150, 200)],
-             "validation": [(400, 450), (450, 500)]}.get(part) or globals()["_SPANS"]
+             "validation": [(500, 550), (550, 600)]}.get(part) or globals()["_SPANS"]     # v0.5.14: 500-599
     rules = ("class",) if part.startswith(("sets", "validation")) else ("class", "rehearsal", "simplest")
     res = {"version": tunnelsim.__version__, "spans": spans, "rules": rules, "runs": {}}
     d = ROOT / "reports" / tunnelsim.__version__

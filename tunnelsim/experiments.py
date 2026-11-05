@@ -202,9 +202,11 @@ def simulate_run(key, seeds, overrides=(), imu_switches=None, branch=True, vehic
 
 
 def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=None, keep_tracks=False,
-                    branch=True, vehicle=None, mount_err_deg=None, map_err=None, mount="estimated", approach_manoeuvre=True):
+                    branch=True, vehicle=None, mount_err_deg=None, map_err=None, mount="estimated", approach_manoeuvre=True,
+                    map_grade=True):
     """branch=False: negative control, the car goes straight on at the diverge while the map (and
-    the branch check) still has the branch on the route (review 7)."""
+    the branch check) still has the branch on the route (review 7). map_grade=False: the map has no
+    grade profile (v0.5.14: the hybrid then switches off)."""
     from .eskf import EskfConfig, run_eskf
     seed_ids = np.arange(seeds) if np.isscalar(seeds) else np.asarray(seeds)
     seeds = len(seed_ids)
@@ -215,7 +217,9 @@ def eskf_experiment(key, seeds=50, overrides=(), zupt_oracle=False, eskf_cfg=Non
     # assumption removal (C): mount_err_deg offsets the filter's mount; v0.5.13: mount="estimated"
     F, W, C_bp_filter, mount_diag = filter_mount(tr, t, F, W, gnss, seed_ids, mount, mount_err_deg)
     C_bp_eval = tr.C_bp if mount == "known" else C_bp_filter     # the body frame as the filter holds it
-    from .mapview import MapView
+    from .mapview import MapView, without_grade
+    if not map_grade:
+        map_road = without_grade(map_road)
     mv = MapView(map_road, *(map_err or (0.0, 1.0)))     # map_err: (lateral offset m, length scale)
     cfg_e = eskf_cfg or EskfConfig()
     if mount_diag is not None:
@@ -434,7 +438,8 @@ def ekf1d_experiment(key, seeds=50, overrides=(), use_grade=True, mount_err_deg=
 # v0.5.11: 10-state map-constrained filter (tunnelsim/ekf10.py), scored like the 1D baseline
 # ---------------------------------------------------------------------------------------------
 def ekf10_experiment(key, seeds=50, overrides=(), mount_err_deg=None, cfg10=None, eskf_cfg=None, sim=None,
-                     branch=True, keep_tracks=False, mount="estimated", vehicle=None, approach_manoeuvre=True):
+                     branch=True, keep_tracks=False, mount="estimated", vehicle=None, approach_manoeuvre=True,
+                     map_grade=True):
     """Along-track metrics at the diverge and the portal, consistency, callout timing (k = 0, 1),
     exit step. branch=False: negative control (the car goes straight on, the filter's route takes
     the branch; the 10-state filter has no second hypothesis), scored as the horizontal distance
@@ -446,6 +451,9 @@ def ekf10_experiment(key, seeds=50, overrides=(), mount_err_deg=None, cfg10=None
     sc, tr, t, F, W, gnss, bt, bh = sim if sim is not None else simulate_run(key, seed_ids, overrides, branch=branch,
                                                                              vehicle=vehicle, approach_manoeuvre=approach_manoeuvre)
     road = get_scenario(key, branch=True).road
+    if not map_grade:                                   # v0.5.14: a map without grade profile
+        from .mapview import without_grade
+        road = without_grade(road)
     F, W, C_bp_f, mount_diag = filter_mount(tr, t, F, W, gnss, seed_ids, mount, mount_err_deg)
     if mount_diag is not None:
         from dataclasses import replace as _rp
@@ -546,7 +554,8 @@ def _three_filters(t, F, W, gnss, bt, bh, C_bp, r_b, road, mv, k_end=None, eskf_
 
 
 def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsal", "simplest"), sim=None,
-                          keep_tracks=False, eskf_cfg=None, map_err=None, mount="estimated", vehicle=None, approach_manoeuvre=True):
+                          keep_tracks=False, eskf_cfg=None, map_err=None, mount="estimated", vehicle=None, approach_manoeuvre=True,
+                          map_grade=True):
     """The three filters, their open-sky rehearsals and the supervisor, scored against the truth.
     Metrics per filter and per selection rule (displayed track: selected filter in the tunnel,
     disagreement-inflated σ, ESKF handover after the exit)."""
@@ -556,6 +565,9 @@ def supervisor_experiment(key, seeds=50, overrides=(), rules=("class", "rehearsa
     sc, tr, t, F, W, gnss, bt, bh = sim if sim is not None else simulate_run(key, seed_ids, overrides, vehicle=vehicle,
                                                                              approach_manoeuvre=approach_manoeuvre)
     road = get_scenario(key, branch=True).road if sim is None else sc.road
+    if not map_grade:                                   # v0.5.14: a map without grade profile
+        from .mapview import without_grade
+        road = without_grade(road)
     mv = MapView(road, *(map_err or (0.0, 1.0)))
     F, W, C_bp, mount_diag = filter_mount(tr, t, F, W, gnss, seed_ids, mount)     # v0.5.13
     r_b = tr.lever_arm_b

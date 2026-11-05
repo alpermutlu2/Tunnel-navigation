@@ -126,6 +126,9 @@ class Ekf10Config:
     # v0.5.14 (owner, from the seed 232 diagnosis): "mean" moves v̂ to 0 and leaves P alone. The constraint is
     # an inequality; as an equality measurement (z = 0 − v̂, R = σ²) it collapsed σ_s through the s–v
     # correlation (450 → 54 m at −1018 m). Mean-only errs on the conservative side. "soft": v0.5.12-13.
+    # Owner 2026-11-05: mean here, soft in the ESKF. The reason is whether the s–v correlation can be
+    # trusted, not the filter: in seed 232 the speed error came from the barometer in the last 20 s, so
+    # the correlation was wrong. Measured, not derived (seeds 232, 247; 300 seeds of both forms, §4.15).
     no_reverse_mode: str = "mean"
     landmark_gate: str = "own"            # "own": this filter's branch decision; "turn": a turn seen only
                                           # (v0.5.12 A/B: on a straight main tunnel the two must agree)
@@ -237,7 +240,8 @@ def run_ekf10(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, road_map, cfg10: Ekf
         name = str(vals[np.argmax(cnt)])
     if name != "note10":
         cfg = replace(cfg, **FILTER_PROFILES[name])
-    cfg10 = resolve_hybrid(cfg10, "ekf10", name)
+    has_grade = road_map is not None and bool(getattr(road_map, "has_grade", hasattr(road_map, "grade")))
+    cfg10 = resolve_hybrid(cfg10, "ekf10", name, has_grade)
     sig_bi = cfg10.gyro_bi_note10 * (cfg10.gyro_bi_ratio_mpu9250 if name == "mpu9250" else 1.0)
     # body-frame specific force (forward) and rates (pitch, yaw) through the known mount
     fx = np.einsum("j,bnj->bn", C_bp[0], f)

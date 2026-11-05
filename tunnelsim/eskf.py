@@ -114,8 +114,11 @@ class EskfConfig:
     no_reverse_sigma: float = 0.5     # m/s [ASSUMED]; default soft form since v0.5.12 (owner): R = (0.02 m/s)² hurt (Note10 S4 5.0 → 6.5 m)
     # v0.5.14 (owner, seed 232): "mean" removes the backward speed from v̂ and leaves P alone (the
     # constraint is an inequality; as an equality measurement it collapses σ through correlations).
-    # "soft": the v0.5.12-13 measurement form.
-    no_reverse_mode: str = "mean"
+    # "soft": the v0.5.12-13 measurement form. Owner 2026-11-05: soft stays the ESKF's default: here the
+    # speed error is long dead-reckoning drift, the s–v correlation is right and the soft row corrects the
+    # position too (S4 seed 247: soft −3 m, mean −144 m; 20 seeds S4 diverge 35 → 50 m). Measured, not
+    # derived: rests on seeds 247 and 232 and the 300-seed run of both forms (REPORT §4.15).
+    no_reverse_mode: str = "soft"
     # v0.5.14 hybrid (owner 2026-11-05, A/B): the map grade as a measurement of the path pitch through the
     # vertical velocity, v_u = γ_road·|v_h| (no mount or suspension pitch enters: it is the velocity's
     # direction, which the barometer's height rate sees), with the map's grade = (1 + k)·the road's and k
@@ -236,9 +239,11 @@ FILTER_PROFILES = {
 HYBRID_DEFAULT = {"eskf": {"note10": True, "mpu9250": False}, "ekf10": {"note10": False, "mpu9250": True}}
 
 
-def resolve_hybrid(cfg, filt: str, cls_name: str):
-    """grade_update / baro_grad left at None take the class default (HYBRID_DEFAULT)."""
-    on = HYBRID_DEFAULT[filt].get(cls_name, False)
+def resolve_hybrid(cfg, filt: str, cls_name: str, has_grade: bool = True):
+    """grade_update / baro_grad left at None take the class default (HYBRID_DEFAULT). A map without a
+    grade profile (owner: missing, not zero) turns the whole hybrid off, the gradient state included:
+    alone it costs nominal accuracy (v0.5.11), so the filter is then the v0.5.13 one."""
+    on = HYBRID_DEFAULT[filt].get(cls_name, False) and has_grade
     kw = {k: on for k in ("grade_update", "baro_grad") if getattr(cfg, k) is None}
     return replace(cfg, **kw) if kw else cfg
 
@@ -390,7 +395,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
         cfg = replace(cfg, **FILTER_PROFILES[cls_name])
     elif cfg.imu_class != "note10":
         cfg = replace(cfg, **FILTER_PROFILES[cfg.imu_class])
-    cfg = resolve_hybrid(cfg, "eskf", cls_name)
+    has_grade = road_map is not None and bool(getattr(road_map, "has_grade", hasattr(road_map, "grade")))
+    cfg = resolve_hybrid(cfg, "eskf", cls_name, has_grade)
     NA = NX + 8          # (+ pitch-prior offset δγ, NX + 5; mount yaw δψ_m, NX + 6; map grade scale k, NX + 7)
     IP = NX + 5
     IY = NX + 6

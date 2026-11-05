@@ -10,6 +10,29 @@ from __future__ import annotations
 import numpy as np
 
 
+class NoGradeRoad:
+    """v0.5.14 (owner): a map without a grade profile. Proxies a road-like object and hides grade() and
+    grade_rate(): a missing grade is not a zero grade, so features that need it switch off."""
+    has_grade = False
+
+    def __init__(self, road):
+        self._road = road
+
+    def __getattr__(self, name):
+        if name in ("grade", "grade_rate"):
+            raise AttributeError(name)
+        return getattr(self._road, name)
+
+
+def without_grade(road):
+    return NoGradeRoad(road)
+
+
+def map_has_grade(m) -> bool:
+    """True when the estimator's map carries a grade profile (MapView.has_grade, or a road with grade())."""
+    return m is not None and bool(getattr(m, "has_grade", hasattr(m, "grade")))
+
+
 class MapView:
     def __init__(self, road, lat_offset_m: float = 0.0, length_scale: float = 1.0, step: float = 1.0):
         self.s = np.arange(0.0, road.length, step)
@@ -24,8 +47,10 @@ class MapView:
         self.xy = xy + lat_offset_m * n
         self.psi = np.unwrap(psi)
         self.kappa = np.gradient(self.psi, self.s)          # map curvature [1/m]
-        # road grade γ(s) [rad] and dγ/ds, when the road object has them (v0.5.11, pitch prior)
-        if hasattr(road, "grade"):
+        # road grade γ(s) [rad] and dγ/ds, when the road object has them (v0.5.11, pitch prior). v0.5.14:
+        # has_grade says whether the map carries them; the zeros below are a placeholder, not a flat road
+        self.has_grade = map_has_grade(road)
+        if self.has_grade:
             s0 = np.arange(0.0, road.length, step)
             self.gamma = road.grade(s0)
             self.gamma_rate = np.gradient(self.gamma, self.s)

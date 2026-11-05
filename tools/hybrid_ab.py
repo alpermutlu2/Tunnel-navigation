@@ -5,6 +5,7 @@ Map grade correct or 10 % too steep; gradient 0 / ±30 Pa/km (custom 3 % 5 km tu
 
     python tools/hybrid_ab.py ekf10 50 70   -> reports/<version>/hybrid_ab_ekf10_50-69.json (low-end and Note10)
     python tools/hybrid_ab.py eskf 50 70    -> reports/<version>/hybrid_ab_eskf_50-69.json  (Note10)
+    python tools/hybrid_ab.py eskf 50 70 v2 -> ..._v2.json: shipped defaults and the map without grade
 """
 import json
 import sys
@@ -36,6 +37,14 @@ CONFIGS = {
               "hybR10": dict(HYB, grade_error_state=False, grade_scale=1.1), "hybK10": dict(HYB, grade_scale=1.1)},
     "eskf": {"v0.5.13": dict(OFF, no_reverse_mode="soft"), "mean": dict(OFF), "grad": dict(OFF, baro_grad=True),
              "hybR10": dict(HYB, grade_error_state=False, grade_scale=1.1), "hybK": dict(HYB), "hybK10": dict(HYB, grade_scale=1.1)}}
+# v2 (owner 2026-11-05): the shipped defaults, and the map without a grade profile ("missing, not zero"):
+# the hybrid must switch itself off and give the v0.5.13 cell exactly ("_map_grade": False).
+CONFIGS_V2 = {
+    "ekf10": {"nograde": {"_map_grade": False}, "nograde_soft": {"_map_grade": False, "no_reverse_mode": "soft"}},
+    "eskf": {"default": {}, "nograde": {"_map_grade": False}}}
+V2 = len(sys.argv) > 4 and sys.argv[4] == "v2"
+if V2:
+    CONFIGS = CONFIGS_V2
 FILT = sys.argv[1] if len(sys.argv) > 1 else "ekf10"
 LO, HI = (int(sys.argv[2]), int(sys.argv[3])) if len(sys.argv) > 3 else (50, 70)
 CASES = cases(("imu_lowend",)) + cases(()) if FILT == "ekf10" else cases(())
@@ -55,12 +64,13 @@ def one(c):
     sim = simulate_run(key, seeds, ov, branch=br) if FILT == "ekf10" else None
     out = {}
     for name, kw in CONFIGS[FILT].items():
+        kw = dict(kw); mg = kw.pop("_map_grade", True)
         if FILT == "ekf10":
-            r = ekf10_experiment(key, seeds, ov, cfg10=Ekf10Config(**kw), sim=sim, branch=br, keep_tracks=br)
+            r = ekf10_experiment(key, seeds, ov, cfg10=Ekf10Config(**kw), sim=sim, branch=br, keep_tracks=br, map_grade=mg)
             br_ = r.get("branch10") or {}
             m = {"branch": br_.get("branch"), "main": br_.get("main")}
         else:
-            r = eskf_experiment(key, seeds, ov, eskf_cfg=EskfConfig(**kw), branch=br, keep_tracks=True)
+            r = eskf_experiment(key, seeds, ov, eskf_cfg=EskfConfig(**kw), branch=br, keep_tracks=True, map_grade=mg)
             bc = r["branch_confirm"]
             m = {"branch": bc["branch_reported_frac"], "main": bc["main_reported_frac"]}
         if not br:
@@ -84,7 +94,7 @@ def one(c):
 if __name__ == "__main__":
     d = ROOT / "reports" / tunnelsim.__version__.split(".dev")[0]
     d.mkdir(parents=True, exist_ok=True)
-    f = d / f"hybrid_ab_{FILT}_{LO}-{HI - 1}.json"
+    f = d / f"hybrid_ab_{FILT}_{LO}-{HI - 1}{'_v2' if V2 else ''}.json"
     res = json.loads(f.read_text()) if f.exists() else {}
     jobs = [c for c in CASES if tag(c) not in res]
     with ProcessPoolExecutor(2) as ex:
