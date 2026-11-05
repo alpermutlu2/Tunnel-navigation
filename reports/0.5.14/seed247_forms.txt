@@ -1,0 +1,4 @@
+no hybrid, mean-only     portal e  -143.7 m  σ  55.9 m  diverge  318.6 m
+no hybrid, soft          portal e    -3.1 m  σ  17.0 m  diverge  242.8 m
+hybrid, mean-only        portal e   -87.0 m  σ  20.5 m  diverge  250.2 m
+hybrid, soft (shipped)   portal e    -2.0 m  σ  17.0 m  diverge  171.2 m

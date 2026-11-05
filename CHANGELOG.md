@@ -32,7 +32,7 @@ REPORT §4.15.
   cell: identical to v0.5.13 in 17/17 ESKF and 34/34 10-state cases.
 - **One-way constraint, per filter** (`no_reverse_mode`): "mean" (v̂ to 0, P untouched) in the
   10-state filter, from the seed 232 trace; "soft" (v0.5.12–13) kept in the ESKF, where mean-only
-  cost S4 (seed 247 −3 → −144 m). Measured, not derived; both forms on 300 seeds below.
+  cost S4 (seed 247 −3 → −144 m, `seed247_forms.txt`). Measured, not derived; both forms on 300 seeds below.
 - **Per-member mount-yaw prior** (`mount_yaw_sigma` may be a tuple): the batch took its majority's.
 - **Prompts that never fire** are "not fired" and left out of the error (`navmetrics`).
 - **Coverage** (`experiments.coverage`): share within 1σ and 2σ at the diverge and the portal, in
@@ -41,7 +41,7 @@ REPORT §4.15.
   sweeps (unobservable); accel-bias random walk ×10 for the Note10 10-state filter (fixes its S4
   consistency but has no physical basis, and the trace does not support the hypothesis behind it).
 - **Tools:** `hybrid_ab.py` (and `v2` cells), `ekf10_ba_rw_ab.py`, `trace_ba_rw_s4.py`,
-  `diag_seed232.py`, `trace_ekf10_grade.py`, `supervisor_pressure_lowend.py`, `ekf10_baro_grad_ab.py`,
+  `diag_seed232.py`, `seed247_forms.py`, `trace_ekf10_grade.py`, `supervisor_pressure_lowend.py`, `ekf10_baro_grad_ab.py`,
   `ekf10_grad_trace.py`, `summarise_300.py`; `ekf10_sets.py` variants v0.5.14 / soft;
   `supervisor_eval.py` low-end + gradient and the 3 % tunnel at ±25 Pa/km; validation 500–599;
   `serve.py` hybrid selector; a debug hook in `run_ekf10` (every update, every landmark evaluation).
@@ -62,19 +62,19 @@ How the numbers moved (0–299, six sets of 50):
   5.3–6.6 m and S3 99–106 → 1.4–1.8 m, branch 0 → 300 of 300 each; low-end at 30 Pa/km (new cases)
   12–25 m, branch 300/300 (20 seeds of v0.5.13: 181–381 m, "main" 20/20); the 3 % tunnel at ±25 Pa/km
   2.6–5.4 m (Note10), 12–23 m (low-end). Low-end S4 16.1–224.7 → 12.1–15.0 m, (e/σ)² with monitor
-  0.60 → 0.10. Low-end cost: S1, S2, S6 portal +2–5 m, S2 0 → 3 late; callouts earlier on flat
+  0.60 → 0.10. Low-end cost: S1, S2, S6 portal +3–5 m, S2 0 → 3 late; callouts earlier on flat
   tunnels (S1 0.8 → 2.5 s, S5 → 4.1–4.6 s with 16–34 % > 5 s early, 5 km → 5.5–6.1 s with 64–86 %),
   likely the gradient state's prior σ (not retuned). Note10 rest within ±0.6 m.
 - Validation 500–599 (run once): ESKF Note10 inside the ranges except single sets of S2 and 1 km at
   the portal (≤ 0.2 m above) and the S4 diverge (below); no run > 100 m; 7 of 1000 callouts > 1 s
   late (k = 1), 2 (k = 1.3); S4 straight on 2 of 100 > 100 m (v0.5.13's validation: 9). Supervisor:
   low-end S4 15.2 / 12.5 m, (e/σ)² 0.13 / 0.06 with the monitor (10-state soft form 22.5 / 18.5 m,
-  1.40); gradient cases 1.4–5.8 m (Note10), 15–25 m (low-end), right branch in every run; low-end S3
-  and S6 one set each 1–2 m above their ranges.
+  1.40); gradient cases 1.4–5.8 m (Note10), 15–25 m (low-end), right branch in every run; low-end S3,
+  S6 and S4 one set each 0.2–2 m above their ranges.
 - Snapshot (`metrics.json`, Note10 ESKF, 20 seeds): S3 diverge 11.74 → 2.51 m, portal 9.06 → 1.73 m
   (the V profile is the map grade the row now uses); S4 diverge 30.03 → 21.59 m; S5 diverge 25.28 →
   28.66 m and 5 km 20.65 → 23.16 m (the hybrid's cost, as on 300 seeds); portal on S1, S2, S4 and the
-  S6 family +0.4–0.8 m (S6 5.35 → 6.11 m), within the 300-seed ranges; (e/σ)² within ±0.1. Callout
+  S6 family +0.4–0.8 m (S6 5.35 → 6.11 m), on this 20-seed sample (the 300-seed ranges are in REPORT §3); (e/σ)² within ±0.1. Callout
   late fraction S3 and S4 0.05 → 0. Truth, sensors, INS and budget unchanged. Tests 201 → 206.
 
 ## v0.5.13 (2026-10-30): mount estimated in open sky, lateral-force speed row, recovery and prompt metrics

@@ -98,12 +98,12 @@ map grade became a measurement (11.6–15.7 and 8.9–11.8 m before).
 - **Consistent.** The filter's own uncertainty covers its error everywhere: mean (e/σ)² ≤ 0.37 in
   every set, conservative, and every run is within 2σ at the portal.
 - **Callout.** Without the rule, 0–66 % of callouts come more than 1 s late; with k = 1, 13 of
-  3000. k = 1.3 cuts them to 5 of 3000 (2 of 1000 in validation), at 0.3–0.9 s more advance. Prompts at 1000, 500 and 200 m and "now" follow the same rule; when the shown 2σ is over
+  3000. k = 1.3 cuts them to 5 of 3000 (2 of 1000 in validation), at 0.1–0.8 s more advance. Prompts at 1000, 500 and 200 m and "now" follow the same rule; when the shown 2σ is over
   100 m the prompt names no distance ("Exit A ahead, keep right").
 - **Exit branch.** Recognised in 3000 of 3000 runs that take it. When the car goes straight on,
   "main" is reported in 600 of 600. Such a car has no curve to correct it: on stop-and-go, 5 of 300
   straight-on runs are more than 100 m off at the exit (34 in v0.5.13), until GNSS returns. Until
-  "main" is decided (11–12 s on stop-and-go) the car is shown on the branch, up to 36 m off.
+  "main" is decided (11–12 s on stop-and-go) the car is shown on the branch, at its farthest 32–36 m off on average.
 - **Exit.** The largest jump at the exit is under 6.3 m (p95); the shown position is under 5 m
   for good a median 10–17 s after the first fix.
 - **Mount.** Estimated on the approach to ~0.6° per axis rms, it costs nothing measurable when the
@@ -189,7 +189,7 @@ The app runs all three and shows one (REPORT §4.12):
      error only through v·δθ, so the cheap gyro's tilt leaks gravity into the speed. The supervisor
      selects the 10-state filter there (12–15 m in all six sets in v0.5.14);
    - the price of the map grade on a low-end phone: a σ much larger than the error on flat tunnels,
-     so callouts come 2–6 s early on average (5 km: most more than 5 s early), and +2–5 m at the
+     so callouts come 2–6 s early on average (5 km: most more than 5 s early), and +3–5 m at the
      portal on three scenarios. The gradient state's assumed prior is the likely source; not
      retuned.
 6. **Levelling from gravity** (an extra update) was tried and left off: it helps one scenario and

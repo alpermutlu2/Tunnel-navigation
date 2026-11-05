@@ -156,12 +156,12 @@ seed 271 decided "main"). When the car goes straight on, "main" is reported in 6
 (v0.5.13: 599, one run undecided); none reported the branch.
 
 - **Showing the car.**
-  - Along the road, in a straight tunnel at steady speed: 12–18 m after 1.5–2 min, 25–50 m with
+  - Along the road, in a straight tunnel at steady speed: 11–18 m after 1.5–2 min, 28–39 m with
     braking or stops.
   - Across the road: 1.3–3 m, which is the map's own lateral uncertainty; the filter cannot do
     better than the map here. Without the map layer, the cross-track error was 26 m on S1 and
     106 m at 5 km, because heading is not observable in a straight tunnel.
-  - The exit curve brings the portal error down to 2.5–16 m.
+  - The exit curve brings the portal error down to 1.7–16 m.
   - The filter is consistent: mean (e/σ)² ≤ 0.37 in every set, and every run is within 2σ at the
     portal.
   - Low-end phones: §4.12 and §4.15 (the 10-state filter is shown there: S4 12–15 m at the portal
@@ -175,7 +175,7 @@ seed 271 decided "main"). When the car goes straight on, "main" is reported in 6
     seeds S5 is at 2–10 % per set.
   - **With k = 1.3:** 5 of 3000 (4 on S5, 1 on S4); with k = 1.65, 1 (S4). In the v0.5.14 validation, k = 1 gives 7 of
     1000 and k = 1.3 gives 2 (§3.1). The cost is
-    0.3–0.9 s more advance (S4: 2.3 → 3.1 → 4.0 s early on average).
+    0.1–0.8 s more advance (S4: 2.3 → 3.1 → 4.0 s early on average).
   - **Why k = 1 stays:** σ_s is about twice the real error ((e/σ)² 0.1–0.4), so k = 1 is in effect
     ~2σ. The k = 1.3 row is the measured alternative; it cuts the late callouts from 13 to 5 in 3000.
   - k has to be chosen again once σ is calibrated on real data. The voice says the estimated
@@ -185,7 +185,8 @@ seed 271 decided "main"). When the car goes straight on, "main" is reported in 6
   - Car goes straight on (negative control, map with the branch): "main" in 600 of 600. The
     portal error then stays at the no-map value: S1 17–27 m rms, S4 40–50 m rms, because there is
     no exit curve. Until "main" is decided (5 s on S1, 11–12 s on S4 after the diverge) the screen
-    shows the car on the branch, up to 36 m from the road it is on (§4.13).
+    shows the car on the branch, at its farthest 32–36 m from the road it is on on average per set
+    (p95 39–54 m; §4.13).
   - **On S4, 5 of 300 straight-on runs are more than 100 m off at the portal** (0, 0, 2, 0, 2 and 1
     per set; v0.5.13: 34). This is the cost of "the map's along-track gain comes only from curves":
     with no curve before the exit, nothing corrects the dead reckoning until GNSS returns, and then
@@ -218,7 +219,7 @@ Nothing was changed after this run.
 - **Low-end, product configuration (supervisor):** S4 portal 15.2 / 12.5 m, (e/σ)² 0.39 / 0.17
   without the monitor and 0.13 / 0.06 with it; no run over 100 m. The 10-state filter's soft form
   gives 22.5 / 18.5 m, (e/σ)² up to 1.40: the shipped mean-only form holds on new seeds. Low-end S3
-  (27.3 m) and S6 (16.6 m) are above their ranges in one set each, by 2 and 1 m.
+  (27.3 m), S6 (16.6 m) and S4 (15.2 m) are above their ranges in one set each, by 2, 1 and 0.2 m.
 - **Pressure gradient on new seeds:** 1.4–5.8 m on a Note10 and 15–25 m on a low-end phone, the
   right branch in every run (§4.15).
 - **The validation sets of v0.5.11 and v0.5.12** each found something (one S4 failure; ranges
@@ -942,12 +943,13 @@ or "main" where the car takes the branch). v0.5.13 against the shipped hybrid (`
 | S6 nominal | 11.9 m | 13.8 m | 15.1 m | 14.6 m |
 | 5 km nominal | 21 m | 35 m (portal 21 → 9 m) | 23 m | 22 m |
 
-- Every hybrid cell is consistent at the diverge ((e/σ)² ≤ 0.83) and decides the branch in 20/20.
+- Every shipped hybrid cell is consistent at the diverge ((e/σ)² ≤ 0.57; ≤ 0.87 with the grade 10 %
+  too steep) and decides the branch in 20/20.
 - **The cost:** on a low-end phone S2 11 → 19 m, S5 17 → 26 m and the 5 km diverge 21 → 35 m. The likely
   reason, not traced: the gradient state takes part of the barometer's height information in every
   tunnel, flat ones too.
 - **The ESKF on a Note10 is the news:** the wrong exit in a gradient tunnel goes from 20/20 to 0,
-  S3 from 155 m to 2.5 m, for +3 m on S5.
+  S3 at 30 Pa/km from 155 m to 2.3 m, for +3 m on S5.
 - The low-end car that goes straight on is still 190–252 m off at the portal (§5).
 
 *Where the hybrid is on* (`eskf.HYBRID_DEFAULT`): the two products, the ESKF on a Note10-class
@@ -986,8 +988,8 @@ s–v correlation. "Mean-only" moves v̂ to 0 and leaves P alone.
 - **10-state filter: mean-only.** In seed 232 the speed error came from the barometer in the last
   20 s, so the s–v correlation was wrong and the soft form collapsed σ_s.
 - **ESKF: soft.** There the speed error is long dead-reckoning drift, the correlation is right and
-  the soft row corrects the position too. S4 seed 247: soft −3 m, mean-only −144 m (−87 m with the
-  hybrid); 20 seeds of S4, diverge 35 → 50 m and the straight-on portal 53 → 71 m with mean-only.
+  the soft row corrects the position too. S4 seed 247 at the portal (`seed247_forms.txt`): soft −3 m,
+  mean-only −144 m; with the hybrid −2 m and −87 m; 20 seeds of S4, diverge 35 → 50 m and the straight-on portal 53 → 71 m with mean-only.
 - **Measured, not derived.** The split is about whether the s–v correlation can be trusted, not
   about the filter, and it rests on two seeds (232, 247) and the 300-seed run of both forms below.
   The soft form had rescued low-end S4 seeds 113, 125 and 255 in v0.5.12, partly by correcting the
@@ -1001,13 +1003,15 @@ S4 it is overconfident: diverge 16.8 m with (e/σ)² 19, 60 % of runs within 2σ
   walk leaves (e/σ)² at 14.6; ×10 brings it to 1.7 with 95 % within 2σ and the portal 12.4 → 5.1 m,
   for S5 17.7 → 22.2 m and the S4 diverge 16.8 → 20.2 m. ×10 is ~7 times the measured Note10 bias
   instability, with no physical basis. Not taken.
-- **The trace does not support the hypothesis** (`trace_ba_rw_s4.txt`). b̂_a moves by 3·10⁻⁴ m/s².
-  The error builds in the crawl and the acceleration after the last stop (seed 59: v̂ ~1 m/s high,
+- **The trace does not support the hypothesis** (`trace_ba_rw_s4.txt`). b̂_a moves by ~4·10⁻⁴ m/s²
+  after the last stop (1.5·10⁻³ over the whole run). The error builds in the crawl and the
+  acceleration after the last stop (seed 59: v̂ ~1 m/s high, `trace_ekf10_grade_note10_s4_seed59.txt`;
   the error 2.5 → 44 m in 80 s), and σ_s does not cover it. In the curve before the diverge the
-  heading and yaw-rate rows then lock ŝ with that error: 10 of 20 runs arrive with σ_s ≈ 3.5 m and
-  e ≈ 17 m. ×10 helps only because the larger σ_v keeps σ_s near 30 m at the curve. The source of
-  the speed error is not isolated; the suspension pitch on acceleration explains at most a third
-  (2.6 % of Δv, ~0.3 of the ~1 m/s). Open (§5).
+  heading and yaw-rate rows then lock ŝ with that error: 8 of 20 runs arrive with σ_s of 2.5–3.6 m
+  and e of 17–34 m. ×10 helps only because the larger σ_v keeps σ_s at 14–38 m at the curve. The
+  source of the speed error is not isolated; the suspension pitch on acceleration can explain at most
+  a third (an estimate, not a measurement: the truth's 1.5°/g makes g·sin θ_d 2.6 % of Δv, ~0.3 of
+  the ~1 m/s). Open (§5).
 - The Note10 product is the ESKF (§4.12), so the delivered behaviour does not change.
 
 *Also in v0.5.14.*
@@ -1058,7 +1062,7 @@ defaults: hybrid on for low-end, mean-only). Portal rms per set, runs > 100 m, w
 | low-end S5 | 7.9–10.4 m, div 15.7–25.1 m | 6.8–12.3 m, div 22.5–37.1 m | = mean-only |
 | low-end S6 | 8.2–10.8 m, div 11.2–13.9 m | 12.1–15.6 m, div 13.3–17.4 m | = mean-only |
 | low-end 5 km | 15.9–19.6 m, div 19.8–30.8 m | 12.8–18.7 m, div 29.4–45.9 m | = mean-only |
-| other Note10 scenarios | – | = v0.5.13 (no hybrid, no reversal) | = v0.5.13 |
+| other Note10 scenarios | – | = v0.5.13 (no hybrid, no reversal), except S4 straight on 188–193 → 185–191 m | = v0.5.13 |
 
 Low-end S4 portal error of the seeds in question, v0.5.13 / mean-only / soft: 113: 21 / 4 / 24 m,
 125: 32 / 22 / 27 m, 200: 62 / 11 / 15 m, **232: −1581 / 16 / 26 m**, 255: 10 / 7 / 14 m.
@@ -1103,7 +1107,7 @@ started this work (`supervisor_lowend_pressure_50-69.json`).
   catch.
 - **Low-end S4 has no failure** and its shown σ is honest ((e/σ)² ≤ 0.10 with the monitor, 0.41
   without).
-- **What it costs on a low-end phone, in accuracy:** +2–5 m at the portal on S1, S2 and S6 (top of
+- **What it costs on a low-end phone, in accuracy:** +3–5 m at the portal on S1, S2 and S6 (top of
   the range), and 3 late callouts on S2 where there were none; S3, S4 and S5 lose their late
   callouts (5, 2, 3 → 0).
 - **And in timing, which is the larger cost:** on flat tunnels the shown σ_s grows much more than
