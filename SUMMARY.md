@@ -266,6 +266,11 @@ The app runs all three and shows one (REPORT §4.12):
     follower's limit across, approved pausing the 10-state filter's map rows, and set the low-end
     callout margin by an acceptance rule he wrote before the 300-seed run (the agent's first rule
     could not fail); on its borderline result he chose k = 0.7 (v0.5.16).
+  - **Stress tests (v0.5.16.1–17):** found the remaining gaps himself by stress-testing the live
+    simulator and watching its playback: a 16-state car spinning at stops (a drawing error), two
+    places where the page drew an estimate with the truth's help, mixed speed units, and a
+    cross-track error held 16–27 s after the exit under three times the assumed map errors. He
+    chose the fix for the last one (cap only the along-track correction, §4.17 of the report).
 - **Detail:** REPORT §6 lists every intervention and the choices the agent made. It also lists
   the AI-side errors and what caught them: the author, AI reviews, the agent's own tests, or the
   consistency metric.

@@ -7,6 +7,31 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.17 (2026-11-06): re-acquisition caps the along-track correction only (a stress test by the owner)
+
+The owner ran S4 in the live simulator with the sliders at about three times the assumed map errors
+(offset 6 m, length +1.5 %, exit multipath 45 m, plus gradient, vibration, bias, speed change and
+driver wander) and saw the 16-state car 10–17 m beside the road after the exit, for 16–27 s. REPORT
+§4.17, §5, §6; DESIGN log.
+
+- **Mechanism (traced, not changed):** the length error moves the map's diverge 33 m on; after the
+  20° turn the map's branch runs 11.2 m beside the real one, and in the tunnel the filter follows
+  the map. The filter already models this lever (`map_scale_lateral`, v0.5.3): at the assumed 0.5 %
+  the cross-track error is covered ((e/σ)² 0.3), at three times it is not (5–16), as expected.
+- **Change (owner):** `EskfConfig.reacq_cap_along_only = True`. The 2 m-per-fix cap of the
+  re-acquisition phase now limits the correction along the car's forward axis (from the attitude),
+  the part the screen would show as a jump; across and in height the gain is whole. `_update_capped`
+  takes the direction; the Joseph form keeps P valid.
+- **20 seeds (50–69):** nominal unchanged (cross-track within 0.4 m, exit step and recovery within
+  0.3 m / 0.3 s). Under the stress the cross-track median 15 s after the exit is 2.1–4.2 m instead of
+  4.1–11.0 m; the along-track exit step does not change. The raw 16-state car may now step up to
+  5.2 m sideways in one epoch; the drawn point is road-snapped and does not.
+- **300 seeds:** RESULT300_CL
+- **Tests:** `tests/test_v0517.py` (the cap limits along only, keeps across, P stays positive
+  definite; the default). The page data carries the 16-state cross-track σ (`sig_lat`).
+- **Docs:** REPORT §6 and SUMMARY's AI section record that the owner found the last gaps (this one
+  and the v0.5.16.1 display ones) by stress-testing the live simulator.
+
 ## v0.5.16.1 (2026-11-06): simulator driver's view follows the drawn point (tools only)
 
 - The driver's view centred on the app's along-track ŝ snapped to the route, so while the branch was

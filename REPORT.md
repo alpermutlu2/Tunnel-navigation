@@ -1280,6 +1280,59 @@ callout, mean "now" prompt early):
 
 On the 5 km tunnel the "now" prompt comes 89–105 m early at k = 0.7 (57–73 m at 0.5, 135–150 m at 1).
 
+**4.17 v0.5.17: a map stress test and the re-acquisition cap** (owner 2026-11-06, found with the
+live simulator's sliders; `tunnelsim/eskf.py` `reacq_cap_along_only`; `tools/reacq_lateral_ab.py`;
+`reports/0.5.17/`).
+
+*What the owner found.* S4, seeds 0 and 46, with the sliders well past the assumptions: map lateral
+offset 6 m, map length error +1.5 %, exit multipath 45 m, pressure gradient 20 Pa/km, vibration ×3,
+accelerometer bias instability ×2, a +10 km/h speed change, driver wander σ_d 5.4 km/h. The 16-state car
+stayed 10–17 m to the side of the road after the exit and took 16–27 s to come back under 2 m.
+
+*Mechanism, in the tunnel.* The map's length error scales the map from the tunnel entry, so its
+diverge sits 1.5 % × 2.2 km = 33 m further on than the real one. After both roads have turned 20°
+they run parallel 33 m × sin 20° = 11.2 m apart, and the filter, which in the tunnel takes its
+lateral position only from the map, follows the map's branch; the 6 m offset adds to it (17.6 m
+measured, seed 0). Single factors on S4 seed 0: nominal 1.6 m after the diverge, the length error
+alone 11.6 m, the speed change alone 3.3 m; the multipath does not enter. The filter already carries
+this lever (`map_scale_lateral`, since v0.5.3: the scale error moves the polyline sideways after a
+turn), so within the assumed map errors σ covers it: with a 0.5 % length error (1σ) the portal
+cross-track error is 2.3 m against σ 4.2 m, (e/σ)² 0.3. At three times the assumed errors it is 5–16,
+as a 3σ error should be. Nothing in the tunnel can correct it; the answer is the next GNSS fix.
+
+*Mechanism, after the exit.* No fix was rejected (242 accepted, 0 rejected); 35 were capped. The
+re-acquisition phase limits each position correction to 2 m so that the screen does not jump along
+the road (§4.11), but it limited the sideways part too. The app draws the car snapped to the road, so
+a sideways correction is never seen on the screen.
+
+*Change (owner):* the cap limits the along-track part of the correction only, along the car's
+forward axis taken from the attitude (not from v̂, which has no direction at a stop: the lesson of
+the same day's heading fix in the simulator). The gain across it and in height is kept whole; the
+Joseph form keeps the covariance valid for that gain. The first 3 s of velocity only and the R
+inflation against exit multipath are unchanged.
+
+| 20 seeds (50–69), research ESKF | cross-track median at +10 / +15 / +20 s after the exit [m] | cross-track rms 0–30 s [m] | along-track exit step p95 [m] |
+|---|---|---|---|
+| nominal S1 | 0.8 / 1.7 / 2.6 → **1.0 / 2.1 / 2.6** | 3.1 → 3.1 | 4.6 → 4.6 |
+| nominal S4 | 1.6 / 2.5 / 2.7 → **1.7 / 2.8 / 2.7** | 2.8 → 2.8 | 3.0 → 2.9 |
+| nominal S5 | 0.9 / 2.2 / 1.8 → **0.9 / 2.3 / 1.8** | 2.8 → 2.8 | 4.7 → 4.7 |
+| nominal 5 km | 1.4 / 3.3 / 2.6 → **1.5 / 3.5 / 2.7** | 3.3 → 3.4 | 4.8 → 4.7 |
+| stress S1 | 8.6 / 5.8 / 2.5 → **7.3 / 3.2 / 2.9** | 7.4 → 6.9 | 6.1 → 6.1 |
+| stress S4 | 12.2 / 9.6 / 6.4 → **8.7 / 4.2 / 2.9** | 10.3 → 8.7 | 6.8 → 6.8 |
+| stress S5 | 9.4 / 4.1 / 2.4 → **8.1 / 2.1 / 2.2** | 7.3 → 6.8 | 6.9 → 6.9 |
+| stress 5 km | 13.6 / 11.0 / 8.7 → **7.5 / 3.7 / 3.2** | 12.0 → 9.1 | 4.2 → 4.2 |
+
+Stress = map lateral offset 6 m, length +1.5 %, exit multipath 45 m. `reports/0.5.17/reacq_lateral_ab_50-69.json`.
+
+- **Nominal runs do not change** (cross-track within 0.4 m at every time, the along-track exit step
+  and recovery identical within 0.3 m and 0.3 s on 20 seeds).
+- **Under the stress the cross-track error comes back about twice as fast:** 15 s after the exit
+  the median is 2–4 m instead of 4–11 m. The first 5 s barely change: the velocity-only seconds and
+  the multipath R inflation still hold the position.
+- **The price:** the raw 16-state car on the map may step up to 5.2 m sideways in one epoch (2.1 m
+  before; 5 km stress). The drawn point is snapped to the road and does not move.
+- **300 seeds:** RESULT300
+
 ## 5. Limitations and next steps
 
 - **Simulation only.** The IMU noise terms are measured. The time shape of the noise, vibration,
@@ -1370,6 +1423,11 @@ On the 5 km tunnel the "now" prompt comes 89–105 m early at k = 0.7 (57–73 m
   strictly, gave 0.7 over 0.5. The price: on the 5 km tunnel 59 of 300 callouts come more than 5 s
   early (mean ~4 s), against 16 of 300 more than 1 s late on the S-bend at 0.5. It rests on the
   [ASSUMED] σ_g; measuring σ_g in a real tunnel is the lasting fix, and k is chosen again then.
+- **Map errors beyond the assumed ones** (§4.17): the map's length error turns into a cross-track
+  error of Δs·sin(turn angle) after a branch (11 m for +1.5 % at 2.2 km and 20°), on top of its lateral
+  offset. σ covers the assumed size (0.5 %, 2 m), not three times it, and nothing corrects it before
+  the next GNSS fix. Map shape errors are not modelled at all (§3.2). After the exit the assumed 30 m
+  multipath alone leaves 4–8 m of cross-track error at times in nominal runs.
 - **A Note10 car going straight on is not consistent through the supervisor** (§3): (e/σ)² 2.35 (S1)
   and 2.54 (5 km), the error 54–141 m rms at the portal with no curve to correct it. Not traced. The
   candidate: after "main" the map rows on the main geometry lower σ_s although a straight road gives
@@ -1457,6 +1515,7 @@ On the 5 km tunnel the "now" prompt comes 89–105 m early at k = 0.7 (57–73 m
 | "Not yet" display (§4.16) | Chose "main first" after a decision deck; required the follower's 2 m/s limit across as well, and that "no re-route while not yet" be written as an [ASSUMED] product rule the policy rests on | CHANGELOG v0.5.15 |
 | 10-state rows while "not yet" (§4.16) | Approved pausing them (symmetric, safe), not running them on the main geometry; added that the "never decided" count be reported and predicted it would not change | CHANGELOG v0.5.15 |
 | Callout k by class (§4.16) | Accepted k = 0.5 on a condition he set: the low-end gradient cases' late share over 300 seeds must not exceed the Note10's at k = 1, else 0.7; required the sentence that k rests on the assumed σ_g; ruled the adaptive prior structurally impossible in a straight tunnel. On the borderline result read the rule strictly and set k = 0.7 | CHANGELOG v0.5.15, v0.5.16 |
+| Stress tests and playback (v0.5.16.1–17) | **Found the gaps himself by stress-testing the live simulator and watching its playback:** the 16-state car spinning at stops (its heading was drawn from v̂, the filter's own heading was right); the constant-speed car and the 16-state edge distance drawn with the truth's help; speed units mixed between the screen and the documents (set the rule: screen km/h, code and documents SI); and, with the sliders at three times the assumed map errors, a 10–17 m cross-track error held 16–27 s after the exit. Chose to cap only the along-track correction after the agent traced the mechanism, and asked for this row | CHANGELOG v0.5.16.1, v0.5.17; §4.17 |
 | Low-end S4 mechanism | **Corrected the agent's diagnosis** (yaw drift at stops) from a trace: the filter loses speed while crawling, because pitch is weakly observable at low speed. Found that the in-browser page could not work on GitHub Pages because `*.zip` was git-ignored | §4.6, CHANGELOG v0.5.7 |
 
 ### 6.2 Choices the agent made
