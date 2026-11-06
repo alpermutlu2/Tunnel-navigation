@@ -106,7 +106,7 @@ Ranges over six sets of 50 seeds (0–299):
 | along-track error at the portal, rms | 5.7–8.1 m | 4.6–8.0 m | 4.3–5.4 m | 12–16 m |
 | cross-track error at the portal, rms (v0.5.10, 50 seeds) | 1.5 m | 1.3–1.9 m | 3.2 m | 2.1 m |
 | callouts more than 1 s late (k = 1), of 300 | 0 | 2 (S4), 11 (S5) | 0 | 0 |
-| shown position under 5 m after the exit, median per set | 13–17 s | 11–16 s | 12–16 s | 10–12 s |
+| shown position under 5 m after the exit, median per set | 13–17.5 s | 11–16.5 s | 12–16 s | 10–12 s |
 
 The V-profile tunnel (S3) is 2.6–3.3 m at the exit branch and 1.7–2.1 m at the portal since the
 map grade became a measurement (11.6–15.7 and 8.9–11.8 m before).
@@ -129,7 +129,7 @@ map grade became a measurement (11.6–15.7 and 8.9–11.8 m before).
   the branch is drawn on the main tunnel for those 3–4 s. The app must not re-route meanwhile
   [ASSUMED].
 - **Exit.** The largest jump at the exit is under 6.3 m (p95); the shown position is under 5 m
-  for good a median 10–17 s after the first fix.
+  for good a median 10–17.5 s after the first fix.
 - **Mount.** Estimated on the approach to ~0.6° per axis rms, it costs nothing measurable when the
   driver accelerates or turns before the tunnel. Without that, the yaw rests on the magnetometer
   (5.8°) and the portal error triples (17–25 m) and is not consistent: open.

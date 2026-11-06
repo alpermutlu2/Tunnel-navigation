@@ -135,7 +135,9 @@ The ranges below are over six independent sets of 50 seeds (0–299), final conf
 mount estimated on the approach (§4.14) and, since v0.5.14, the map grade as a pitch measurement
 with the pressure-gradient and grade-error states (§4.15; `reports/0.5.14/eval_sets_300_default.json`).
 Against v0.5.13: S3 11.6–15.7 → 2.6–3.3 m at the diverge (its V profile is the grade the filter now
-uses), S4 35.0–48.4 → 28.3–35.9 m, S5 24.8–35.6 → 27.7–38.6 m; the rest within ±1 m.
+uses), S4 35.0–48.4 → 28.3–35.9 m, S5 24.8–35.6 → 27.7–38.6 m; the rest within ±1 m. The exit-step
+and recovery rows are the v0.5.17 re-run (`reports/0.5.17/eval_sets_300_default.json`; §4.17); the
+other rows did not change.
 
 | | S1 | S2 | S3 | S4 | S5 | S6s | S6 | S6L | S1-1km | S1-5km |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -148,8 +150,8 @@ uses), S4 35.0–48.4 → 28.3–35.9 m, S5 24.8–35.6 → 27.7–38.6 m; the r
 | runs within 2σ at the portal (v0.5.14) | 100 % | 100 % | 100 % | 100 % | 100 % | 100 % | 100 % | 100 % | 100 % | 100 % |
 | callout > 1 s late, worst set: k = 0 / 1 / 1.3 / 1.65 | 12 / 0 / 0 / 0 % | 0 / 0 / 0 / 0 % | 0 / 0 / 0 / 0 % | 32 / 4 / 2 / 2 % | 66 / 10 / 6 / 0 % | 12 / 0 / 0 / 0 % | 12 / 0 / 0 / 0 % | 10 / 0 / 0 / 0 % | 0 / 0 / 0 / 0 % | 46 / 0 / 0 / 0 % |
 | callout mean, k = 1 [s] (− early) | -0.7…-0.9 | -0.2…-0.3 | -0.4 | -2.1…-2.5 | -0.4…-1.0 | -0.7…-0.9 | -0.7…-0.9 | -0.7…-1.0 | -0.1…-0.2 | -1.3…-1.7 |
-| largest exit step p95, worst set [m] | 4.2 | 6.3 | 4.8 | 3.9 | 4.6 | 4.5 | 4.2 | 4.5 | 4.9 | 5.3 |
-| shown position under 5 m after the first fix, median per set [s] | 13–17 | 12–16 | 0–16 | 11–16 | 12–14 | 13–16 | 13–17 | 12–16 | 0–16 | 10–12 |
+| largest exit step p95, worst set [m] | 4.3 | 6.3 | 4.8 | 4.0 | 4.6 | 4.5 | 4.2 | 4.5 | 4.9 | 5.3 |
+| shown position under 5 m after the first fix, median per set [s] | 13–17.5 | 12–16 | 0–16 | 11–16.5 | 12–14 | 13–16.5 | 13–17 | 12–16 | 0–16 | 10–12 |
 | "now" prompt: mean true distance minus the target [m] (+ early), missed (of 300) | 17–22, 0 | 6–8, 0 | 8–9, 0 | 42–49, 2 | 3–14, 1 | 16–22, 0 | 17–23, 0 | 16–24, 0 | 4–6, 0 | 28–38, 0 |
 
 Cross-track error at the portal is 1.3–3 m (v0.5.10, 50 seeds), the map's own lateral uncertainty.
@@ -207,7 +209,7 @@ phone the 10-state filter never decides "main" for such a car (§4.16).
     with no curve before the exit, nothing corrects the dead reckoning until GNSS returns, and then
     the exit follower. v0.5.14 cut it sevenfold (§4.15); why, on a flat tunnel, is not traced.
 - **Recovery.** The largest step at the exit is ≤ 6.3 m (p95, worst set). The time until the shown
-  position is under 5 m for good is a median of 10–17 s per set (0 s in some sets of S3 and the
+  position is under 5 m for good is a median of 10–17.5 s per set (0 s in some sets of S3 and the
   1 km tunnel, where the error is already under 5 m; the supervisor's follower in §4.12); 12–33 runs
   of 300 per scenario are not under 5 m within 60 s.
 
@@ -1341,7 +1343,15 @@ Stress = map lateral offset 6 m, length +1.5 %, exit multipath 45 m. `reports/0.
   on, whose along-track error at the exit is 30–90 m, showed it: exit step p95 5.5 → 14.9 m on S4,
   7.9 → 11.3 m on S1 (worst set). The 20-seed A/B above had no straight-on case; it has one now, and a
   test pins the height scaling. First results: `reports/0.5.17/superseded/`.
-- **300 seeds:** RESULT300
+- **300 seeds** (sets 0–299, `reports/0.5.17/eval_sets_300_default.json` against v0.5.14,
+  `supervisor_sets_0-299.json` against v0.5.15; `python tools/summarise_v0517.py all`): nominal
+  ESKF results are unchanged within the set-to-set spread. Error at the diverge and the portal,
+  (e/σ)², failures, callouts and the branch decision are identical; the worst-set exit step p95 moves
+  by at most 0.1 m (S1 4.2 → 4.3, S4 3.9 → 4.0 m) and the recovery medians by at most 0.6 s
+  (S4 11.0–15.9 → 11.0–16.5 s). Straight on, the exit step p95 is back to 5.5 m (S4) and 7.9 m (S1).
+  The supervisor's shown output (class rule, majority) does not change in any of the 30 cases; only
+  the ESKF running beneath it moves, within the spread, its largest change in the cases where the
+  supervisor already does not use it (low-end, pressure-gradient stress).
 
 ## 5. Limitations and next steps
 

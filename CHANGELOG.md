@@ -31,7 +31,10 @@ driver wander) and saw the 16-state car 10–17 m beside the road after the exit
   barometer update moved the position up to 13 m along the road through their correlation. Straight
   on, exit step p95 5.5 → 14.9 m (S4), 7.9 → 11.3 m (S1). Height now stays scaled; the A/B gained a
   straight-on case and the tests a height check. First results kept in `reports/0.5.17/superseded/`.
-- **300 seeds:** RESULT300_CL
+- **300 seeds (sets 0–299):** nominal unchanged. Diverge and portal error, (e/σ)², failures,
+  callouts and branch identical to v0.5.14; worst-set exit step p95 +0.1 m at most (S1 4.3, S4 4.0 m),
+  recovery medians +0.6 s at most (S4 up to 16.5 s, S1 up to 17.5 s); straight on, exit step back to
+  5.5 m (S4) / 7.9 m (S1). The supervisor's shown output is unchanged in all 30 cases.
 - **Tests:** `tests/test_v0517.py` (the cap limits along only, keeps across, height stays scaled,
   P stays positive definite; the default). The page data carries the 16-state cross-track σ (`sig_lat`).
 - **Docs:** REPORT §6 and SUMMARY's AI section record that the owner found the last gaps (this one
