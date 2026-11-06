@@ -1,1 +1,2 @@
 Fri Nov  6 20:18:35 +03 2026
+nominal  S1      v0.5.16 cap all    exit_step_p95_m=4.6  exit_step_max_m=5.0  along_recovery_5m_median_s=15.0  portal_rms_m=5.4  nees_portal=0.1  lat_5s_median_m=1.3  lat_5s_max_m=3.4  lat_10s_median_m=0.8  lat_10s_max_m=4.4  lat_15s_median_m=1.7  lat_15s_max_m=6.7  lat_20s_median_m=2.6  lat_20s_max_m=7.0  lat_30s_median_m=2.9  lat_30s_max_m=7.8  lat_rms_0_30s_m=3.1  lat_at_exit_max_m=2.9  lat_settle_2m_median_s=39.8  lat_settle_2m_max_s=51.6  lat_not_settled_60s=10  lat_after_settle_max_m=8.1  lat_step_max_m=2.1
