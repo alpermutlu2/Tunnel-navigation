@@ -364,8 +364,11 @@ def _update_capped(x_corr, P, z, H, R, gate, max_step, along=None):
         step = np.abs(np.einsum("bi,bi->b", t3, dx[:, 0:3]))
     alpha = np.where(step > max_step, max_step / np.maximum(step, 1e-12), 1.0)
     Kc = K * alpha[:, None, None]
-    if along is not None:              # position rows: α on the along-track part, 1 across
-        keep = np.eye(3)[None] - np.einsum("bi,bj->bij", t3, t3)
+    if along is not None:              # position rows: α on the along-track part, 1 across (horizontal only)
+        # the vertical stays scaled by α as before: taken whole, it collapsed P_zz while the along-track
+        # variance stayed large, and the next barometer update then moved the position 13 m along the
+        # road through P_xz (S4 straight on, seed 157; v0.5.17 300-seed run)
+        keep = np.diag([1.0, 1.0, 0.0])[None] - np.einsum("bi,bj->bij", t3, t3)
         Kc[:, 0:3] = alpha[:, None, None] * K[:, 0:3] + (1.0 - alpha)[:, None, None] * (keep @ K[:, 0:3])
     K = Kc
     x_corr += np.einsum("bij,bj->bi", K, z)

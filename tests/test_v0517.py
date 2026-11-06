@@ -36,3 +36,19 @@ def test_cap_along_only_limits_along_and_keeps_across():
 
 def test_default_is_along_only():
     assert EskfConfig().reacq_cap_along_only is True
+
+
+def test_vertical_stays_scaled_with_along_only():
+    # taken whole, the vertical collapsed P_zz while the along-track variance stayed large; a later
+    # barometer update then moved the position 13 m along the road through P_xz (300-seed run)
+    P = np.diag([400.0, 400.0, 400.0, 4.0])[None].astype(float)
+    P[0, 0, 2] = P[0, 2, 0] = 300.0
+    H = np.zeros((1, 3, 4)); H[0, :, 0:3] = np.eye(3)
+    R = np.diag([1.0, 1.0, 1.0])[None]
+    z = np.array([[12.0, 15.0, 10.0]])
+    x = np.zeros((1, 4))
+    _, alpha = _update_capped(x, P, z, H, R, None, 2.0, np.array([[1.0, 0.0]]))
+    assert abs(x[0, 0]) <= 2.0 + 1e-9
+    assert abs(x[0, 1]) > 14.0                  # cross-track whole
+    assert abs(x[0, 2]) < 0.5 * 10.0            # vertical scaled by α, not taken whole
+    assert np.linalg.eigvalsh(P[0]).min() > 0.0

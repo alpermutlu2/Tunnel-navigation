@@ -24,7 +24,7 @@ from tunnelsim.experiments import eskf_experiment      # noqa: E402
 S0 = int(sys.argv[1]) if len(sys.argv) > 1 else 50
 N = int(sys.argv[2]) if len(sys.argv) > 2 else 20
 SEEDS = list(range(S0, S0 + N))
-CASES = ["S1", "S4", "S5", "S1-5km"]
+CASES = ["S1", "S4", "S5", "S1-5km", "S4_straight_on"]     # straight on: the car does not take the branch
 COND = {"nominal": dict(map_err=None, overrides=()),
         "stress": dict(map_err=(6.0, 1.015), overrides=("set:gnss.exit_multipath_m=45",))}
 VAR = {"v0.5.16 cap all": False, "v0.5.17 cap along": True}
@@ -63,8 +63,9 @@ for cond, kw in COND.items():
     for case in CASES:
         for vname, along in VAR.items():
             cfg = replace(EskfConfig(), reacq_cap_along_only=along)
-            r = eskf_experiment(case, SEEDS, overrides=kw["overrides"], eskf_cfg=cfg, keep_tracks=True,
-                                map_err=kw["map_err"])
+            key, so = case.split("_straight_on")[0], case.endswith("_straight_on")
+            r = eskf_experiment(key, SEEDS, overrides=kw["overrides"], eskf_cfg=cfg, keep_tracks=True,
+                                map_err=kw["map_err"], branch=not so)
             tk = r["_tracks"]; t_, es_, tx_ = np.asarray(tk["t"]), np.asarray(tk["e_s"]), tk["t_exit"]
             w_ = (t_ >= tx_) & (t_ <= tx_ + 60.0)
             jmp = np.abs(np.diff(es_[:, w_], axis=1)).max(axis=1)     # largest along-track step per run
