@@ -7,6 +7,16 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.16.1 (2026-11-06): simulator driver's view follows the drawn point (tools only)
+
+- The driver's view centred on the app's along-track ŝ snapped to the route, so while the branch was
+  "not yet" (v0.5.15 "main first") the map drew the app car on the main tunnel and the driver's view
+  drew it on the branch. It now uses the drawn point (`app_xy`) and its direction of travel, as the
+  map does; the map's app car takes the same heading.
+- The driver's view has an "app" switch like the map's (on by default; the view stays centred on the
+  app's position when it is off). Links keep it on unless they say `noapp`.
+- `tunnelsim` is unchanged, so every metric is v0.5.16's (no snapshot). Static page rebuilt.
+
 ## v0.5.16 (2026-11-05): low-end callout margin k = 0.7; scoped consistency claims; freeze
 
 The closing version. From two final reviews of v0.5.15 (owner's decision on k; the rest is documentation).

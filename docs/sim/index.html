@@ -196,7 +196,8 @@ input[type=range] { flex: 1; min-width: 140px; }
     <div class="card">
       <h2>Driver's view (what the app shows)</h2>
       <div class="navwrap" id="navwrap" title="double-click: full screen"><canvas id="nav"></canvas></div>
-      <div class="navopts"><label><input type="checkbox" id="ghost"> show the true car</label>
+      <div class="navopts"><label><input type="checkbox" class="navf" data-n="app" checked> app</label>
+        <label><input type="checkbox" id="ghost"> show the true car</label>
         <label><input type="checkbox" class="navf" data-n="eskf"> 16-state</label>
         <label><input type="checkbox" class="navf" data-n="e10"> 10-state</label>
         <label><input type="checkbox" class="navf" data-n="ref"> 4-state</label>
@@ -311,8 +312,15 @@ function setup(c) {
   const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); return [g, r.width, r.height];
 }
 const SHOW = { app: true, eskf: true, e10: true, ref: true, cv: true };
-const NAV = { eskf: false, e10: false, ref: false, cv: false };         // the driver's view shows the app only by default
+const NAV = { app: true, eskf: false, e10: false, ref: false, cv: false };   // the driver's view shows the app only by default
 const appS = i => (D.s_app ? D.s_app[i] : D.s_hat[i]), appSig = i => (D.sig_app ? D.sig_app[i] : D.sig_s[i]);
+// the point the app draws (main tunnel while the branch is "not yet", v0.5.15) and its direction of travel
+const appXY = i => (D.app_xy ? D.app_xy[i] : sToXY(appS(i)));
+function appHeading(i) {
+  if (D.app_xy) { const a = D.app_xy[Math.max(0, i - 1)], b = D.app_xy[Math.min(D.app_xy.length - 1, i + 1)];
+    if (Math.hypot(b[0] - a[0], b[1] - a[1]) > 0.5) return Math.atan2(b[1] - a[1], b[0] - a[0]); }
+  return headingAt(appS(i));
+}
 function cvS(i) {
   const t = D.t[i];
   if (t < D.cv.t0 || t > D.cv.t1) return null;
@@ -373,7 +381,7 @@ function drawMap() {
   const c = cvS(k); if (SHOW.cv && c !== null) { const [x, y] = sToXY(c); drawCar(x, y, D.heading[k], css("--cv"), "CV", 0.55, -Wc / 2 - 20); }
   if (SHOW.ref && D.s_1d) { const [x, y] = sToXY(D.s_1d[k]); drawCar(x, y, headingAt(D.s_1d[k]), css("--ref"), "4", 0.6, -Wc / 2 - 33); }
   if (SHOW.e10 && D.s_10) { const [x, y] = sToXY(D.s_10[k]); drawCar(x, y, headingAt(D.s_10[k]), css("--e10"), "10", 0.6, -Wc / 2 - 46); }
-  if (SHOW.app && D.s_app) { const [x, y] = D.app_xy ? D.app_xy[k] : sToXY(D.s_app[k]); drawCar(x, y, headingAt(D.s_app[k]), css("--app"), "app", 0.85, -Wc / 2 - 59); }
+  if (SHOW.app && D.s_app) { const [x, y] = appXY(k); drawCar(x, y, appHeading(k), css("--app"), "app", 0.85, -Wc / 2 - 59); }
   const eh = isFinite(D.est_heading[k]) ? D.est_heading[k] : D.heading[k];
   if (SHOW.eskf) drawCar(D.est_xy[k][0], D.est_xy[k][1], eh, css("--est"), "16", 0.9, -Wc / 2 - 7);
   drawCar(cx, cy, D.heading[k], css("--true"), "true car", 1, Wc / 2 + 15);
@@ -432,7 +440,7 @@ function roundDist(d) { return d >= 1000 ? `${(d / 1000).toFixed(1)} km` : `${Ma
 function headingAt(s) { const [x0, y0] = sToXY(s - 5), [x1, y1] = sToXY(s + 5); return Math.atan2(y1 - y0, x1 - x0); }
 function drawNav() {
   const cv = document.getElementById("nav"); const [g, W, H] = setup(cv);
-  const sh = appS(k), [ex, ey] = sToXY(sh), psi = headingAt(sh);
+  const sh = appS(k), [ex, ey] = appXY(k), psi = appHeading(k);
   const scale = Math.min(W, H) / 380;                       // px per metre: ~380 m across the short side
   // one UI unit for every text and bar, so the panel and full screen keep the same proportions
   const u = Math.max(1, Math.min(W, H) / 400), bh = Math.round(72 * u), fb = Math.round(60 * u);
@@ -484,9 +492,9 @@ function drawNav() {
     }
   };
   pills(ahead_, topM + 12 * u); pills(behind_, H - botM - 12 * u);
-  // car chevron
-  g.save(); g.translate(cx, cy); g.scale(u, u); g.fillStyle = "#ffffff"; g.strokeStyle = "#4f8df5"; g.lineWidth = 3;
-  g.beginPath(); g.moveTo(0, -16); g.lineTo(11, 12); g.lineTo(0, 6); g.lineTo(-11, 12); g.closePath(); g.fill(); g.stroke(); g.restore();
+  // car chevron: the app's position (the view is centred on it whether or not the chevron is shown)
+  if (NAV.app) { g.save(); g.translate(cx, cy); g.scale(u, u); g.fillStyle = "#ffffff"; g.strokeStyle = "#4f8df5"; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(0, -16); g.lineTo(11, 12); g.lineTo(0, 6); g.lineTo(-11, 12); g.closePath(); g.fill(); g.stroke(); g.restore(); }
   // top maneuver banner
   const ex0 = D.exits[0];
   const called = callK >= 0 && k >= callK;
@@ -528,7 +536,8 @@ function viewHash() {
   if (curKey) p.set("tab", curKey);
   if (D) p.set("t", (D.t[k] - D.t_entry).toFixed(1));
   p.set("show", Object.keys(SHOW).filter(x => SHOW[x]).join(",") || "-");
-  const nv = Object.keys(NAV).filter(x => NAV[x]); if (document.getElementById("ghost").checked) nv.push("true");
+  const nv = Object.keys(NAV).filter(x => x !== "app" && NAV[x]); if (!NAV.app) nv.push("noapp");
+  if (document.getElementById("ghost").checked) nv.push("true");
   if (nv.length) p.set("nav", nv.join(","));
   if (callKs !== null) p.set("k", String(callKs));
   p.set("lead", String(callLead));
@@ -550,7 +559,7 @@ function applyHash(q) {
   if (!q) return;
   if (q.show) for (const el of document.querySelectorAll("#showRow input[data-f]")) { el.checked = q.show.split(",").includes(el.dataset.f); SHOW[el.dataset.f] = el.checked; }
   if (q.nav !== undefined) { const nv = q.nav.split(",");
-    for (const el of document.querySelectorAll(".navf")) { el.checked = nv.includes(el.dataset.n); NAV[el.dataset.n] = el.checked; }
+    for (const el of document.querySelectorAll(".navf")) { el.checked = el.dataset.n === "app" ? !nv.includes("noapp") : nv.includes(el.dataset.n); NAV[el.dataset.n] = el.checked; }
     document.getElementById("ghost").checked = nv.includes("true"); }
   const kS = document.getElementById("kSl"), lS = document.getElementById("lSl");
   if (q.k !== undefined && kS) { kS.value = q.k; kS.dispatchEvent(new Event("input")); }
