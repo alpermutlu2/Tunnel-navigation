@@ -196,13 +196,12 @@ input[type=range] { flex: 1; min-width: 140px; }
     <div class="card">
       <h2>Driver's view (what the app shows)</h2>
       <div class="navwrap" id="navwrap" title="double-click: full screen"><canvas id="nav"></canvas></div>
-      <div class="navopts"><label><input type="checkbox" class="navf" data-n="app" checked> app</label>
-        <label><input type="checkbox" id="ghost"> show the true car</label>
+      <div class="navopts"><label><input type="checkbox" id="ghost"> show the true car</label>
         <label><input type="checkbox" class="navf" data-n="eskf"> 16-state</label>
         <label><input type="checkbox" class="navf" data-n="e10"> 10-state</label>
         <label><input type="checkbox" class="navf" data-n="ref"> 4-state</label>
         <label><input type="checkbox" class="navf" data-n="cv"> constant speed</label>
-        <span>heading-up, position snapped to the road; the others as dots, at the screen edge with their distance when out of view</span></div>
+        <span>the arrow is the app (the map's app car); heading-up, position snapped to the road; the others as dots, at the screen edge with their distance when out of view</span></div>
     </div>
     <div class="card" style="margin-top:14px">
       <h2>Now</h2>
@@ -312,7 +311,7 @@ function setup(c) {
   const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); return [g, r.width, r.height];
 }
 const SHOW = { app: true, eskf: true, e10: true, ref: true, cv: true };
-const NAV = { app: true, eskf: false, e10: false, ref: false, cv: false };   // the driver's view shows the app only by default
+const NAV = { eskf: false, e10: false, ref: false, cv: false };         // the driver's view shows the app only by default
 const appS = i => (D.s_app ? D.s_app[i] : D.s_hat[i]), appSig = i => (D.sig_app ? D.sig_app[i] : D.sig_s[i]);
 // the point the app draws (main tunnel while the branch is "not yet", v0.5.15) and its direction of travel
 const appXY = i => (D.app_xy ? D.app_xy[i] : sToXY(appS(i)));
@@ -492,9 +491,9 @@ function drawNav() {
     }
   };
   pills(ahead_, topM + 12 * u); pills(behind_, H - botM - 12 * u);
-  // car chevron: the app's position (the view is centred on it whether or not the chevron is shown)
-  if (NAV.app) { g.save(); g.translate(cx, cy); g.scale(u, u); g.fillStyle = "#ffffff"; g.strokeStyle = "#4f8df5"; g.lineWidth = 3;
-  g.beginPath(); g.moveTo(0, -16); g.lineTo(11, 12); g.lineTo(0, 6); g.lineTo(-11, 12); g.closePath(); g.fill(); g.stroke(); g.restore(); }
+  // car chevron: the app's drawn position (the same point as the map's app car)
+  g.save(); g.translate(cx, cy); g.scale(u, u); g.fillStyle = "#ffffff"; g.strokeStyle = "#4f8df5"; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(0, -16); g.lineTo(11, 12); g.lineTo(0, 6); g.lineTo(-11, 12); g.closePath(); g.fill(); g.stroke(); g.restore();
   // top maneuver banner
   const ex0 = D.exits[0];
   const called = callK >= 0 && k >= callK;
@@ -536,8 +535,7 @@ function viewHash() {
   if (curKey) p.set("tab", curKey);
   if (D) p.set("t", (D.t[k] - D.t_entry).toFixed(1));
   p.set("show", Object.keys(SHOW).filter(x => SHOW[x]).join(",") || "-");
-  const nv = Object.keys(NAV).filter(x => x !== "app" && NAV[x]); if (!NAV.app) nv.push("noapp");
-  if (document.getElementById("ghost").checked) nv.push("true");
+  const nv = Object.keys(NAV).filter(x => NAV[x]); if (document.getElementById("ghost").checked) nv.push("true");
   if (nv.length) p.set("nav", nv.join(","));
   if (callKs !== null) p.set("k", String(callKs));
   p.set("lead", String(callLead));
@@ -559,7 +557,7 @@ function applyHash(q) {
   if (!q) return;
   if (q.show) for (const el of document.querySelectorAll("#showRow input[data-f]")) { el.checked = q.show.split(",").includes(el.dataset.f); SHOW[el.dataset.f] = el.checked; }
   if (q.nav !== undefined) { const nv = q.nav.split(",");
-    for (const el of document.querySelectorAll(".navf")) { el.checked = el.dataset.n === "app" ? !nv.includes("noapp") : nv.includes(el.dataset.n); NAV[el.dataset.n] = el.checked; }
+    for (const el of document.querySelectorAll(".navf")) { el.checked = nv.includes(el.dataset.n); NAV[el.dataset.n] = el.checked; }
     document.getElementById("ghost").checked = nv.includes("true"); }
   const kS = document.getElementById("kSl"), lS = document.getElementById("lSl");
   if (q.k !== undefined && kS) { kS.value = q.k; kS.dispatchEvent(new Event("input")); }

@@ -13,8 +13,8 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   "not yet" (v0.5.15 "main first") the map drew the app car on the main tunnel and the driver's view
   drew it on the branch. It now uses the drawn point (`app_xy`) and its direction of travel, as the
   map does; the map's app car takes the same heading.
-- The driver's view has an "app" switch like the map's (on by default; the view stays centred on the
-  app's position when it is off). Links keep it on unless they say `noapp`.
+- The driver's view says that its arrow is the app (the map's app car). An "app" switch added first
+  was removed: the arrow is always the app.
 - `tunnelsim` is unchanged, so every metric is v0.5.16's (no snapshot). Static page rebuilt.
 
 ## v0.5.16 (2026-11-05): low-end callout margin k = 0.7; scoped consistency claims; freeze
