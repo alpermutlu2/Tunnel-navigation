@@ -35,6 +35,15 @@ driver wander) and saw the 16-state car 10–17 m beside the road after the exit
   callouts and branch identical to v0.5.14; worst-set exit step p95 +0.1 m at most (S1 4.3, S4 4.0 m),
   recovery medians +0.6 s at most (S4 up to 16.5 s, S1 up to 17.5 s); straight on, exit step back to
   5.5 m (S4) / 7.9 m (S1). The supervisor's shown output is unchanged in all 30 cases.
+- **Validation 700–799** (new untouched tier, run once; 600–699 was spent in v0.5.15;
+  `validation_700-799.json`, `supervisor_validation.json`): exit step inside the 300-seed ranges
+  everywhere (≤ 5.0 m p95 with the branch, ≤ 6.3 m straight on); no run taking the branch > 100 m
+  off; S4 straight on 1 of 100; 4 of 1000 callouts > 1 s late (k = 1). Single sets above the ranges
+  by 0.1–1.8 m (ESKF S4 portal 6.9 m; supervisor low-end S1 16.9, S2 15.3 m, Note10 S4 6.8 m, 3 %
+  tunnel 5.0 m). The set 750–799 recovers slower in the 3 km straight family (median up to 19 s,
+  p95 21.1 s); the v0.5.16 cap on the same seeds gives the same times, so it is the seeds
+  (`tools/validation_attrib_v0517.py`, diagnosis only). Tools: validation tier 700–799 in
+  `eval_sets.py` and `supervisor_eval.py`; `summarise_v0517.py validation`.
 - **Snapshot diff vs 0.5.16** (`tools/snapshot.py --diff 0.5.16 0.5.17`): only the exit step
   (`recovery.max_step_jump_m`) moves, by at most +0.04 m (S4 p95 3.30 → 3.33 m); tests 209 → 213.
 - **Tests:** `tests/test_v0517.py` (the cap limits along only, keeps across, height stays scaled,

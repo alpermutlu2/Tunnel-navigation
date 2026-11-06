@@ -7,7 +7,7 @@ tunnel. The navigation app has to keep showing the car, call out an exit inside 
 right moment, and recover cleanly when the car comes out.
 
 All results come from simulation. The main results are six independent sets of 50 seeds
-(`tools/eval_sets.py`, `reports/0.5.14/`; `reports/0.5.15/` for the supervisor and the 10-state filter) plus a held-out validation set of 100; §3 explains the
+(`tools/eval_sets.py`, `reports/0.5.14/`; `reports/0.5.15/` for the supervisor and the 10-state filter; `reports/0.5.17/` for the re-run after the v0.5.17 change) plus a held-out validation set of 100 per version (700–799 for v0.5.17); §3 explains the
 three seed tiers. Earlier sections quote 30–50 seeds where they say so. Every parameter is tagged [MEAS] (measured,
 cited), [SPEC] (datasheet) or [ASSUMED] (chosen here); §2.2 lists the assumptions and
 `tunnelsim/profiles.py` holds every value. The simulator runs interactively (`python tools/serve.py`) or one page per run
@@ -228,6 +228,24 @@ v0.5.15 changes are in the supervisor and the 10-state filter.
   gradient and 3 % tunnel cases (S1 at 30 Pa/km 7.3 m, 3 % tunnel 4.6 m, −25 Pa/km 6.4 m) are above
   their 300-seed portal ranges in one set each, by 0.5–3 m, and low-end S3 (25.6 m) and S6 (15.4 m) by
   0.3–0.4 m. Worst (e/σ)² 0.95 (low-end S3). No run that takes the exit is more than 100 m off.
+
+**v0.5.17 validation** (700–799, run once; `reports/0.5.17/validation_700-799.json`,
+`supervisor_validation.json`; `python tools/summarise_v0517.py validation`). The v0.5.17 change is in
+the ESKF, so both the ESKF table and the supervisor were run.
+- **Exit step** (the screen's concern, and what the change could have worsened): inside the 300-seed
+  ranges in every case, ≤ 5.0 m p95 with the branch and ≤ 6.3 m straight on.
+- **No run that takes the branch is more than 100 m off**; branch and "main" right in every run;
+  S4 straight on 1 of 100 more than 100 m off (0–299: 5 of 300). Callouts more than 1 s late (k = 1):
+  4 of 1000 (S5 2, S6 and 5 km 1 each; 0–299: 13 of 3000).
+- **Above the ranges, by little:** S4 portal rms 6.9 m (0–299 up to 6.2) with (e/σ)² 0.17 (0.13);
+  5 km portal p95 29.9 m (29.4); the worst shown p95 on 5 km, S4 and S5 by 0.1–0.7 m. The supervisor's
+  shown portal error is above its range in single sets of low-end S1 (16.9 m) and S2 (15.3 m), Note10
+  S4 (6.8 m) and the 3 % tunnel (5.0 m; at +25 Pa/km 4.2 m), by 0.1–1.8 m; worst (e/σ)² 0.38.
+- **Recovery:** the set 750–799 is slower in the 3 km straight family (S1, S6s: under 5 m after a
+  median 19 s, 0–299 up to 17.5 s; under 10 m p95 21.1 s in S1, S6, S6L, S6s, 0–299 up to 18.6 s). The
+  same seeds with the v0.5.16 cap give the same times (S1 19.0 / 21.1 s both; S6s 18.0 → 19.0 s median;
+  S4 equal), so the seeds cause it, not the change (diagnosis only, nothing tuned:
+  `reports/0.5.17/validation_attrib_750-799.json`).
 
 **3.1 Validation on untouched seeds** (500–599, v0.5.14 configuration, run once;
 `reports/0.5.14/validation_500-599.json`, `ekf10_validation_500-599.json`, `supervisor_validation.json`).
@@ -1352,6 +1370,9 @@ Stress = map lateral offset 6 m, length +1.5 %, exit multipath 45 m. `reports/0.
   The supervisor's shown output (class rule, majority) does not change in any of the 30 cases; only
   the ESKF running beneath it moves, within the spread, its largest change in the cases where the
   supervisor already does not use it (low-end, pressure-gradient stress).
+- **Validation 700–799** (run once, §3): the exit step inside the 300-seed ranges everywhere; no run
+  taking the branch more than 100 m off; single sets above the ranges by 0.1–1.8 m. A slower
+  recovery in one set is the seeds' (the v0.5.16 cap on the same seeds gives the same times).
 
 ## 5. Limitations and next steps
 

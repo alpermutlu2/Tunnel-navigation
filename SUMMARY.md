@@ -4,8 +4,9 @@ Short version of [`REPORT.md`](REPORT.md), which has the full results, mechanism
 All numbers come from simulation. The main results are ranges over six independent sets of 50
 seeds (0–299); tuning was done on seeds 0–49, features were designed on 50–299, and a further 100
 seeds (500–599) were run once on the v0.5.14 configuration for validation (`reports/0.5.14/`) and
-600–699 on v0.5.15 for the supervisor and the 10-state filter (`reports/0.5.15/`; each earlier
-version spent its own validation set). Every parameter is tagged [MEAS] (measured, cited), [SPEC] (datasheet) or
+600–699 on v0.5.15 for the supervisor and the 10-state filter (`reports/0.5.15/`), 700–799 on
+v0.5.17 for the ESKF and the supervisor (`reports/0.5.17/`; each earlier version spent its own
+validation set). Every parameter is tagged [MEAS] (measured, cited), [SPEC] (datasheet) or
 [ASSUMED] (chosen here). Units: Code, filter and documents use SI (speeds in m/s); the simulator's screen shows speeds in km/h, as an app would. Scenario speeds are given in km/h, and where a document compares a speed with them it gives both.
 
 ## Problem
@@ -136,6 +137,8 @@ map grade became a measurement (11.6–15.7 and 8.9–11.8 m before).
 - **Validation on 100 untouched seeds (500–599),** run once, nothing changed after: no run more
   than 100 m off; inside the ranges except single sets at the edge (S2 and 1 km portal, ≤ 0.2 m);
   7 of 1000 callouts more than 1 s late with k = 1; the pressure-gradient cases right in every run.
+  The v0.5.17 tier (700–799) agrees: exit step inside the ranges, no branch-taking run more than
+  100 m off, 4 of 1000 callouts late, single sets above the ranges by at most 1.8 m.
 - **Branch window.** A validation run 110 m off (the turn outside the decision's fixed 100 m
   window) made the window grow with σ_s; the run is 3 m off and nothing else moved.
 - **Seed tiers and method.** A callout claim of "1 in 500 late" made on 0–49 became 22 in 3000;
