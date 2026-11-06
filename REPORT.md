@@ -1307,8 +1307,9 @@ a sideways correction is never seen on the screen.
 
 *Change (owner):* the cap limits the along-track part of the correction only, along the car's
 forward axis taken from the attitude (not from v̂, which has no direction at a stop: the lesson of
-the same day's heading fix in the simulator). The gain across it and in height is kept whole; the
-Joseph form keeps the covariance valid for that gain. The first 3 s of velocity only and the R
+the same day's heading fix in the simulator). The horizontal gain across it is kept whole; height
+stays scaled as before (see the 300-seed note below). The Joseph form keeps the covariance valid for
+that gain. The first 3 s of velocity only and the R
 inflation against exit multipath are unchanged.
 
 | 20 seeds (50–69), research ESKF | cross-track median at +10 / +15 / +20 s after the exit [m] | cross-track rms 0–30 s [m] | along-track exit step p95 [m] |
@@ -1316,11 +1317,13 @@ inflation against exit multipath are unchanged.
 | nominal S1 | 0.8 / 1.7 / 2.6 → **1.0 / 2.1 / 2.6** | 3.1 → 3.1 | 4.6 → 4.6 |
 | nominal S4 | 1.6 / 2.5 / 2.7 → **1.7 / 2.8 / 2.7** | 2.8 → 2.8 | 3.0 → 2.9 |
 | nominal S5 | 0.9 / 2.2 / 1.8 → **0.9 / 2.3 / 1.8** | 2.8 → 2.8 | 4.7 → 4.7 |
-| nominal 5 km | 1.4 / 3.3 / 2.6 → **1.5 / 3.5 / 2.7** | 3.3 → 3.4 | 4.8 → 4.7 |
+| nominal 5 km | 1.4 / 3.3 / 2.6 → **1.6 / 3.5 / 2.7** | 3.3 → 3.4 | 4.8 → 4.8 |
+| nominal S4, straight on | 0.9 / 0.9 / 1.4 → **0.9 / 0.9 / 1.5** | 1.6 → 1.6 | 6.4 → 6.4 |
 | stress S1 | 8.6 / 5.8 / 2.5 → **7.3 / 3.2 / 2.9** | 7.4 → 6.9 | 6.1 → 6.1 |
 | stress S4 | 12.2 / 9.6 / 6.4 → **8.7 / 4.2 / 2.9** | 10.3 → 8.7 | 6.8 → 6.8 |
-| stress S5 | 9.4 / 4.1 / 2.4 → **8.1 / 2.1 / 2.2** | 7.3 → 6.8 | 6.9 → 6.9 |
-| stress 5 km | 13.6 / 11.0 / 8.7 → **7.5 / 3.7 / 3.2** | 12.0 → 9.1 | 4.2 → 4.2 |
+| stress S5 | 9.4 / 4.1 / 2.4 → **8.1 / 2.0 / 2.2** | 7.3 → 6.8 | 6.9 → 6.9 |
+| stress 5 km | 13.6 / 11.0 / 8.7 → **7.5 / 3.8 / 3.2** | 12.0 → 9.1 | 4.2 → 4.2 |
+| stress S4, straight on | 3.7 / 3.5 / 3.2 → **3.6 / 3.3 / 2.7** | 3.8 → 3.7 | 6.1 → 6.1 |
 
 Stress = map lateral offset 6 m, length +1.5 %, exit multipath 45 m. `reports/0.5.17/reacq_lateral_ab_50-69.json`.
 
@@ -1331,6 +1334,13 @@ Stress = map lateral offset 6 m, length +1.5 %, exit multipath 45 m. `reports/0.
   the multipath R inflation still hold the position.
 - **The price:** the raw 16-state car on the map may step up to 5.2 m sideways in one epoch (2.1 m
   before; 5 km stress). The drawn point is snapped to the road and does not move.
+- **The 300-seed run caught a leak in the first version of the change.** It kept the height
+  correction whole as well. A velocity fix then collapsed the height variance while the along-track
+  variance stayed large, and the next barometer update (innovation 0.1 m) moved the position 13 m
+  along the road through their correlation: the cap was bypassed, not broken. A car going straight
+  on, whose along-track error at the exit is 30–90 m, showed it: exit step p95 5.5 → 14.9 m on S4,
+  7.9 → 11.3 m on S1 (worst set). The 20-seed A/B above had no straight-on case; it has one now, and a
+  test pins the height scaling. First results: `reports/0.5.17/superseded/`.
 - **300 seeds:** RESULT300
 
 ## 5. Limitations and next steps

@@ -20,15 +20,20 @@ driver wander) and saw the 16-state car 10–17 m beside the road after the exit
   the cross-track error is covered ((e/σ)² 0.3), at three times it is not (5–16), as expected.
 - **Change (owner):** `EskfConfig.reacq_cap_along_only = True`. The 2 m-per-fix cap of the
   re-acquisition phase now limits the correction along the car's forward axis (from the attitude),
-  the part the screen would show as a jump; across and in height the gain is whole. `_update_capped`
+  the part the screen would show as a jump; across it (horizontal) the gain is whole, height stays scaled. `_update_capped`
   takes the direction; the Joseph form keeps P valid.
 - **20 seeds (50–69):** nominal unchanged (cross-track within 0.4 m, exit step and recovery within
   0.3 m / 0.3 s). Under the stress the cross-track median 15 s after the exit is 2.1–4.2 m instead of
-  4.1–11.0 m; the along-track exit step does not change. The raw 16-state car may now step up to
+  4.1–11.0 m (S1, S4, S5, 5 km); the along-track exit step does not change, nor does a car going straight on. The raw 16-state car may now step up to
   5.2 m sideways in one epoch; the drawn point is road-snapped and does not.
+- **Fixed before release (300-seed run):** the first version kept the height correction whole too;
+  a velocity fix collapsed the height variance while the along-track one stayed large, and the next
+  barometer update moved the position up to 13 m along the road through their correlation. Straight
+  on, exit step p95 5.5 → 14.9 m (S4), 7.9 → 11.3 m (S1). Height now stays scaled; the A/B gained a
+  straight-on case and the tests a height check. First results kept in `reports/0.5.17/superseded/`.
 - **300 seeds:** RESULT300_CL
-- **Tests:** `tests/test_v0517.py` (the cap limits along only, keeps across, P stays positive
-  definite; the default). The page data carries the 16-state cross-track σ (`sig_lat`).
+- **Tests:** `tests/test_v0517.py` (the cap limits along only, keeps across, height stays scaled,
+  P stays positive definite; the default). The page data carries the 16-state cross-track σ (`sig_lat`).
 - **Docs:** REPORT §6 and SUMMARY's AI section record that the owner found the last gaps (this one
   and the v0.5.16.1 display ones) by stress-testing the live simulator.
 
