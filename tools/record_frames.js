@@ -12,6 +12,8 @@ const { chromium } = require('playwright');
     const dt = D.t[1] - D.t[0]; return [a, e > 0 ? e : D.t.length - 1, Math.max(1, Math.round(0.5 / dt))];
   });
   await p.evaluate(() => { document.getElementById('zoom').value = 0.6; });
+  // the map and the driver's view in frame (the controls above them grew in v0.5.12–16)
+  await p.evaluate(() => document.getElementById('map').closest('.card').scrollIntoView({ block: 'start' }));
   let n = 0;
   for (let kk = k0; kk <= k1; kk += dk) {
     await p.evaluate(x => { k = x; render(); }, kk);

@@ -6,7 +6,7 @@ seeds (0–299); tuning was done on seeds 0–49, features were designed on 50�
 seeds (500–599) were run once on the v0.5.14 configuration for validation (`reports/0.5.14/`) and
 600–699 on v0.5.15 for the supervisor and the 10-state filter (`reports/0.5.15/`; each earlier
 version spent its own validation set). Every parameter is tagged [MEAS] (measured, cited), [SPEC] (datasheet) or
-[ASSUMED] (chosen here).
+[ASSUMED] (chosen here). Units: Code, filter and documents use SI (speeds in m/s); the simulator's screen shows speeds in km/h, as an app would. Scenario speeds are given in km/h, and where a document compares a speed with them it gives both.
 
 ## Problem
 
@@ -51,8 +51,8 @@ information:
   the tunnel's ventilation pressure gradient and the map's grade error are then states, so the
   barometer cannot be fooled by the gradient. Off where the map has no grade.
 - **Stop detection:** zero-velocity updates at stops.
-- **Driver model (cruise):** a stated assumption that the speed wanders slowly (σ 0.5 m/s,
-  τ 60 s), not a measurement.
+- **Driver model (cruise):** a stated assumption that the speed wanders slowly (σ 0.5 m/s =
+  1.8 km/h, τ 60 s), not a measurement.
 - **Map in the tunnel:** heading and lateral position against the route, with the map's own
   offset and length errors as states.
 - **Callout rule:** announce when ŝ + k·σ_s reaches the callout point, so the callout errs early

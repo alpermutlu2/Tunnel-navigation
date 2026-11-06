@@ -67,7 +67,7 @@ Vibration is a real specific force / rate, so it passes through the sensor scale
 | Temperature (K3 → R4) | **Not modelled.** IMU assumed calibrated incl. temperature; residual bias estimated by the filter before the tunnel; in-tunnel temperature change neglected (not observable there) | Known limitation, size with earlier assumptions: ~9.6e-4 m/s² accel, ~8.5e-5 rad/s gyro bias change over 3 min, same order as BI. SPEC coefficients 0.1 mg/°C, 0.005 dps/°C kept for reference |
 | Scale / misalignment (K4) | Sensor misalignment (MEMS → phone) is a separate matrix from the mount rotation (vehicle → phone) | Gyro scale 0.3 % [ASSUMED], ±1 % [SPEC] bound; accel scale 3e-3 [ASSUMED]. Curve-matching heading budget ε_ψ ≈ s_g·Δψ |
 | Vibration (K5) | Generated at 100 Hz. Road: broadband ≈ 2–30 Hz, scaled with speed. Engine: narrow band ≈ 25 Hz at idle. No wheel tone (5.2) | [ASSUMED], two levels "calm" / "noisy". 1 kHz + LPF + decimation is an optional sensitivity test. **Out of scope:** vibration rectification error (VRE) |
-| Timestamps (K6) | Timestamps carry the true measurement time. Scenarios: (1) sample-rate offset ±1–2 %, timestamps correct → no effect expected; (2) timestamp scale error → accumulating error; (3) estimator uses nominal dt → v0.4 | White jitter 0.5 ms, occasional gaps [ASSUMED]. IMU–GNSS time offset nominal 0, sweep 0–200 ms. "1 % rate error → 45 m (25 m/s, 180 s)" holds only for (2) and (3) |
+| Timestamps (K6) | Timestamps carry the true measurement time. Scenarios: (1) sample-rate offset ±1–2 %, timestamps correct → no effect expected; (2) timestamp scale error → accumulating error; (3) estimator uses nominal dt → v0.4 | White jitter 0.5 ms, occasional gaps [ASSUMED]. IMU–GNSS time offset nominal 0, sweep 0–200 ms. "1 % rate error → 45 m (25 m/s = 90 km/h, 180 s)" holds only for (2) and (3) |
 
 ### 3.2 Barometer (K7, implemented in `simulate_baro`)
 - Model: `h̃ = h + b_h0 + b_h,GM(t) + n_h + d_cabin(t) + d_tunnel(s)`, 25 Hz, h = true phone altitude.
@@ -77,7 +77,7 @@ Vibration is a real specific force / rate, so it passes through the sensor scale
 - b_h,GM: **nominal GM(0.1 m, 60 s)** [ASSUMED], the mildest correlated row of the K7 table, because white-only is known to be optimistic (5.1 note). White-only, GM(0.3 m, 300 s) and GM(0.3 m, 60 s) are named overrides.
 - d_cabin: GM, off in the baseline (A6); override 0.3 m, τ 5 s [ASSUMED].
 - d_tunnel = −(k_p/ρg)·(s − s_entry) inside the tunnel, zero at the entry: ventilation pressure gradient read as altitude [ASSUMED], nominal off, overrides 10 and 30 Pa/km (illustrative, magnitude not sourced). ρg = 11.8 Pa/m. Level at the exit k_p·L/ρg (S3, 3.5 km: 3.0 m at 10 Pa/km, 8.9 m at 30 Pa/km). After the exit it decays over distance, `d(s_exit)·exp(−(s − s_exit)/L_p)`, L_p = 200 m nominal, 50 and 500 m swept [ASSUMED, sensitivity parameter, not validated] (review 2, 4.2): a step would make portal detection artificially easy. The step is kept as a stress override (`baro_exit_step`). On a constant-grade tunnel it is indistinguishable from a grade offset: 10 Pa/km reads as a 0.085 % grade (≈ 8.3 mm/s²), 30 Pa/km as 0.25 % (≈ 25 mm/s², 2/3 of the S5 mean drift). If real gradients are of this size, they dominate the barometric grade error; a short literature check is worth doing before v0.6.
-- Grade floor (least-squares slope over window T): white `σ_ḣ = σ√(12/(fT³))`; correlated (T ≪ τ) `σ_ḣ ≈ √(6q/(5T))`, q = 2σ²/τ. Verified in v0.3 against the exact value `p'Σp` (LS slope weights p, noise covariance Σ) and Monte Carlo (agree within 4 %). Accel equivalent at 25 m/s, exact:
+- Grade floor (least-squares slope over window T): white `σ_ḣ = σ√(12/(fT³))`; correlated (T ≪ τ) `σ_ḣ ≈ √(6q/(5T))`, q = 2σ²/τ. Verified in v0.3 against the exact value `p'Σp` (LS slope weights p, noise covariance Σ) and Monte Carlo (agree within 4 %). Accel equivalent at 25 m/s (90 km/h), exact:
 
 | Noise | T = 5 s | 10 s | 20 s | 30 s | 60 s |
 |---|---|---|---|---|---|
@@ -266,7 +266,7 @@ The forward axis is the hard problem: on S1 the map gives no features. These cue
 
 | Cue | Sensor | Principle | Calibrated before tunnel | Main risk |
 |---|---|---|---|---|
-| Wheel rotation frequency | Accel (vertical), 100 Hz | Tire/wheel non-uniformity gives a peak at f = v / (2πr) (~10 Hz at 20 m/s) | Effective rolling radius r | Peak may be weak on smooth asphalt |
+| Wheel rotation frequency | Accel (vertical), 100 Hz | Tire/wheel non-uniformity gives a peak at f = v / (2πr) (~10 Hz at 20 m/s, 72 km/h) | Effective rolling radius r | Peak may be weak on smooth asphalt |
 | Wheelbase delay | Accel (vertical) | Front and rear axle hit the same joint/bump; Δt = L / v | Effective wheelbase L | Needs discrete bumps (tunnel segment joints) |
 | Pitch dynamics (squat/dive) | Gyro y | Pitch angle ≈ K · a_x, pitch rate marks accel/brake onset | Vehicle pitch gain K | Small for gentle drift; best as IMM mode-switch trigger, not magnitude |
 | Tunnel lighting | Ambient light sensor | Light fixtures at regular spacing: f = v / d; portal = sharp light drop | Spacing d (not always in map) | Low sensor rate, spacing knowledge |

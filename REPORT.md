@@ -30,6 +30,8 @@ A measured error budget set the design (`DESIGN.md` §4, 200 seeds, 180 s):
 
 ## 2. Approach
 
+**Units.** Code, filter and documents use SI (speeds in m/s); the simulator's screen shows speeds in km/h, as an app would. Scenario speeds are given in km/h, and where a document compares a speed with them it gives both.
+
 The estimator is an error-state Kalman filter (`tunnelsim/eskf.py`). It runs on 100 Hz IMU data.
 Its 16 core states are position, velocity, attitude, accelerometer bias, gyro bias and barometer
 offset. Cruise mode adds 2 states, the map layer 2 more, and the mount yaw, the tunnel's pressure
@@ -42,7 +44,7 @@ gradient and the map's grade error one each (§4.14, §4.15).
 | Barometer, 1 s average modelled at the window centre | Vertical channel and pitch |
 | Map grade in the tunnel (v0.5.14): the road's grade as a weak measurement of the vertical velocity, once per second; the tunnel's pressure gradient and the map's grade scale error as per-tunnel states; off where the map has no grade profile | Pitch from the map, so the barometer's residual can go to the pressure gradient (§4.4, §4.15) |
 | ZUPT from an IMU stop detector | Stop-and-go traffic |
-| Cruise prior: speed = v_ref + d, d Gauss–Markov (σ 0.5 m/s, τ 60 s) | A stated model of the driver, not a measurement (§4.2) |
+| Cruise prior: speed = v_ref + d, d Gauss–Markov (σ 0.5 m/s = 1.8 km/h, τ 60 s) | A stated model of the driver, not a measurement (§4.2) |
 | Map in the tunnel: 1 Hz heading and cross-track against the route polyline; map lateral offset (σ 2 m) and length error (σ 0.5 %) as states; paused around the diverge until the in-loop branch decision | Heading and lateral position; along-track information where the road curves, bounded by the map's own uncertainty (§4.5) |
 | Callout when ŝ + 1·σ_s reaches s_exit − 300 m | Errs early: a late callout can make the driver miss the exit |
 | Re-acquisition: 3 s velocity only, decaying position R, ≤ 2 m per update | No jump at the exit, even with multipath |
@@ -99,7 +101,7 @@ overconfident.
 | Barometer | 0.1 m white + 0.1 m offset drift (60 s); closed cabin; no tunnel pressure gradient in the nominal runs (±25–30 Pa/km tested, §4.4, §4.15) | [ASSUMED] |
 | Map | Route polyline with the diverge; lateral offset σ 2 m and length error σ 0.5 % (§4.5); a grade profile where the map has one, with a 10 % scale error σ (§4.15); without one the grade layer is off | [ASSUMED] |
 | Vehicle | Sideslip 0.4°/(m/s²) with a 0.2 s lag; suspension pitch 1.5°/g | [ASSUMED] |
-| Driver | In cruise the speed wanders like a Gauss–Markov process, σ 0.5 m/s, τ 60 s (the filter's model) | [ASSUMED] |
+| Driver | In cruise the speed wanders like a Gauss–Markov process, σ 0.5 m/s (1.8 km/h), τ 60 s (the filter's model) | [ASSUMED] |
 | Exit | 20° branch over 150 m at about 0.73 of the tunnel; callout 300 m before it, k = 1 | [ASSUMED] |
 
 Sensors left out:
@@ -349,14 +351,14 @@ have no stops and do not change.
 With these fixes a low-end phone works, and is honest about its uncertainty, in every scenario
 except stop-and-go: within 10–25 m at the portal and with no late callouts. S4 stays broken
 (~1 km), and the cause is low speed, not the stops. A trace of S4 seed 0 shows it:
-- During the 30 km/h crawl the filter's speed falls from about 7 to 2.6 m/s in 60 s while the true
-  speed stays at 8.3 m/s (−320 m).
-- At the second stop the filter still believes it is moving at about 6.6 m/s (−250 m more).
+- During the 30 km/h crawl the filter's speed falls from about 7 to 2.6 m/s (25 → 9 km/h) in 60 s
+  while the true speed stays at 8.3 m/s (30 km/h) (−320 m).
+- At the second stop the filter still believes it is moving at about 6.6 m/s (24 km/h) (−250 m more).
 - Yaw drifts 5–7° during the stops, but the map corrects it within seconds of moving off, and the
   cross-track error stays under 1 m.
 
-The NHC and the barometer see a pitch error only through v·δθ, so at 8 m/s they hold pitch about a
-third as strongly as at 22 m/s. The low-end gyro then tilts the filter and gravity leaks into the
+The NHC and the barometer see a pitch error only through v·δθ, so at 8 m/s (30 km/h) they hold
+pitch about a third as strongly as at 22 m/s (80 km/h). The low-end gyro then tilts the filter and gravity leaks into the
 speed. The same IMU gives 14 m on S1 and ~1 km on S4: the difference is the speed. A perfect stop
 detector, levelling at stops, the stop detector's speed gate and the cruise threshold do not
 change this (`reports/0.5.7/lowend_s4_level_10.json`). On a phone classed as low-end, the app
@@ -472,7 +474,7 @@ The prior is θ_b = γ(ŝ) ± σ, applied at 10 Hz below 10 m/s in the outage, w
 ∂θ_b/∂δθ = [u_y, −u_x, 0]/cos θ_b (checked by finite differences).
 
 A trace of low-end S4 found a second mechanism. The speed is lost while crawling. When the car
-stops, the filter still believes it moves at ~5 m/s, and the ZUPT's speed gate ("filter speed
+stops, the filter still believes it moves at ~5 m/s (18 km/h), and the ZUPT's speed gate ("filter speed
 < 2 m/s") then keeps the stop from correcting it: the gate relies on the very state it should
 correct. A new gate source fixes that: a stop the detector has held for ≥ 2 s is applied whatever
 the filter speed.
@@ -548,7 +550,7 @@ How the gate and the forms behave:
   a linearisation at a wrong ŝ cannot. With it on, the gate no longer fires on nominal runs and
   stays as a safety net. Two simplifications err conservative:
   - the prior enters twice, once in J and again through P in the update;
-  - the 5 m R floor stands in for the sideslip shift k·v² (3.4 m at 22 m/s), which a faster car
+  - the 5 m R floor stands in for the sideslip shift k·v² (3.4 m at 22 m/s, 80 km/h), which a faster car
     would exceed.
 - **v1 ran before the branch decision.** A car going straight on, matched to the branch
   hypothesis, was pulled back to the straight before the diverge every second; the straight-on
@@ -1001,7 +1003,7 @@ form, and its mean-only cell in all 34 with the shipped form.
 *Seed 232, the mechanism* (low-end S4; `tools/diag_seed232.py`, a record of every update,
 `diag_seed232_{estimated,known}.txt`). It has two steps:
 1. **The crawl leaves v̂ low.** Then the barometer rows, linearised at a wrong θ̂ (+1.8°), read the
-   flat height as a speed excess and drive v̂ from 12.6 to ~2 m/s in 20 s (the error goes from
+   flat height as a speed excess and drive v̂ from 12.6 to ~2 m/s (45 → 7 km/h) in 20 s (the error goes from
    −260 to −900 m).
 2. **A strong speed row then collapses σ_s** through the s–v correlation: the one-way constraint's
    equality form with the estimated mount (σ_s 450 → 54 m at −1018 m), or the lateral-force row with
@@ -1036,7 +1038,7 @@ S4 it is overconfident: diverge 16.8 m with (e/σ)² 19, 60 % of runs within 2σ
   instability, with no physical basis. Not taken.
 - **The trace does not support the hypothesis** (`trace_ba_rw_s4.txt`). b̂_a moves by ~4·10⁻⁴ m/s²
   after the last stop (1.5·10⁻³ over the whole run). The error builds in the crawl and the
-  acceleration after the last stop (seed 59: v̂ ~1 m/s high, `trace_ekf10_grade_note10_s4_seed59.txt`;
+  acceleration after the last stop (seed 59: v̂ ~1 m/s (3.6 km/h) high, `trace_ekf10_grade_note10_s4_seed59.txt`;
   the error 2.5 → 44 m in 80 s), and σ_s does not cover it. In the curve before the diverge the
   heading and yaw-rate rows then lock ŝ with that error: 8 of 20 runs arrive with σ_s of 2.5–3.6 m
   and e of 17–34 m. ×10 helps only because the larger σ_v keeps σ_s at 14–38 m at the curve. The
@@ -1197,7 +1199,7 @@ the car is on, mean per set (p95 over runs) [runs over 10 m of 300]:
 *K2, the 10-state filter's map rows while "not yet" (owner).* Found while measuring K1: with no
 decision, the heading, curvature-gyro and grade rows used the route's geometry past the diverge, the
 branch's. On a low-end phone going straight on in the 5 km tunnel (`trace_notyet_ekf10_s1-5km.txt`,
-seeds 50–53) ψ̂ was pulled to the branch's −20° within 30 s, v̂ fell by 3.5–5 m/s and ŝ went back by
+seeds 50–53) ψ̂ was pulled to the branch's −20° within 30 s, v̂ fell by 3.5–5 m/s (13–18 km/h) and ŝ went back by
 435–577 m in 60 s. The ESKF pauses its map layer around the diverge until its decision; the 10-state
 filter now pauses those rows while its decision is "not yet" and ŝ is past the diverge
 (`pause_undecided`, on). The grade row is paused too, for the same reason (the simulated branches have
@@ -1301,7 +1303,7 @@ On the 5 km tunnel the "now" prompt comes 89–105 m early at k = 0.7 (57–73 m
   | offline (reference) | 96 % | 0 | 30.3 / 4.8 m, 0.08, 0 % |
 
   - **The asymmetry:** a missed stop costs little, because the ZUPT still fires for most of it;
-    a false stop at 3 m/s cost hundreds of metres.
+    a false stop at 3 m/s (11 km/h) cost hundreds of metres.
   - **Why not order 3:** it scores slightly better, but it sits next to the cliff at order 2.
   - **What it still rests on:** the margin comes from the [ASSUMED] vibration and engine model,
     so the thresholds must be re-set on recordings.
@@ -1489,7 +1491,7 @@ change. The author is ready to explain or change any of them:
 | Low-end S4 explained as yaw drift at stops; it is low-speed pitch unobservability | the author, from a trace |
 | `browser.html` published without its package (`*.zip` git-ignored) | the author |
 | Headline results used the offline (forward-backward) stop detector; the 0.5.3 results file recorded k = 1.65 in its main callout block while the report quoted its k = 1 row | an external AI comparison; measured, switched and re-run at v0.5.10 |
-| The causal stop detector at twice the order (to restore the offline engine rejection) took a 3 m/s crawl as a stop in 3 of 50 seeds: S4 portal 91 m | the agent's 50-seed re-run; the order A/B and the choice of the conservative order were the author's |
+| The causal stop detector at twice the order (to restore the offline engine rejection) took a 3 m/s (11 km/h) crawl as a stop in 3 of 50 seeds: S4 portal 91 m | the agent's 50-seed re-run; the order A/B and the choice of the conservative order were the author's |
 | "Removing the ZUPT gate costs the Note10 6 m": a 30-seed number compared with a 5-seed one | the agent, on re-measuring the same seeds (the gate changes nothing on the Note10) |
 | The display handed over to the ESKF after the exit, which on a low-end phone is the broken filter (253 m step) | the agent's first supervisor run |
 | `MapView.nearest` failed when an estimate ran past the end of the map; the same in the 10-state and 1D route grids | the pitch-prior A/B; a supervisor run |

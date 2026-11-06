@@ -8,6 +8,8 @@ the right moment, and recover cleanly when the car comes out. Only the phone's o
 **Write-up:** [`SUMMARY.md`](SUMMARY.md) (about six pages; the product's numbers in one table at the top) and the full [`REPORT.md`](REPORT.md):
 approach, what is simulated, assumptions, results, where it breaks and why, AI usage.
 
+**Units.** Code, filter and documents use SI (speeds in m/s); the simulator's screen shows speeds in km/h, as an app would. Scenario speeds are given in km/h, and where a document compares a speed with them it gives both.
+
 ## Quick start
 
 ```bash
@@ -79,7 +81,7 @@ one time cursor, and changing a parameter keeps the time position.
 The map shows the true car (ground truth) and the estimated car side by side, drawn to scale and
 rotated to their headings.
 
-![Simulator, S5 after the exit diverge](docs/media/sim_S5_page.png)
+![Simulator, S5 170 m before the exit diverge](docs/media/sim_S5_page.png)
 
 Recording: [`docs/media/sim_S5_seed0.mp4`](docs/media/sim_S5_seed0.mp4) (S5, seed 0, map and
 driver's view, from 15 s before the portal to 45 s after the exit, 10× real time; frames stepped with

@@ -29,6 +29,12 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   to the map's Show boxes), and the plot's y range follows the lines still shown (the along-track error
   keeps its fixed clip range). The hidden lines travel in the link (`hide=`). The speed plot gains the
   app's speed, which it lacked. The sensor headers' coloured x·y·z words gave way to the legends.
+- Units (owner): code, filter and documents stay SI (speeds in m/s); the simulator's screen shows speeds
+  in km/h. The driver-wander slider σ_d is now in km/h (1.8 km/h = 0.5 m/s, converted before the
+  request); it was the only speed on the screen in m/s. Where a document compares a speed with the
+  km/h scenario speeds it now gives both (REPORT §4 low-end crawl, the 10-state "not yet" trace, the
+  cruise σ_d; DESIGN timing and vibration rows). The rule is stated in README, SUMMARY and REPORT §2.
+- Media re-made from the current page (`docs/media`).
 - `tunnelsim` is unchanged, so every metric is v0.5.16's (no snapshot). Static page rebuilt.
 
 ## v0.5.16 (2026-11-05): low-end callout margin k = 0.7; scoped consistency claims; freeze
