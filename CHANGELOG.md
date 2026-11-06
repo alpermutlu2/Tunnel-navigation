@@ -35,6 +35,8 @@ driver wander) and saw the 16-state car 10–17 m beside the road after the exit
   callouts and branch identical to v0.5.14; worst-set exit step p95 +0.1 m at most (S1 4.3, S4 4.0 m),
   recovery medians +0.6 s at most (S4 up to 16.5 s, S1 up to 17.5 s); straight on, exit step back to
   5.5 m (S4) / 7.9 m (S1). The supervisor's shown output is unchanged in all 30 cases.
+- **Snapshot diff vs 0.5.16** (`tools/snapshot.py --diff 0.5.16 0.5.17`): only the exit step
+  (`recovery.max_step_jump_m`) moves, by at most +0.04 m (S4 p95 3.30 → 3.33 m); tests 209 → 213.
 - **Tests:** `tests/test_v0517.py` (the cap limits along only, keeps across, height stays scaled,
   P stays positive definite; the default). The page data carries the 16-state cross-track σ (`sig_lat`).
 - **Docs:** REPORT §6 and SUMMARY's AI section record that the owner found the last gaps (this one
