@@ -1,0 +1,6 @@
+wrote /home/claude/tunnel-navigation/docs/sim/index.html (6.1 MB)
+wrote /home/claude/tunnel-navigation/docs/sim/browser.html + py/ (experimental Pyodide live mode)
+
+real	2m31.008s
+user	4m39.374s
+sys	0m0.333s
