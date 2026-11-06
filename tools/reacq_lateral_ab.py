@@ -43,7 +43,14 @@ def lateral_metrics(r):
         over.append(0.0 if j0 is None else float(np.abs(el[b, k[j0]:k[-1] + 1]).max()))
         step.append(float(np.abs(np.diff(el[b, k])).max()))
     s = np.array(settle)
-    return {"lat_at_exit_max_m": float(np.abs(el[:, k[0]]).max()),
+    prof = {}
+    for dt_ in (5, 10, 15, 20, 30):                  # |cross-track| at fixed times after the exit
+        i_ = int(np.argmin(np.abs(t - (tx + dt_))))
+        prof[f"lat_{dt_}s_median_m"] = float(np.median(np.abs(el[:, i_])))
+        prof[f"lat_{dt_}s_max_m"] = float(np.abs(el[:, i_]).max())
+    w30 = (t >= tx) & (t <= tx + 30.0)
+    prof["lat_rms_0_30s_m"] = float(np.sqrt(np.mean(el[:, w30] ** 2)))
+    return {**prof, "lat_at_exit_max_m": float(np.abs(el[:, k[0]]).max()),
             "lat_settle_2m_median_s": float(np.nanmedian(s)) if np.isfinite(s).any() else None,
             "lat_settle_2m_max_s": float(np.nanmax(s)) if np.isfinite(s).any() else None,
             "lat_not_settled_60s": int(np.isnan(s).sum()),
