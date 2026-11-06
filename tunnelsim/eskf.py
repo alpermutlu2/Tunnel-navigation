@@ -148,6 +148,12 @@ class EskfConfig:
     reacq_r_factor: float = 10.0      # position sigma inflation at the start of the phase ...
     reacq_r_tau_s: float = 8.0        # ... decaying to 1 with this time constant
     reacq_max_step_m: float = 2.0     # largest position correction per fix in the phase (gain scaled)
+    # v0.5.17 (owner, after a stress test): the cap limits the along-track part only. It exists so the
+    # screen does not jump along the road; the app draws the car snapped to the road, so a sideways
+    # correction is never seen, and capping it held a map-induced 10–17 m cross-track error for
+    # 16–27 s after the exit (S4, map length +1.5 %, offset 6 m). Along = the car's forward axis from
+    # the attitude (not v̂, which has no direction at a stop).
+    reacq_cap_along_only: bool = True
     gnss_max_reported_sigma_m: float = 10.0   # position fixes reporting more than this are not used
     reacq: bool = True                # switch for A/B comparison
     # B. Cruise (speed-hold) mode (accepted 2026-10-20). Without GNSS velocity for > 5 s, moving
@@ -339,9 +345,11 @@ def zupt_detector(t, f, cfg, fs, win_s=1.0):
     return mov(raw.astype(float)) > 1.0 - 1e-9
 
 
-def _update_capped(x_corr, P, z, H, R, gate, max_step):
+def _update_capped(x_corr, P, z, H, R, gate, max_step, along=None):
     """As _update, but the gain is scaled by α ≤ 1 so the position correction is at most
-    max_step (per seed). Joseph form keeps the covariance valid for any gain."""
+    max_step (per seed). Joseph form keeps the covariance valid for any gain.
+    along (B,2) unit vectors, optional (v0.5.17): only the correction along them is capped; the
+    position gain's component across them (and vertical) is kept whole, every other row scaled."""
     S = H @ P @ np.swapaxes(H, 1, 2) + R
     Sinv = np.linalg.inv(S)
     nis = np.einsum("bi,bij,bj->b", z, Sinv, z)
@@ -349,10 +357,18 @@ def _update_capped(x_corr, P, z, H, R, gate, max_step):
     K = P @ np.swapaxes(H, 1, 2) @ Sinv
     K[~ok] = 0.0
     dx = np.einsum("bij,bj->bi", K, z)
-    step = np.linalg.norm(dx[:, 0:3], axis=1)
+    if along is None:
+        step = np.linalg.norm(dx[:, 0:3], axis=1)
+    else:
+        t3 = np.c_[along, np.zeros(len(along))]
+        step = np.abs(np.einsum("bi,bi->b", t3, dx[:, 0:3]))
     alpha = np.where(step > max_step, max_step / np.maximum(step, 1e-12), 1.0)
-    K = K * alpha[:, None, None]
-    x_corr += dx * alpha[:, None]
+    Kc = K * alpha[:, None, None]
+    if along is not None:              # position rows: α on the along-track part, 1 across
+        keep = np.eye(3)[None] - np.einsum("bi,bj->bij", t3, t3)
+        Kc[:, 0:3] = alpha[:, None, None] * K[:, 0:3] + (1.0 - alpha)[:, None, None] * (keep @ K[:, 0:3])
+    K = Kc
+    x_corr += np.einsum("bij,bj->bi", K, z)
     IKH = np.eye(P.shape[-1]) - K @ H
     P[:] = IKH @ P @ np.swapaxes(IKH, 1, 2) + K @ R @ np.swapaxes(K, 1, 2)
     return ok, alpha
@@ -603,6 +619,10 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                 last_fix = np.where(any_fix, tf, last_fix)  # the outage is over once fixes return
                 okp = okp & ~skip
                 fac = np.where(in_reacq, 1.0 + (cfg.reacq_r_factor - 1.0) * np.exp(-np.maximum(age, 0) / cfg.reacq_r_tau_s), 1.0)
+            fwd_h = None
+            if cfg.reacq and cfg.reacq_cap_along_only and in_reacq.any():
+                f3 = np.einsum("bij,j->bi", C, C_bp.T @ np.array([1.0, 0.0, 0.0]))     # car forward, nav (attitude)
+                fwd_h = f3[:, :2] / np.maximum(np.linalg.norm(f3[:, :2], axis=1, keepdims=True), 1e-9)
             if okp.any():
                 R = np.zeros((B, 3, 3))
                 R[:, 0, 0] = R[:, 1, 1] = (fac * cfg.gnss_pos_factor * np.nan_to_num(sh, nan=1e3)) ** 2
@@ -615,7 +635,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                         continue
                     Psub, xs = P[sel], x[sel]
                     if capped:
-                        acc, alpha = _update_capped(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999, cfg.reacq_max_step_m)
+                        acc, alpha = _update_capped(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999, cfg.reacq_max_step_m,
+                                                    fwd_h[sel] if fwd_h is not None else None)
                         ev["gnss_pos_capped"] += int((alpha < 1).sum())
                         sidx = np.nonzero(sel)[0]
                         settle[sidx] = np.where(alpha < 1, 0, settle[sidx] + 1)
@@ -642,7 +663,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                         continue
                     Psub, xs = P[sel], x[sel]
                     if capped:
-                        acc, alpha = _update_capped(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999, cfg.reacq_max_step_m)
+                        acc, alpha = _update_capped(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999, cfg.reacq_max_step_m,
+                                                    fwd_h[sel] if fwd_h is not None else None)
                         ev["gnss_pos_capped"] += int((alpha < 1).sum())
                     else:
                         acc, nis = _update(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999)

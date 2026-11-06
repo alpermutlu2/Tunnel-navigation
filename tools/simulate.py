@@ -176,6 +176,7 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
         "s_hat": s_hat[sel].round(2).tolist(),
         "e_s": e_s[sel].round(2).tolist(),
         "e_lat": e_lat[sel].round(2).tolist(),
+        "sig_lat": np.sqrt(np.einsum("ki,kij,kj->k", nrm, out.P_pos[0][:, :2, :2], nrm))[sel].round(2).tolist(),   # 16-state cross-track σ
         "sig_s": sig_s[sel].round(2).tolist(),
         "s_1d": np.interp(out.t[sel], o1.t, o1.s[0]).round(2).tolist(),
         "e_1d": (np.interp(out.t[sel], o1.t, o1.s[0]) - tr.s[idx[sel]]).round(2).tolist(),
