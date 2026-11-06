@@ -132,7 +132,7 @@ changes).
 ```bash
 python tools/evaluate.py                 # Monte Carlo, 50 seeds per scenario (~1 h on 2 cores)
 python tools/evaluate.py --seeds 20 S1 S4 --negative   # subset + car-goes-straight control
-python tools/eval_sets.py default       # ESKF on six sets of 50 seeds (0-299); variants known, cup, noexc (mount); --validation: 600-699 once
+python tools/eval_sets.py default       # ESKF on six sets of 50 seeds (0-299); variants known, cup, noexc (mount); --validation: a new untouched tier per version, run once (v0.5.17: 700-799)
 python tools/ekf10_sets.py               # 10-state filter on 0-299, v0.5.15 and no_pause (v0.5.14's filter); --validation: 600-699
 python tools/hybrid_ab.py eskf 50 70     # the hybrid matrix (map grade, pressure gradient, grade error); ekf10 for the 10-state filter; v2: defaults and a map without grade
 python tools/summarise_300.py            # 300-seed results against v0.5.13

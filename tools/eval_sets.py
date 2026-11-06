@@ -2,7 +2,7 @@
 (200-299 since v0.5.12), validation 300-399 (run once). Variants are EskfConfig overrides.
 
     python tools/eval_sets.py default              -> reports/<version>/eval_sets_300_default.json (resumable)
-    python tools/eval_sets.py default --validation -> reports/<version>/validation_300-399.json
+    python tools/eval_sets.py default --validation -> reports/<version>/validation_700-799.json
     python tools/eval_sets.py win2 --only S4,S4_straight_on   -> a subset
 """
 import json
@@ -19,7 +19,7 @@ import tunnelsim  # noqa: E402
 
 SETS = (0, 50, 100, 150, 200, 250)   # v0.5.12: 200-299 is a design tier (the branch window came from seed 247)
 if "--validation" in sys.argv:          # untouched seeds, final configuration only, run once (owner 2026-10-25)
-    SETS = (600, 650)                   # v0.5.15: 600-699
+    SETS = (700, 750)                   # v0.5.17: 700-799 (600-699 spent in v0.5.15)
     sys.argv.remove("--validation")
 ONLY = None
 if "--only" in sys.argv:                # e.g. --only S1_straight_on,S4_straight_on
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     if ONLY:
         out_name = out_name.replace(".json", "_" + "_".join(sorted(ONLY)) + ".json")
     if SETS[0] >= 400:
-        out_name = "validation_600-699.json"
+        out_name = f"validation_{SETS[0]}-{SETS[-1] + 49}.json"
     res = {"version": tunnelsim.__version__, "sets": list(SETS), "variants": {v: VARIANTS[v] for v in RUN}, "seeds_per_set": 50, "fail_m": FAIL_M, "runs": {}}
     d = ROOT / "reports" / tunnelsim.__version__
     d.mkdir(parents=True, exist_ok=True)
