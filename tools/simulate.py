@@ -117,6 +117,7 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
     idx = np.clip(np.round((out.t - tr.t[0]) / tr.dt).astype(int), 0, len(tr.t) - 1)
     tn = _tangent(tr, idx)
     pR = out.p[0] - np.einsum("kij,j->ki", out.C[0] @ C_bp_f.T, tr.lever_arm_b)
+    fwd16 = np.einsum("kij,j->ki", out.C[0] @ C_bp_f.T, np.array([1.0, 0.0, 0.0]))
     e_s = np.einsum("ki,ki->k", pR - tr.pos_n[idx], tn)
     sig_s = np.sqrt(np.einsum("ki,kij,kj->k", tn, out.P_pos[0], tn))
     i_e = int(np.argmax(tr.in_tunnel))
@@ -168,7 +169,9 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
         "true_xy": tr.pos_n[idx[sel], :2].round(2).tolist(),
         "est_xy": pR[sel, :2].round(2).tolist(),
         "heading": np.arctan2(tn[sel, 1], tn[sel, 0]).round(4).tolist(),
-        "est_heading": np.arctan2(out.v[0, sel, 1], out.v[0, sel, 0]).round(4).tolist(),
+        # the car body's heading from the filter's attitude (vehicle forward axis), not from v̂: at a stop
+        # v̂ ≈ 0 and its direction is noise (S4: median 60° off while stopped, attitude 0.6°)
+        "est_heading": np.arctan2(fwd16[sel, 1], fwd16[sel, 0]).round(4).tolist(),
         "s_true": tr.s[idx[sel]].round(2).tolist(),
         "s_hat": s_hat[sel].round(2).tolist(),
         "e_s": e_s[sel].round(2).tolist(),

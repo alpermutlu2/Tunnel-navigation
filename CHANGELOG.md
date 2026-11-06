@@ -15,6 +15,10 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   map does; the map's app car takes the same heading.
 - The driver's view says that its arrow is the app (the map's app car). An "app" switch added first
   was removed: the arrow is always the app.
+- The map's 16-state car takes its heading from the filter's attitude (the vehicle's forward axis),
+  not from the direction of v̂. At a stop v̂ ≈ 0 and its direction is noise, so the car spun while
+  stopped (S4 seed 0, 676 stopped samples: median 60° off, up to 180°; the attitude: 0.6°, at most
+  0.8°). The filter itself was right; only the drawing was wrong.
 - `tunnelsim` is unchanged, so every metric is v0.5.16's (no snapshot). Static page rebuilt.
 
 ## v0.5.16 (2026-11-05): low-end callout margin k = 0.7; scoped consistency claims; freeze
