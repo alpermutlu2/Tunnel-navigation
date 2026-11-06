@@ -19,6 +19,12 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   not from the direction of v̂. At a stop v̂ ≈ 0 and its direction is noise, so the car spun while
   stopped (S4 seed 0, 676 stopped samples: median 60° off, up to 180°; the attitude: 0.6°, at most
   0.8°). The filter itself was right; only the drawing was wrong.
+- Two more places where the page drew an estimate with the truth's help, found by an audit of the page:
+  the constant-speed (CV) car took the true car's heading (now the road's heading at its own ŝ), and the
+  16-state's mark on the road strip and its distance at the driver's-view edge used its position
+  projected on the true road (now its ŝ matched to the map, `s_16`, as the filters compute it). The
+  audit found no other heading taken from v̂ (the mount alignment uses the GNSS course only above
+  3 m/s), and no metric uses either quantity.
 - `tunnelsim` is unchanged, so every metric is v0.5.16's (no snapshot). Static page rebuilt.
 
 ## v0.5.16 (2026-11-05): low-end callout margin k = 0.7; scoped consistency claims; freeze

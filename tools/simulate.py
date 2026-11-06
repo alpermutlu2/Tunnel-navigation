@@ -181,6 +181,9 @@ def run(key, seed, overrides, zupt, eskf=(), mount_err=None, no_sideslip=False, 
         "e_1d": (np.interp(out.t[sel], o1.t, o1.s[0]) - tr.s[idx[sel]]).round(2).tolist(),
         "sig_1d": np.interp(out.t[sel], o1.t, o1.sig_s[0]).round(2).tolist(),
         "v_1d": np.interp(out.t[sel], o1.t, o1.v[0]).round(3).tolist(),
+        # the 16-state's ŝ as the estimator computes it (its 3-D position matched to the map); "s_hat" above is
+        # its position projected on the true road, which is for scoring only
+        "s_16": S_["eskf"][0, sel].round(2).tolist(),
         "s_10": S_["ekf10"][0, sel].round(2).tolist(),
         "e_10": (S_["ekf10"][0, sel] - tr.s[idx[sel]]).round(2).tolist(),
         "sig_10": G_["ekf10"][0, sel].round(2).tolist(),

@@ -312,6 +312,7 @@ function setup(c) {
 }
 const SHOW = { app: true, eskf: true, e10: true, ref: true, cv: true };
 const NAV = { eskf: false, e10: false, ref: false, cv: false };         // the driver's view shows the app only by default
+const e16S = i => (D.s_16 ? D.s_16[i] : D.s_hat[i]);          // estimator-side ŝ of the 16-state (s_hat: scoring only)
 const appS = i => (D.s_app ? D.s_app[i] : D.s_hat[i]), appSig = i => (D.sig_app ? D.sig_app[i] : D.sig_s[i]);
 // the point the app draws (main tunnel while the branch is "not yet", v0.5.15) and its direction of travel
 const appXY = i => (D.app_xy ? D.app_xy[i] : sToXY(appS(i)));
@@ -377,7 +378,7 @@ function drawMap() {
     const tx = X(x) - g.measureText(label).width / 2, ty = Y(y) + dy;
     g.strokeStyle = css("--panel"); g.lineWidth = 3; g.strokeText(label, tx, ty); g.fillText(label, tx, ty);
   };
-  const c = cvS(k); if (SHOW.cv && c !== null) { const [x, y] = sToXY(c); drawCar(x, y, D.heading[k], css("--cv"), "CV", 0.55, -Wc / 2 - 20); }
+  const c = cvS(k); if (SHOW.cv && c !== null) { const [x, y] = sToXY(c); drawCar(x, y, headingAt(c), css("--cv"), "CV", 0.55, -Wc / 2 - 20); }
   if (SHOW.ref && D.s_1d) { const [x, y] = sToXY(D.s_1d[k]); drawCar(x, y, headingAt(D.s_1d[k]), css("--ref"), "4", 0.6, -Wc / 2 - 33); }
   if (SHOW.e10 && D.s_10) { const [x, y] = sToXY(D.s_10[k]); drawCar(x, y, headingAt(D.s_10[k]), css("--e10"), "10", 0.6, -Wc / 2 - 46); }
   if (SHOW.app && D.s_app) { const [x, y] = appXY(k); drawCar(x, y, appHeading(k), css("--app"), "app", 0.85, -Wc / 2 - 59); }
@@ -404,7 +405,7 @@ function drawStrip() {
   const sh = appS(k), sg = 2 * appSig(k);
   g.fillStyle = css("--band"); g.fillRect(X(sh - sg), H / 2 - 12, Math.max(2, X(sh + sg) - X(sh - sg)), 24);
   g.fillStyle = css("--app"); g.fillRect(X(sh) - 2, H / 2 - 12, 4, 24);
-  if (SHOW.eskf) { g.fillStyle = css("--est"); g.fillRect(X(D.s_hat[k]) - 1, H / 2 - 9, 2, 18); }
+  if (SHOW.eskf) { g.fillStyle = css("--est"); g.fillRect(X(e16S(k)) - 1, H / 2 - 9, 2, 18); }
   const c = cvS(k); if (c !== null) { g.fillStyle = css("--cv"); g.fillRect(X(c) - 1.5, H / 2 - 9, 3, 18); }
   g.fillStyle = css("--true"); g.beginPath(); g.arc(X(D.s_true[k]), H / 2, 5, 0, 7); g.fill();
 }
@@ -465,7 +466,7 @@ function drawNav() {
   if (NAV.cv) { const c = cvS(k); if (c !== null) others.push(["CV", css("--cv"), sToXY(c), c]); }
   if (NAV.ref && D.s_1d) others.push(["4", css("--ref"), sToXY(D.s_1d[k]), D.s_1d[k]]);
   if (NAV.e10 && D.s_10) others.push(["10", css("--e10"), sToXY(D.s_10[k]), D.s_10[k]]);
-  if (NAV.eskf) others.push(["16", css("--est"), D.est_xy[k], D.s_hat[k]]);
+  if (NAV.eskf) others.push(["16", css("--est"), D.est_xy[k], e16S(k)]);
   if (document.getElementById("ghost").checked) others.push(["true", "#ffffff", D.true_xy[k], null]);
   const fs = Math.round(12 * u), topM = bh + 6 * u, botM = fb + 6 * u;
   const ahead_ = [], behind_ = [];
