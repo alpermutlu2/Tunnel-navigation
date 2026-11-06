@@ -25,6 +25,10 @@ Design decisions and their reasons live in `DESIGN.md` (decision log, section 12
   projected on the true road (now its ŝ matched to the map, `s_16`, as the filters compute it). The
   audit found no other heading taken from v̂ (the mount alignment uses the GNSS course only above
   3 m/s), and no metric uses either quantity.
+- Every plot has a legend; a click on a name hides that line in that plot only (owner: per plot, not tied
+  to the map's Show boxes), and the plot's y range follows the lines still shown (the along-track error
+  keeps its fixed clip range). The hidden lines travel in the link (`hide=`). The speed plot gains the
+  app's speed, which it lacked. The sensor headers' coloured x·y·z words gave way to the legends.
 - `tunnelsim` is unchanged, so every metric is v0.5.16's (no snapshot). Static page rebuilt.
 
 ## v0.5.16 (2026-11-05): low-end callout margin k = 0.7; scoped consistency claims; freeze
