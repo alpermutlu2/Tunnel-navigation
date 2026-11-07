@@ -35,3 +35,20 @@ def test_accepted_uncapped_counts_capped_or_rejected_resets():
 
 def test_default_counts_accepted_only():
     assert EskfConfig().reacq_settle_accepted_only is True
+
+
+def test_phase_ends_when_locked_out_after_min_time():
+    from tunnelsim.eskf import _reacq_done
+    cfg = EskfConfig()
+    age = np.array([5.0, 12.0, 12.0, 12.0])
+    settle = np.array([0, 0, 5, 2])
+    rej = np.array([9, 5, 0, 3])
+    done, lock = _reacq_done(age, settle, rej, cfg)
+    assert done.tolist() == [False, True, True, False]   # too early; locked out; settled; neither
+    assert lock.tolist() == [False, True, False, False]
+
+
+def test_all_rejected_ends_where_v0517_did():
+    # every fix rejected: v0.5.17 counted them as settled; v0.5.17.1 counts them as a lock-out; same N
+    cfg = EskfConfig()
+    assert cfg.reacq_rej_exit_n == cfg.reacq_settle_fixes

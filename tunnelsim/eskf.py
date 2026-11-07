@@ -145,6 +145,9 @@ class EskfConfig:
     reacq_min_s: float = 10.0         # the phase lasts at least this long ...
     reacq_settle_fixes: int = 5       # ... and ends after this many uncapped position updates in a row
     reacq_settle_accepted_only: bool = True   # v0.5.17.1: a fix the gate rejects does not count as settled
+    reacq_rej_exit_n: int = 5         # v0.5.17.1: ... and the phase also ends after this many rejected position
+                                      # fixes in a row (after reacq_min_s), handing a locked-out filter to the
+                                      # gate-lock recovery of the normal path (0 = off)
     reacq_vel_only_s: float = 3.0     # first seconds: velocity (Doppler) only, no position
     reacq_r_factor: float = 10.0      # position sigma inflation at the start of the phase ...
     reacq_r_tau_s: float = 8.0        # ... decaying to 1 with this time constant
@@ -388,6 +391,16 @@ def _settle_step(settle, acc, alpha, accepted_only=True):
     return np.where(good, settle + 1, 0)
 
 
+def _reacq_done(age, settle, rej_run, cfg):
+    """Re-acquisition phase end: after reacq_min_s, either reacq_settle_fixes uncapped updates in a row
+    (settled), or reacq_rej_exit_n rejected fixes in a row (locked out: the normal path's gate-lock
+    recovery takes over). Returns (done, ended_by_lock)."""
+    settled = settle >= cfg.reacq_settle_fixes
+    locked = (rej_run >= cfg.reacq_rej_exit_n) if cfg.reacq_rej_exit_n > 0 else np.zeros_like(settled)
+    old = age >= cfg.reacq_min_s
+    return old & (settled | locked), old & locked & ~settled
+
+
 def _update(x_corr, P, z, H, R, gate):
     """Batched update. z = h(x̂) − measurement − H·x_corr (innovation in the estimate − truth
     convention, net of corrections already accumulated this epoch); the filter then estimates the
@@ -502,7 +515,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     n_rej = np.zeros(B, int)                # consecutive open-sky GNSS rejections (pos or vel)
     q_scale = np.ones(B)                    # adaptive accel/gyro noise scale (α)
     ev = {"map_updates": 0, "map_branch": 0, "map_main": 0, "gate_inflations": 0, "gnss_pos_acc": 0, "gnss_pos_rej": 0, "gnss_vel_acc": 0, "gnss_vel_rej": 0, "zupt": 0,
-          "gnss_pos_skipped_reacq": 0, "gnss_pos_capped": 0, "gnss_pos_rej_reacq": 0}
+          "gnss_pos_skipped_reacq": 0, "gnss_pos_capped": 0, "gnss_pos_rej_reacq": 0, "reacq_exit_locked": 0}
     def _gate_monitor(sel, acc, nis, open_sky):
         """(i) gate-lock recovery and (ii) adaptive noise from the GNSS NIS (3-dof updates)."""
         nonlocal P, q_scale
@@ -537,6 +550,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     reacq_start = np.full(B, -np.inf)       # start of the current re-acquisition phase
     reacq_on = np.zeros(B, bool)            # phase active (ends on convergence, not on a timer)
     settle = np.zeros(B, int)               # uncapped position updates in a row within the phase
+    rej_run = np.zeros(B, int)              # rejected position fixes in a row within the phase
     Fsum = np.zeros((B, NA, NA)); dt_sum = 0.0
     Qc = np.zeros(NA)
     Qc[3:6] = cfg.accel_noise ** 2; Qc[6:9] = cfg.gyro_noise ** 2
@@ -624,8 +638,11 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                 reacq_start = np.where(new_phase, tf, reacq_start)
                 reacq_on = reacq_on | new_phase
                 settle = np.where(new_phase, 0, settle)
+                rej_run = np.where(new_phase, 0, rej_run)
                 age = tf - reacq_start
-                done = reacq_on & (age >= cfg.reacq_min_s) & (settle >= cfg.reacq_settle_fixes)
+                done, by_lock = _reacq_done(age, settle, rej_run, cfg)
+                done = reacq_on & done
+                ev["reacq_exit_locked"] += int((done & by_lock).sum())
                 reacq_on = reacq_on & ~done
                 in_reacq = reacq_on
                 skip = okp & in_reacq & (age < cfg.reacq_vel_only_s)
@@ -655,6 +672,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                         sidx = np.nonzero(sel)[0]
                         ev["gnss_pos_rej_reacq"] += int((~acc).sum())       # rejected in the phase: K = 0, alpha = 1
                         settle[sidx] = _settle_step(settle[sidx], acc, alpha, cfg.reacq_settle_accepted_only)
+                        rej_run[sidx] = np.where(acc, 0, rej_run[sidx] + 1)
                     else:
                         acc, nis = _update(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999)
                     P[sel], x[sel] = Psub, xs
