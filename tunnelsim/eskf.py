@@ -144,6 +144,7 @@ class EskfConfig:
     reacq_gap_s: float = 10.0         # an outage longer than this starts a re-acquisition phase
     reacq_min_s: float = 10.0         # the phase lasts at least this long ...
     reacq_settle_fixes: int = 5       # ... and ends after this many uncapped position updates in a row
+    reacq_settle_accepted_only: bool = True   # v0.5.17.1: a fix the gate rejects does not count as settled
     reacq_vel_only_s: float = 3.0     # first seconds: velocity (Doppler) only, no position
     reacq_r_factor: float = 10.0      # position sigma inflation at the start of the phase ...
     reacq_r_tau_s: float = 8.0        # ... decaying to 1 with this time constant
@@ -377,6 +378,16 @@ def _update_capped(x_corr, P, z, H, R, gate, max_step, along=None):
     return ok, alpha
 
 
+def _settle_step(settle, acc, alpha, accepted_only=True):
+    """Re-acquisition settle counter after one capped position update: +1 for an uncapped update, else 0.
+    A fix the gate rejects has K = 0, so alpha = 1 although nothing was applied; since v0.5.17.1 it
+    resets the count instead of adding to it (from a review of v0.5.17)."""
+    good = alpha >= 1.0
+    if accepted_only:
+        good = good & acc
+    return np.where(good, settle + 1, 0)
+
+
 def _update(x_corr, P, z, H, R, gate):
     """Batched update. z = h(x̂) − measurement − H·x_corr (innovation in the estimate − truth
     convention, net of corrections already accumulated this epoch); the filter then estimates the
@@ -491,7 +502,7 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
     n_rej = np.zeros(B, int)                # consecutive open-sky GNSS rejections (pos or vel)
     q_scale = np.ones(B)                    # adaptive accel/gyro noise scale (α)
     ev = {"map_updates": 0, "map_branch": 0, "map_main": 0, "gate_inflations": 0, "gnss_pos_acc": 0, "gnss_pos_rej": 0, "gnss_vel_acc": 0, "gnss_vel_rej": 0, "zupt": 0,
-          "gnss_pos_skipped_reacq": 0, "gnss_pos_capped": 0}
+          "gnss_pos_skipped_reacq": 0, "gnss_pos_capped": 0, "gnss_pos_rej_reacq": 0}
     def _gate_monitor(sel, acc, nis, open_sky):
         """(i) gate-lock recovery and (ii) adaptive noise from the GNSS NIS (3-dof updates)."""
         nonlocal P, q_scale
@@ -642,7 +653,8 @@ def run_eskf(imu_t, f, w, gnss, baro_t, baro_h, C_bp, r_b, cfg: EskfConfig = Esk
                                                     fwd_h[sel] if fwd_h is not None else None)
                         ev["gnss_pos_capped"] += int((alpha < 1).sum())
                         sidx = np.nonzero(sel)[0]
-                        settle[sidx] = np.where(alpha < 1, 0, settle[sidx] + 1)
+                        ev["gnss_pos_rej_reacq"] += int((~acc).sum())       # rejected in the phase: K = 0, alpha = 1
+                        settle[sidx] = _settle_step(settle[sidx], acc, alpha, cfg.reacq_settle_accepted_only)
                     else:
                         acc, nis = _update(xs, Psub, z[sel], H[sel], R[sel], CHI2_3_999)
                     P[sel], x[sel] = Psub, xs
