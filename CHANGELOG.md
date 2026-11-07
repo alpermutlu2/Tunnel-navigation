@@ -7,6 +7,24 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
+## v0.5.17.1 (2026-11-07): the re-acquisition settle counter ignores rejected fixes (owner, after a review)
+
+A review of v0.5.17 read in the code that a GNSS position fix the NIS gate rejects has K = 0, so
+`_update_capped` returns α = 1 and the settle counter counted it as an uncapped update; five such
+fixes after the minimum 10 s could end the re-acquisition phase with fewer accepted fixes. The owner
+asked for the fix (first recorded in REPORT §5 as not fixed).
+- **Change:** `_settle_step` (new): +1 only for an accepted and uncapped update, 0 otherwise.
+  `EskfConfig.reacq_settle_accepted_only = True` (False is v0.5.17's counting, for A/B). New event
+  `gnss_pos_rej_reacq` (position fixes rejected inside the phase), recorded by `eval_sets.py`.
+- **20 seeds (50–69,** `reports/0.5.17.1/settle_ab_50-69.json`): S1–S6, 5 km and S4 straight on,
+  nominal and under the v0.5.17 map stress: no fix rejected inside the phase; identical.
+- **300 seeds (0–299,** `python tools/compare_v05171.py`): ESKF 72 of 72 runs of 50 identical to
+  v0.5.17, 0 fixes rejected inside the phase. SUPERVISOR_LINE
+- **No screen number moves:** the gap was real in the code and never reached in these runs.
+- **Tests:** `tests/test_v05171.py` (a rejected fix gives α = 1 and applies nothing; six rejected fixes
+  in a row do not settle, v0.5.17's counting would; accepted-uncapped counts, capped or rejected
+  resets; the default).
+
 ## v0.5.17 (2026-11-06): re-acquisition caps the along-track correction only (a stress test by the owner)
 
 The owner ran S4 in the live simulator with the sliders at about three times the assumed map errors
