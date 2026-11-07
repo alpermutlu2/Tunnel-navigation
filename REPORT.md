@@ -1360,7 +1360,11 @@ Stress = map lateral offset 6 m, length +1.5 %, exit multipath 45 m. `reports/0.
   along the road through their correlation: the cap was bypassed, not broken. A car going straight
   on, whose along-track error at the exit is 30–90 m, showed it: exit step p95 5.5 → 14.9 m on S4,
   7.9 → 11.3 m on S1 (worst set). The 20-seed A/B above had no straight-on case; it has one now, and a
-  test pins the height scaling. First results: `reports/0.5.17/superseded/`.
+  test pins the height scaling. First results: `reports/0.5.17/superseded/`. The same mechanism
+  across the road (the cross-track gain taken whole collapses the cross-track variance, and the next
+  update could move the along-track position through their correlation) was checked through the
+  along-track exit step: equal to v0.5.16's within 0.1 m in every 300-seed set, straight on included;
+  not seen.
 - **300 seeds** (sets 0–299, `reports/0.5.17/eval_sets_300_default.json` against v0.5.14,
   `supervisor_sets_0-299.json` against v0.5.15; `python tools/summarise_v0517.py all`): nominal
   ESKF results are unchanged within the set-to-set spread. Error at the diverge and the portal,
@@ -1489,7 +1493,16 @@ Stress = map lateral offset 6 m, length +1.5 %, exit multipath 45 m. `reports/0.
   or measured. Most Istanbul tunnels curve after a branch.
 - **The 12 s gyro noise on a low-end phone (~5°) is the size of the 5° turn threshold.** The branch
   gate keeps false turns from moving s; on its own the threshold would not.
-- **The validation tier is one set of 100 seeds per version** (§3.1, 600–699 for v0.5.15); claims on
+- **The re-acquisition phase can end on rejected fixes** (found by review after v0.5.17, from the
+  code; not measured). The phase ends after 5 uncapped position updates in a row
+  (`reacq_settle_fixes`), but a fix the NIS gate rejects also gives α = 1 and counts as one. So the
+  phase could end, after its minimum 10 s, with fewer than 5 accepted fixes. Early in the phase R is
+  inflated tenfold, so rejections should be rare there; how often it happens is not counted. The fix is
+  one line (count only accepted, uncapped updates) plus a test with rejected fixes in a row; not
+  made, under the rule below.
+- **After v0.5.17, findings that do not change a number on the screen go here, not into a version**
+  (owner, 2026-11-07). The code is frozen at v0.5.17.
+- **The validation tier is one set of 100 seeds per version** (§3.1, 600–699 for v0.5.15, 700–799 for v0.5.17); claims on
   rarer failures (1 in 300 in §4.14) need more.
 - **A car that stays in the main tunnel has no curve to correct it.** On S4, 5 of 300 such runs are
   more than 100 m off at the portal with the ESKF (§3). Only GNSS at the exit, through the follower, fixes it;

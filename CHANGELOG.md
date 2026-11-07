@@ -44,6 +44,11 @@ driver wander) and saw the 16-state car 10–17 m beside the road after the exit
   p95 21.1 s); the v0.5.16 cap on the same seeds gives the same times, so it is the seeds
   (`tools/validation_attrib_v0517.py`, diagnosis only). Tools: validation tier 700–799 in
   `eval_sets.py` and `supervisor_eval.py`; `summarise_v0517.py validation`.
+- **Docs after the owner's review (2026-11-07):** REPORT §4.17 records that the height leak's
+  cross-track counterpart was checked through the exit step and not seen; §5 gains the
+  re-acquisition settle counter (a gate-rejected fix counts as settled; from a review, not measured,
+  not fixed) and the owner's rule that findings which do not change a screen number go to §5, not
+  into a version. Code frozen at v0.5.17.
 - **Snapshot diff vs 0.5.16** (`tools/snapshot.py --diff 0.5.16 0.5.17`): only the exit step
   (`recovery.max_step_jump_m`) moves, by at most +0.04 m (S4 p95 3.30 → 3.33 m); tests 209 → 213.
 - **Tests:** `tests/test_v0517.py` (the cap limits along only, keeps across, height stays scaled,
