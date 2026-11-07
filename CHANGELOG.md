@@ -34,8 +34,10 @@ is right. The owner asked for the fix (first recorded in REPORT §5 as not fixed
   explicit exit ended 20 of 20 phases in S4, 14 at 30 Pa/km, 2 in S3, 1 each in S2 and S5.
 - **300 seeds (0–299,** `python tools/compare_v05171.py`): ESKF 72 of 72 runs of 50 identical to
   v0.5.17, 0 fixes rejected inside the phase; supervisor 180 of 180 identical (rules and filters).
-- **700–799** (spent in v0.5.17, rerun as an identity check, not as validation): IDENTITY_LINE
-- **No screen number moves.** Snapshot: SNAPSHOT_LINE
+- **700–799** (spent in v0.5.17, rerun as an identity check, not as validation): ESKF 24 of 24 runs of 50 identical
+  (0 fixes rejected inside the phase), supervisor 60 of 60 identical.
+- **No screen number moves.** Snapshot: `tools/snapshot.py --diff 0.5.17 0.5.17.1`: no metric changed;
+  tests 213 → 219 (the six new ones).
 - **Tests:** `tests/test_v05171.py` (a rejected fix gives α = 1 and applies nothing; six rejected fixes
   in a row do not settle, v0.5.17's counting would; accepted-uncapped counts, capped or rejected
   resets; the default; `_reacq_done` ends on settle or on the rejection run, only after the minimum;
