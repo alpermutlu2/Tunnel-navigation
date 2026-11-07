@@ -69,6 +69,7 @@ def one(args):
            "exit_step_p95": r["recovery"]["max_step_jump_m"]["p95_abs"],
            "branch": r["branch_confirm"]["branch_reported_frac"], "main": r["branch_confirm"]["main_reported_frac"],
            "map_rejected": r["events"].get("map_rejected", 0),
+           "gnss_pos_rej_reacq": r["events"].get("gnss_pos_rej_reacq"),     # v0.5.17.1
            "none": r["branch_confirm"]["none_frac"], "branch_delay_s": (r["branch_confirm"]["delay_s"] or {}).get("bias"),
            "errors": e.round(1).tolist()}
     if "coverage" in r:
