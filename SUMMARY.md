@@ -139,6 +139,8 @@ map grade became a measurement (11.6–15.7 and 8.9–11.8 m before).
   7 of 1000 callouts more than 1 s late with k = 1; the pressure-gradient cases right in every run.
   The v0.5.17 tier (700–799) agrees: exit step inside the ranges, no branch-taking run more than
   100 m off, 4 of 1000 callouts late, single sets above the ranges by at most 1.8 m.
+  v0.5.17.1 (a settle-counter fix after a review, with an explicit exit for a filter the gate
+  has locked out) gives identical results on all 300 seeds and in the supervisor.
 - **Branch window.** A validation run 110 m off (the turn outside the decision's fixed 100 m
   window) made the window grow with σ_s; the run is 3 m off and nothing else moved.
 - **Seed tiers and method.** A callout claim of "1 in 500 late" made on 0–49 became 22 in 3000;

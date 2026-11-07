@@ -1377,6 +1377,9 @@ Stress = map lateral offset 6 m, length +1.5 %, exit multipath 45 m. `reports/0.
 - **Validation 700–799** (run once, §3): the exit step inside the 300-seed ranges everywhere; no run
   taking the branch more than 100 m off; single sets above the ranges by 0.1–1.8 m. A slower
   recovery in one set is the seeds' (the v0.5.16 cap on the same seeds gives the same times).
+- **v0.5.17.1** (after a review): the phase's settle counter no longer counts rejected fixes, and
+  the phase ends after 5 rejected fixes in a row so a locked-out filter still reaches the gate-lock
+  recovery. Every 300-seed result, the supervisor's included, is identical to v0.5.17 (§5).
 
 ## 5. Limitations and next steps
 
@@ -1493,15 +1496,19 @@ Stress = map lateral offset 6 m, length +1.5 %, exit multipath 45 m. `reports/0.
   or measured. Most Istanbul tunnels curve after a branch.
 - **The 12 s gyro noise on a low-end phone (~5°) is the size of the 5° turn threshold.** The branch
   gate keeps false turns from moving s; on its own the threshold would not.
-- **The re-acquisition phase can end on rejected fixes** (found by review after v0.5.17, from the
-  code; not measured). The phase ends after 5 uncapped position updates in a row
-  (`reacq_settle_fixes`), but a fix the NIS gate rejects also gives α = 1 and counts as one. So the
-  phase could end, after its minimum 10 s, with fewer than 5 accepted fixes. Early in the phase R is
-  inflated tenfold, so rejections should be rare there; how often it happens is not counted. The fix is
-  one line (count only accepted, uncapped updates) plus a test with rejected fixes in a row; not
-  made, under the rule below.
+- **The re-acquisition phase could end on rejected fixes** (found by review after v0.5.17, from the
+  code; fixed in v0.5.17.1 at the owner's request). The phase ended after 5 uncapped position updates
+  in a row (`reacq_settle_fixes`), but a fix the NIS gate rejects also gives α = 1 and counted as one.
+  The miscount turned out to be load-bearing: it was the only way out of the phase for a filter
+  that had diverged in the tunnel and has every fix rejected, and only outside the phase does the
+  gate-lock recovery run. Counting accepted fixes alone kept such a filter locked out (low-end ESKF
+  under the supervisor, worst shown p95 1430 → 9262 m; the screen shows the 10-state filter there).
+  v0.5.17.1 counts only accepted, uncapped updates and also ends the phase after 5 rejected fixes in
+  a row, now by intent; 300 seeds and the supervisor are identical to v0.5.17 (CHANGELOG v0.5.17.1).
+  No screen number moves. The owner asked for the fix although the rule below would have left it as
+  an item.
 - **After v0.5.17, findings that do not change a number on the screen go here, not into a version**
-  (owner, 2026-11-07). The code is frozen at v0.5.17.
+  (owner, 2026-11-07). The code is frozen at v0.5.17.1.
 - **The validation tier is one set of 100 seeds per version** (§3.1, 600–699 for v0.5.15, 700–799 for v0.5.17); claims on
   rarer failures (1 in 300 in §4.14) need more.
 - **A car that stays in the main tunnel has no curve to correct it.** On S4, 5 of 300 such runs are
@@ -1633,6 +1640,7 @@ change. The author is ready to explain or change any of them:
 | The decision deck proposed "the late count must not exceed v0.5.13's" as the k acceptance rule; in the gradient tunnels v0.5.13 was late in 20 of 20, so the rule could not fail | the author, who set the rule against the Note10's late share at k = 1 |
 | The deck listed an adaptive gradient prior as "later"; in a straight tunnel the gradient is not observable, so the trigger cannot fire where it is needed | the author |
 | A seed 247 tool's "mean-only, no hybrid" case ran with the soft default (the ESKF default had changed), and printed −3 m instead of −144 m | the agent, on comparing with the earlier inline run |
+| The first v0.5.17.1 settle fix (count accepted fixes only) removed the only way out of the re-acquisition phase for a diverged filter: low-end ESKF worst shown p95 1430 → 9262 m under the supervisor; the 20-seed A/B had no low-end case | the agent's 300-seed supervisor comparison before release; the explicit exit was the owner's choice |
 
 **Process controls,** used because generated code can be confidently wrong:
 - parameter tags;

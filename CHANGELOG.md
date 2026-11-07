@@ -7,23 +7,39 @@ Each version has a git tag and a metrics snapshot in `reports/<version>/metrics.
 Design decisions and their reasons live in `DESIGN.md` (decision log, section 12) and
 `docs/decisions/`. This file records what changed in the code and how the numbers moved.
 
-## v0.5.17.1 (2026-11-07): the re-acquisition settle counter ignores rejected fixes (owner, after a review)
+## v0.5.17.1 (2026-11-07): the re-acquisition settle counter ignores rejected fixes, with an explicit exit (owner, after a review)
 
 A review of v0.5.17 read in the code that a GNSS position fix the NIS gate rejects has K = 0, so
 `_update_capped` returns α = 1 and the settle counter counted it as an uncapped update; five such
-fixes after the minimum 10 s could end the re-acquisition phase with fewer accepted fixes. The owner
-asked for the fix (first recorded in REPORT §5 as not fixed).
-- **Change:** `_settle_step` (new): +1 only for an accepted and uncapped update, 0 otherwise.
-  `EskfConfig.reacq_settle_accepted_only = True` (False is v0.5.17's counting, for A/B). New event
-  `gnss_pos_rej_reacq` (position fixes rejected inside the phase), recorded by `eval_sets.py`.
-- **20 seeds (50–69,** `reports/0.5.17.1/settle_ab_50-69.json`): S1–S6, 5 km and S4 straight on,
-  nominal and under the v0.5.17 map stress: no fix rejected inside the phase; identical.
+fixes after the minimum 10 s could end the re-acquisition phase with fewer accepted fixes. The claim
+is right. The owner asked for the fix (first recorded in REPORT §5 as not fixed).
+- **The miscount was load-bearing:** the gate-lock recovery (`_gate_monitor`, inflates P after
+  `gate_recover_n` rejections in a row) runs only on the normal path, not inside the phase. A filter
+  that has diverged in the tunnel (low-end IMU, pressure gradient) has every fix rejected; the
+  miscount ended its phase after 10 s and handed it to that recovery. With the counter fixed alone it
+  never left the phase and stayed locked out: supervisor 300 seeds, low-end ESKF worst shown p95
+  1430 → 9262 m (5 km, 3 %, −25 Pa/km), 171 → 768 m (S1, 30 Pa/km); 20 seeds, low-end S1 at 30 Pa/km
+  error 60 s after the exit 127 → 811 m. The supervisor shows the 10-state filter in these cases, so
+  the screen did not move; the results are kept in `reports/0.5.17.1/superseded/`.
+- **Change (owner chose fix + explicit exit):** `_settle_step` (new): +1 only for an accepted and
+  uncapped update, 0 otherwise (`EskfConfig.reacq_settle_accepted_only = True`). `_reacq_done` (new):
+  the phase also ends after `reacq_rej_exit_n = 5` rejected position fixes in a row (after
+  `reacq_min_s`), so a locked-out filter reaches the gate-lock recovery when it did in v0.5.17, now
+  by intent. New events `gnss_pos_rej_reacq` (fixes rejected inside the phase, recorded by
+  `eval_sets.py`) and `reacq_exit_locked` (phases ended by the explicit exit).
+- **20 seeds (50–69,** `tools/settle_ab_v05171.py`, `reports/0.5.17.1/settle_ab_50-69.json`): three
+  variants (v0.5.17 counting; fix without exit; v0.5.17.1) on S1, S2, S4, S5, 5 km, S4 straight on,
+  under the v0.5.17 map stress, and low-end S1–S5 and S1 at 30 Pa/km. Note10 nominal and stress: no fix
+  rejected inside the phase, identical. Low-end: v0.5.17.1 identical to v0.5.17 in every metric; the
+  explicit exit ended 20 of 20 phases in S4, 14 at 30 Pa/km, 2 in S3, 1 each in S2 and S5.
 - **300 seeds (0–299,** `python tools/compare_v05171.py`): ESKF 72 of 72 runs of 50 identical to
-  v0.5.17, 0 fixes rejected inside the phase. SUPERVISOR_LINE
-- **No screen number moves:** the gap was real in the code and never reached in these runs.
+  v0.5.17, 0 fixes rejected inside the phase; supervisor 180 of 180 identical (rules and filters).
+- **700–799** (spent in v0.5.17, rerun as an identity check, not as validation): IDENTITY_LINE
+- **No screen number moves.** Snapshot: SNAPSHOT_LINE
 - **Tests:** `tests/test_v05171.py` (a rejected fix gives α = 1 and applies nothing; six rejected fixes
   in a row do not settle, v0.5.17's counting would; accepted-uncapped counts, capped or rejected
-  resets; the default).
+  resets; the default; `_reacq_done` ends on settle or on the rejection run, only after the minimum;
+  `reacq_rej_exit_n` equals `reacq_settle_fixes`).
 
 ## v0.5.17 (2026-11-06): re-acquisition caps the along-track correction only (a stress test by the owner)
 
