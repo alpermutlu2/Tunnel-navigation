@@ -38,6 +38,11 @@ is right. The owner asked for the fix (first recorded in REPORT §5 as not fixed
   (0 fixes rejected inside the phase), supervisor 60 of 60 identical.
 - **No screen number moves.** Snapshot: `tools/snapshot.py --diff 0.5.17 0.5.17.1`: no metric changed;
   tests 213 → 219 (the six new ones).
+- **Site and demo (2026-11-08):** `docs/sim/` rebuilt (the in-browser package carried v0.5.17's
+  code; the static page's seed-0 data is unchanged). `docs/DEMO.md` seed-0 numbers re-read on
+  v0.5.17.1: unchanged, since v0.5.17 and v0.5.17.1 act only after the exit. The `docs/media/`
+  recording and screenshots (v0.5.16.1) differ from v0.5.17.1 by at most 2.0 m in the drawn point
+  after the exit (S5 seed 0); kept. `tools/demo_seed0_check.py`, `reports/0.5.17.1/demo_seed0_check.txt`.
 - **Tests:** `tests/test_v05171.py` (a rejected fix gives α = 1 and applies nothing; six rejected fixes
   in a row do not settle, v0.5.17's counting would; accepted-uncapped counts, capped or rejected
   resets; the default; `_reacq_done` ends on settle or on the rejection run, only after the minimum;

@@ -1,0 +1,21 @@
+S5 (recording) | max |Δ| drawn (app_xy) all/after exit (1.99, 1.99) | raw 16-state (est_xy) (2.11, 2.11)
+   diverge {'e_s': -1.7, 'sig_s': 37.5, 'e_app': -1.8, 'sig_app': 37.5, 'e_10': 15.4, 'sig_10': 26.4}  portal {'e_s': 1.9, 'sig_s': 14.8, 'e_app': 0.9, 'sig_app': 14.8, 'e_10': 5.4, 'sig_10': 4.5}
+   decisions ['map_branch']
+S1 | max |Δ| drawn (app_xy) all/after exit (1.0, 1.0) | raw 16-state (est_xy) (1.09, 1.09)
+   diverge {'e_s': 10.1, 'sig_s': 26.5, 'e_app': 9.6, 'sig_app': 26.5, 'e_10': 18.9, 'sig_10': 20.5}  portal {'e_s': 4.6, 'sig_s': 16.1, 'e_app': 4.2, 'sig_app': 16.1, 'e_10': 2.1, 'sig_10': 7.1}
+   decisions ['map_branch']
+S1 map off | max |Δ| drawn (app_xy) all/after exit (1.25, 1.25) | raw 16-state (est_xy) (8.16, 8.16)
+   diverge {'e_s': 0.1, 'sig_s': 40.1, 'e_app': -0.7, 'sig_app': 40.1, 'e_10': 18.9, 'sig_10': 20.5}  portal {'e_s': 8.6, 'sig_s': 34.8, 'e_app': 7.9, 'sig_app': 34.8, 'e_10': 2.1, 'sig_10': 7.1}
+   decisions ['map_branch']
+S4 | max |Δ| drawn (app_xy) all/after exit (1.0, 1.0) | raw 16-state (est_xy) (0.04, 0.04)
+   diverge {'e_s': -13.8, 'sig_s': 58.1, 'e_app': -14.3, 'sig_app': 58.1, 'e_10': 45.8, 'sig_10': 43.2}  portal {'e_s': -4.6, 'sig_s': 16.9, 'e_app': -4.8, 'sig_app': 16.9, 'e_10': -1.6, 'sig_10': 7.0}
+   decisions ['map_branch']
+S3 p30 hybrid off | max |Δ| drawn (app_xy) all/after exit (0.89, 0.89) | raw 16-state (est_xy) (19.88, 19.88)
+   diverge {'e_s': 182.1, 'sig_s': 28.2, 'e_app': 175.1, 'sig_app': 26.5, 'e_10': 197.8, 'sig_10': 22.0}  portal {'e_s': 115.2, 'sig_s': 36.2, 'e_app': 114.4, 'sig_app': 109.5, 'e_10': 364.5, 'sig_10': 42.4}
+   decisions ['map_branch']
+S3 p30 hybrid on | max |Δ| drawn (app_xy) all/after exit (1.0, 1.0) | raw 16-state (est_xy) (0.08, 0.08)
+   diverge {'e_s': 3.5, 'sig_s': 8.2, 'e_app': 3.2, 'sig_app': 8.2, 'e_10': 197.8, 'sig_10': 22.0}  portal {'e_s': -0.4, 'sig_s': 6.2, 'e_app': -0.7, 'sig_app': 6.2, 'e_10': 364.5, 'sig_10': 42.4}
+   decisions ['map_branch']
+S4 low-end | max |Δ| drawn (app_xy) all/after exit (0.0, 0.0) | raw 16-state (est_xy) (87.58, 87.58)
+   diverge {'e_s': -417.8, 'sig_s': 67.3, 'e_app': 14.2, 'sig_app': 61.1, 'e_10': 14.2, 'sig_10': 61.1}  portal {'e_s': -570.3, 'sig_s': 82.1, 'e_app': 10.9, 'sig_app': 84.7, 'e_10': 10.9, 'sig_10': 84.7}
+   decisions ['map_branch']

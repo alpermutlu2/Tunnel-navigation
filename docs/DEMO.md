@@ -1,8 +1,11 @@
 # Demo script
 
 Live demo for the interview: about 5 minutes, four moments, each answering one question the
-reviewer is likely to have. The numbers below are seed 0 on v0.5.16, read from `serve.py`'s
-`/api/run`. Other seeds give other numbers; the 300-seed ranges are in SUMMARY.
+reviewer is likely to have. The numbers below are seed 0, read from `serve.py`'s `/api/run`, first
+on v0.5.16 and re-read on v0.5.17.1 (2026-11-08): unchanged, since v0.5.17 and v0.5.17.1 act only
+after the exit. The recording and screenshots in `docs/media/` were made on v0.5.16.1; after the
+exit the drawn point differs from v0.5.17.1 by at most 2.0 m (S5 seed 0), within a few seconds.
+Other seeds give other numbers; the 300-seed ranges are in SUMMARY.
 
 ## Before the call
 
