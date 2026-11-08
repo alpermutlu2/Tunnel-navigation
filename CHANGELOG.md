@@ -278,8 +278,7 @@ How the numbers moved (0–299, six sets of 50):
 
 ## v0.5.13 (2026-10-30): mount estimated in open sky, lateral-force speed row, recovery and prompt metrics
 
-From a comparison with another case-study repository; the owner chose items 1, 2, 3, 4 and 6 and
-rejected BLE beacons (item 5: a tunnel with beacons is not a fair assumption). Validation is
+Validation is
 400–499, run once (`reports/0.5.13/validation_400-499.json`, `ekf10_validation_400-499.json`,
 `supervisor_validation.json`); 300–399 was v0.5.12's and was not used here. REPORT §4.14.
 

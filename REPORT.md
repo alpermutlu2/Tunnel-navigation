@@ -833,7 +833,7 @@ Low-end S4, 10-state filter alone (route given), 300 seeds (`ekf10_sets_300_v2.j
 sets: every per-seed error identical. At scenario speeds k·v² ≤ 3.4 m stays under the 5 m floor.
 
 **4.14 v0.5.13: the mount estimated in open sky, a lateral-force speed row, recovery and prompt
-metrics** (owner 2026-10-29/30, from a comparison with another case-study repository;
+metrics** (owner 2026-10-29/30;
 `tunnelsim/mount_init.py`, `magnetometer.py`, `navmetrics.py`; `EskfConfig.mount_yaw_sigma`;
 `Ekf10Config.lateral_speed`, `mount_yaw_sigma`; `tools/eval_sets.py` variants `known`, `cup`,
 `noexc`, `cup-known`, `noexc-known`; `reports/0.5.13/`). Every number is over seeds 0–299 unless
@@ -889,7 +889,7 @@ runs > 100 m, failures, (e/σ)²:
 | + estimated mount, no mount-yaw state | 93.3 / 19.6 m, 1, 5.08 | 6.0 m, 3.29 | 6.2 m, 1.05 | 18.0 m |
 | **+ mount-yaw state (v0.5.13)** | **93.3 / 19.6 m, 1, 5.03** | **4.4 m, 0.98** | **6.1 m, 0.70** | **18.0 m** |
 
-- **Lateral-force speed row (owner's item 4):** in a turn the phone's lateral specific force is
+- **Lateral-force speed row (owner):** in a turn the phone's lateral specific force is
   v·ω, so z = f̄_y − b̂_y − (v(ω̄ − b_gz) − ψ_m f̄_x) observes the speed where the low-end phone loses
   it. b̂_y is a 30 s mean of f_y over straight driving. First form, a fixed |ω| > 0.02 rad/s
   threshold: on low-end S4, 710 m with 12 failures in 20 seeds, because gyro noise peaks were taken
@@ -906,7 +906,7 @@ runs > 100 m, failures, (e/σ)²:
 failed to stop. That was wrong: the landmark never fires and the s-guard is not involved. The
 mechanism, from a trace of every update (v0.5.14), is in §4.15.
 
-*Recovery and prompt metrics (owner's items 1 and 2;* `navmetrics.py`). Recovery: from the first
+*Recovery and prompt metrics (owner;* `navmetrics.py`). Recovery: from the first
 fix of any kind after the outage, the time until the shown along-track error is under 10 m and 5 m
 for the rest of a 60 s window, and the largest error shown meanwhile. Prompts at 1000, 500 and 200 m
 and "now" (D = max(30 m, 2 s·v̂) [ASSUMED]), each when ŝ + kσ ≥ s_gore − D, as the callout: the
@@ -916,7 +916,7 @@ Numbers in §3 and §4.12. The ESKF gets under 5 m in a median of 10–18 s; 12�
 scenario do not within 60 s. Through the supervisor's follower a low-end phone takes 17–28 s, and the
 pressure gradient 36–52 s.
 
-*Simulator (owner's item 6).* The page state is in the address (`#tab=…&t=…&show=…&nav=…&k=…`), so a
+*Simulator (owner).* The page state is in the address (`#tab=…&t=…&show=…&nav=…&k=…`), so a
 view can be shared as a link. The callout wording follows σ: without a distance when 2σ > 100 m. The
 navigation view draws the other filters and the constant-speed baseline as dots, by the same
 checkboxes as the map.
@@ -1565,7 +1565,6 @@ Stress = map lateral offset 6 m, length +1.5 %, exit multipath 45 m. `reports/0.
 | 10-state branch decision (§4.13) | **Rejected the agent's proposal** to gate the landmark on "a turn was seen": it assumes a straight main tunnel, which Istanbul tunnels are not. Designed the batch J_kol / J_ana test instead | CHANGELOG v0.5.12 |
 | Speed constraint (§4.13) | Proposed "a car does not reverse in a one-way tunnel" as an assumption, with the expectation "a limit, not a cure". Chose the soft form after the measurement showed his tight form harmful | CHANGELOG v0.5.12 |
 | Method (§3) | Read the third optimistic small-sample result as a method: 20 seeds to look, 300 for the number | CHANGELOG v0.5.12 |
-| Comparison (§4.14) | Compared the repository with another case study and chose what to take: recovery and prompt metrics, the mount init, the lateral-force row, the permalink and σ-dependent wording. **Rejected BLE beacons**: a tunnel with beacons is not a fair assumption | CHANGELOG v0.5.13 |
 | Mount init (§4.14) | Designed it: tilt from the gravity mean ("complementary init"), yaw first from the magnetometer, then from the velocity and acceleration direction; noted that heading needs the car's direction, so the phone-to-car difference is the mount, and proposed the acceleration direction once the car moves | CHANGELOG v0.5.13 |
 | Mount-yaw state (§4.14) | Chose option (a), a mount-yaw state in the 10-state filter as well, after the measurement showed the estimated mount inconsistent there (Note10 S2 (e/σ)² 3.3) | CHANGELOG v0.5.13 |
 | Hybrid (§4.15) | Read a low-end gradient run, where the strongest candidate came last, as a product failure and had it measured; asked for the map grade as a source rather than a fourth filter, and did not take a shadow fourth filter; closed the gradient-state-alone and prior-σ results as a negative result | CHANGELOG v0.5.14 |

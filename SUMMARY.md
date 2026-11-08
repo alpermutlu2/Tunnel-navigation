@@ -256,8 +256,6 @@ The app runs all three and shows one (REPORT §4.12):
   - **Seeds:** read the 200-seed result as a selection effect and asked for an untouched
     validation tier.
   - **Re-association:** proposed it, and required the failure cases before it became the default.
-  - **Comparison with another repository:** chose what to take (recovery and prompt metrics, the
-    mount init, the lateral-force row, the permalink) and rejected BLE beacons in the tunnel.
   - **Mount:** designed the init (gravity tilt, magnetometer then acceleration-direction yaw) and
     chose a mount-yaw state in the 10-state filter too.
   - **Low-end stop-and-go:** corrected the agent's reading of the gyro noise (a profile artefact),
